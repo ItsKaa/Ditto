@@ -1,5 +1,4 @@
-﻿using Ditto.Bot.Modules.Music.Data;
-using Ditto.Bot.Services.Data;
+﻿using Ditto.Bot.Services.Data;
 using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
@@ -18,10 +17,6 @@ namespace Ditto.Bot.Services
         public partial class YoutubeService
         {
             protected YouTubeService _youtubeService { get; set; }
-			
-#if TESTING
-            protected VideoLibrary.YouTube _youTube { get; } = VideoLibrary.YouTube.Default;
-#endif // DEBUG
 
             public virtual Task SetupAsync(BaseClientService.Initializer bcs)
             {
@@ -112,143 +107,6 @@ namespace Ditto.Bot.Services
                 query.MaxResults = 1;
                 query.Id = id;
                 return (await query.ExecuteAsync())?.Items?.FirstOrDefault()?.Snippet?.Title;
-            }
-            
-#if TESTING
-            public async Task<VideoLibrary.YouTubeVideo> ParseVideoAsync(string url)
-            {
-                var videos = await _youTube.GetAllVideosAsync(url).ConfigureAwait(false);
-                var video = videos
-                    .Where(v => v.AudioBitrate < 256)
-                    .OrderByDescending(v => v.AudioBitrate)
-                    .FirstOrDefault();
-                return video;
-            }
-#endif // DEBUG
-
-
-
-
-            /// <summary>
-            /// Retrieves the youtube playlist data, including the most basic song info (Id).
-            /// This method will automatically start tasks to retrieve detailed song information, see the property DataRetrievalTasks.
-            /// </summary>
-            /// <param name="id">playlist id</param>
-            /// <param name="songsAddedAction">Action that gets executed every time we add songs to the collection, up to a maximum of 50.</param>
-            /// <param name="songsAddedCompletedAction">Action that gets executed after every song has been added.</param>
-            /// <param name="songsDetailsLoaded"></param>
-            /// <param name="cancellationToken"></param>
-            /// <returns></returns>
-            public Task<PlaylistInfo> GetPlaylistInfo(string id, Action<PlaylistInfo> songsAddedAction, Action<PlaylistInfo> songsAddedCompletedAction, Action<List<SongInfo>> songsDetailsLoaded, CancellationToken cancellationToken)
-            {
-                return Task.Run(async () =>
-                {
-                    PlaylistInfo playlistInfo = null;
-
-                    // Get basic playlist info
-                    var playlistQuery = _youtubeService.Playlists.List("snippet,contentDetails");
-                    playlistQuery.MaxResults = 1;
-                    playlistQuery.Id = id;
-                    var playlistResponse = await playlistQuery.ExecuteAsync();
-                    if (playlistResponse?.Items != null)
-                    {
-                        var item = playlistResponse.Items.FirstOrDefault();
-                        playlistInfo = new PlaylistInfo()
-                        {
-                            Id = item.Id,
-                            Title = item.Snippet.Title,
-                            TotalSongs = item.ContentDetails.ItemCount ?? 0
-                        };
-                    }
-                    else
-                    {
-                        // error #1: playlist not found
-                        return null;
-                    }
-
-                    // Get playlist basic song info
-                    PlaylistItemListResponse playlistItemResponse = null;
-                    var token = "";
-                    var current = 0;
-                    while (token != null)
-                    {
-                        var playlistItemQuery = _youtubeService.PlaylistItems.List("snippet");
-                        playlistItemQuery.PlaylistId = id;
-                        playlistItemQuery.MaxResults = 50;
-                        playlistItemQuery.PageToken = token;
-
-                        playlistItemResponse = await playlistItemQuery.ExecuteAsync();
-                        if (playlistItemResponse.Items != null)
-                        {
-                            var playlistItemSongs = playlistItemResponse.Items.Select((e)
-                                => new SongInfo()
-                                {
-                                    Id = e.Snippet.ResourceId.VideoId,
-                                    Title = e.Snippet.Title,
-                                    Duration = null,
-                                    DetailsLoaded = false
-                                }
-                            ).ToList();
-                            playlistInfo.Songs.AddRange(playlistItemSongs);
-                            songsAddedAction(playlistInfo);
-                            playlistInfo.DataRetrievalTasks.Add(Task.Run(async () =>
-                            {
-                                var queryVideo = _youtubeService.Videos.List("contentDetails,snippet"); // contentDetails for time, snippet for title (maybe liveStreamingDetails??)
-                                queryVideo.MaxResults = 50;
-                                queryVideo.Id = string.Join(',', playlistItemSongs.Select(a => a.Id));
-                                var videos = (await queryVideo.ExecuteAsync()).Items;
-                                var songs = new List<SongInfo>();
-                                foreach (var video in videos)
-                                {
-                                    var song = playlistItemSongs.FirstOrDefault(e => e.Id == video.Id);
-                                    if (song != null)
-                                    {
-                                        song.Title = video.Snippet.Title;
-                                        song.Duration = XmlConvert.ToTimeSpan(video.ContentDetails.Duration); // ISO 8601 time format
-                                        song.DetailsLoaded = true;
-                                        songs.Add(song);
-                                    }
-                                }
-                                current += videos.Count;
-                                songsDetailsLoaded(songs);
-                                //Log.Info("{0}/{1}/{2}", current, playlistInfo.Songs.Count, playlistInfo.TotalSongs);
-                            }, cancellationToken));
-
-                            //playlistInfo.Songs.Add()
-                            // Get video details
-                            //var ids = string.Join(',', result.Items.Select(a => a.Snippet.ResourceId.VideoId));
-                            //var queryVideo = _youtubeService.Videos.List("contentDetails,snippet"); // contentDetails for time, snippet for title (and liveStreamingDetails is obvious)
-                            //queryVideo.MaxResults = 50;
-                            //queryVideo.Id = ids;
-                            //var videos = (await queryVideo.ExecuteAsync()).Items;
-                            //list.AddRange(videos);
-                        }
-                        token = playlistItemResponse.NextPageToken;
-                    }
-                    songsAddedCompletedAction(playlistInfo);
-                    return playlistInfo;
-                }, cancellationToken);
-            }
-
-            public async Task<SongInfo> GetSongInfoAsync(string id)
-            {
-                var songQuery = _youtubeService.Videos.List("snippet,contentDetails,liveStreamingDetails");
-                songQuery.MaxResults = 1;
-                songQuery.Id = id;
-                var songResponse = await songQuery.ExecuteAsync();
-                if (songResponse?.Items != null)
-                {
-                    var item = songResponse.Items.FirstOrDefault();
-                    return new SongInfo()
-                    {
-                        LiveStream = item.LiveStreamingDetails != null,
-                        Id = item.Id,
-                        Title = item.Snippet.Title,
-                        Duration = XmlConvert.ToTimeSpan(item.ContentDetails.Duration), // ISO 8601 time format
-                        DetailsLoaded = true
-                    };
-                }
-                return null;
             }
         }
     }
