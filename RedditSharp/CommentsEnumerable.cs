@@ -1,5 +1,4 @@
 ﻿using RedditSharp.Things;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -31,6 +30,12 @@ namespace RedditSharp
             this.agent = agent;
             limit = limitPerRequest;
         }
+
+        public IAsyncEnumerator<Comment> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        {
+            return GetEnumerator().WithCancellation(cancellationToken);
+        }
+
         /// <summary>
         /// Returns <see cref="IAsyncEnumerator{T}"/> for the comments on the <see cref="Post"/>> 
         /// </summary>
@@ -143,6 +148,19 @@ namespace RedditSharp
             public void Dispose()
             {
                 
+            }
+
+            public ValueTask<bool> MoveNextAsync()
+            {
+                return new ValueTask<bool>(MoveNext(CancellationToken.None));
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                return new ValueTask(Task.Run(() =>
+                {
+                    Dispose();
+                }));
             }
         }
     }

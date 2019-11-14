@@ -1,11 +1,11 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using RedditSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Authentication;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using RedditSharp.Extensions;
 
 namespace RedditSharp.Things
 {
@@ -17,8 +17,9 @@ namespace RedditSharp.Things
         private const string CommentUrl = "/api/comment";
         private const string EditUserTextUrl = "/api/editusertext";
         private const string SetAsReadUrl = "/api/read_message";
+        private const string SetAsUnReadUrl = "/api/unread_message";
 
-        #pragma warning disable 1591
+        /// <inheritdoc />
         public Comment(IWebAgent agent, JToken json, Thing sender) : base(agent, json) {
             var data = json["data"];
             Parent = sender;
@@ -31,7 +32,6 @@ namespace RedditSharp.Things
             }
             ParseComments(json, sender);
         }
-        #pragma warning restore 1591
 
         /// <inheritdoc />
         internal override JToken GetJsonData(JToken json) => json["data"];
@@ -143,6 +143,9 @@ namespace RedditSharp.Things
         [JsonProperty("link_title")]
         public string LinkTitle { get; private set; }
 
+        [JsonProperty("new")]
+        public bool Unread { get; private set; }
+
         /// <summary>
         /// More comments.
         /// </summary>
@@ -162,23 +165,7 @@ namespace RedditSharp.Things
         public Thing Parent { get; internal set; }
 
         /// <inheritdoc/>
-        public override string Shortlink
-        {
-            get
-            {
-                // Not really a "short" link, but you can't actually use short links for comments
-                string linkId = "";
-                int index = this.LinkId.IndexOf('_');
-                if (index > -1)
-                {
-                    linkId = this.LinkId.Substring(index + 1);
-                }
-
-                return string.Format("{0}://{1}/r/{2}/comments/{3}/_/{4}",
-                                     RedditSharp.WebAgent.Protocol, RedditSharp.WebAgent.RootDomain,
-                                     this.Subreddit, this.Parent != null ? this.Parent.Id : linkId, this.Id);
-            }
-        }
+        public override string Shortlink => Permalink.ToString();
 
         /// <summary>
         /// Reply to this comment.
@@ -190,16 +177,26 @@ namespace RedditSharp.Things
             // TODO actual error handling. This just hides the error and returns null
             //try
             //{
-                var json = await WebAgent.Post(CommentUrl, new
+            var json = await WebAgent.Post(CommentUrl, new
+            {
+                text = message,
+                thing_id = FullName,
+                api_type = "json"
+                //r = Subreddit
+            }).ConfigureAwait(false);
+            if (json["errors"].Any())
+            {
+                if (json["errors"][0].Any(x => x.ToString() == "RATELIMIT" || x.ToString() == "ratelimit"))
                 {
-                    text = message,
-                    thing_id = FullName,
-                    api_type = "json"
-                    //r = Subreddit
-                }).ConfigureAwait(false);
-                if (json["json"]["ratelimit"] != null)
-                    throw new RateLimitException(TimeSpan.FromSeconds(json["json"]["ratelimit"].ValueOrDefault<double>()));
-                return new Comment(WebAgent, json["json"]["data"]["things"][0], this);
+                    var timeToReset = TimeSpan.FromMinutes(Convert.ToDouble(Regex.Match(json["errors"][0].ElementAt(1).ToString(), @"\d+").Value));
+                    throw new RateLimitException(timeToReset);
+                }
+                else
+                {
+                    throw new Exception(json["errors"][0][0].ToString());
+                }
+            }
+            return new Comment(WebAgent, json["data"]["things"][0], this);
             //}
             //catch (HttpRequestException ex)
             //{
@@ -220,10 +217,10 @@ namespace RedditSharp.Things
                 text = newText,
                 thing_id = FullName
             }).ConfigureAwait(false);
-            if (json["json"].ToString().Contains("\"errors\": []"))
+            if (!json["errors"].Any())
                 Body = newText;
             else
-                throw new Exception("Error editing text.");
+                throw new Exception($"Errors editing text {json["errors"][0][0].ToString()}");
         }
 
         /// <inheritdoc />
@@ -240,11 +237,57 @@ namespace RedditSharp.Things
         /// </summary>
         public async Task SetAsReadAsync()
         {
-            await WebAgent.Post(SetAsReadUrl, new
+            await SetReadStatusAsync(SetAsReadUrl);
+        }
+
+        /// <summary>
+        /// Mark this comment as unread.
+        /// </summary>
+        public async Task SetAsUnReadAsync()
+        {
+            await SetReadStatusAsync(SetAsUnReadUrl);
+        }
+
+        private async Task SetReadStatusAsync(string statusUrl)
+        {
+            await WebAgent.Post(statusUrl, new
             {
                 id = FullName,
                 api_type = "json"
             }).ConfigureAwait(false);
         }
+
+        #region Static Methods
+        /// <summary>
+        /// Post a reply to a specific comment
+        /// </summary>
+        /// <param name="webAgent"></param>
+        /// <param name="commentFullName">e.g. "t1_12345"</param>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        public static async Task Reply(IWebAgent webAgent, string commentFullName, string message) {
+            // TODO actual error handling. This just hides the error and returns null
+            //try
+            //{
+            var json = await webAgent.Post(CommentUrl, new {
+                text = message,
+                thing_id = commentFullName,
+                api_type = "json"
+                //r = Subreddit
+            }).ConfigureAwait(false);
+            if (json["json"]["ratelimit"] != null) {
+                throw new RateLimitException(TimeSpan.FromSeconds(json["json"]["ratelimit"].ValueOrDefault<double>()));
+            }
+            
+
+            //}
+            //catch (HttpRequestException ex)
+            //{
+            //    var error = new StreamReader(ex..GetResponseStream()).ReadToEnd();
+            //    return null;
+            //}
+        }
+        #endregion
+
     }
 }

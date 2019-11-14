@@ -1,10 +1,9 @@
-﻿#pragma warning disable 1591
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
+using RedditSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
-using RedditSharp.Extensions;
 using System.Threading.Tasks;
 
 namespace RedditSharp
@@ -14,14 +13,15 @@ namespace RedditSharp
         private const string ToolBoxUserNotesWiki = "/r/{0}/wiki/usernotes";
         public static async Task<IEnumerable<TBUserNote>> GetUserNotesAsync(IWebAgent webAgent, string subName)
         {
-            var response = await webAgent.Get(string.Format(ToolBoxUserNotesWiki, subName)).ConfigureAwait(false);
+            var reqResponse = await webAgent.Get(string.Format(ToolBoxUserNotesWiki, subName)).ConfigureAwait(false);
+            var response = JObject.Parse(reqResponse["data"]["content_md"].Value<string>());
             int version = response["ver"].Value<int>();
+            if(version < 6) throw new ToolBoxUserNotesException("Unsupported ToolBox version");
 
             string[] mods = response["constants"]["users"].Values<string>().ToArray();
 
             string[] warnings = response["constants"]["warnings"].Values<string>().ToArray();
 
-            if (version < 6) throw new ToolBoxUserNotesException("Unsupported ToolBox version");
 
             try
             {
@@ -73,6 +73,18 @@ namespace RedditSharp
                 throw new ToolBoxUserNotesException("An error occured while processing Usernotes wiki. See inner exception for details", e);
             }
         }
+
+        public static async Task<string[]> GetWarningKeys(IWebAgent webAgent, string subName) {
+            var reqResponse = await webAgent.Get(string.Format(ToolBoxUserNotesWiki, subName)).ConfigureAwait(false);
+            var response = JObject.Parse(reqResponse["data"]["content_md"].Value<string>());
+            int version = response["ver"].Value<int>();
+            if(version < 6) throw new ToolBoxUserNotesException("Unsupported ToolBox version");
+
+            string[] warnings = response["constants"]["warnings"].Values<string>().ToArray();
+
+            return warnings;
+
+        }
         public static string UnsquashLink(string subreddit, string permalink)
         {
             var link = "https://reddit.com/r/" + subreddit + "/";
@@ -96,4 +108,3 @@ namespace RedditSharp
         }
     }
 }
-#pragma warning restore 1591

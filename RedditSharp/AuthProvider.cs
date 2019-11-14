@@ -1,5 +1,3 @@
-using Newtonsoft.Json.Linq;
-using RedditSharp.Things;
 using System;
 using System.Security.Authentication;
 using System.Text;
@@ -18,16 +16,6 @@ namespace RedditSharp
         public const string AccessUrl = "https://ssl.reddit.com/api/v1/access_token";
         private const string OauthGetMeUrl = "https://oauth.reddit.com/api/v1/me";
         private const string RevokeUrl = "https://www.reddit.com/api/v1/revoke_token";
-
-        /// <summary>
-        /// OAuth2 token.
-        /// </summary>
-        public static string OAuthToken { get; set; }
-
-        /// <summary>
-        /// OAuth2 refresh token.
-        /// </summary>
-        public static string RefreshToken { get; set; }
 
 #pragma warning disable 1591
         [Flags]
@@ -137,9 +125,6 @@ namespace RedditSharp
                 }).ConfigureAwait(false);
             if (json["access_token"] != null)
             {
-                if (json["refresh_token"] != null)
-                    RefreshToken = json["refresh_token"].ToString();
-                OAuthToken = json["access_token"].ToString();
                 return json["access_token"].ToString();
             }
             throw new AuthenticationException("Could not log in.");
@@ -173,9 +158,6 @@ namespace RedditSharp
                 }).ConfigureAwait(false);
             if (json["access_token"] != null)
             {
-                if (json["refresh_token"] != null)
-                    RefreshToken = json["refresh_token"].ToString();
-                OAuthToken = json["access_token"].ToString();
                 return json["access_token"].ToString();
             }
             throw new AuthenticationException("Could not log in.");

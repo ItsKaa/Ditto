@@ -1,8 +1,8 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using RedditSharp.Search;
 using RedditSharp.Things;
 using System;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Security.Authentication;
 using System.Threading.Tasks;
 using DefaultWebAgent = RedditSharp.WebAgent;
@@ -37,6 +37,19 @@ namespace RedditSharp
         private const string GetLiveEventUrl = "https://www.reddit.com/live/{0}/about";
 
         #endregion
+        private IAdvancedSearchFormatter _searchFormatter;
+        private IAdvancedSearchFormatter SearchFormatter
+        {
+            get
+            {
+                if(_searchFormatter == null)
+                {
+                    _searchFormatter = new DefaultSearchFormatter();
+                }
+                return _searchFormatter;
+            }
+            set => _searchFormatter = value;
+        }
 
         #region Properties
         internal IWebAgent WebAgent { get; set; }
@@ -159,10 +172,11 @@ namespace RedditSharp
         /// Get a subreddit by name.
         /// </summary>
         /// <param name="name">subreddit name with or without preceding /r/</param>
+        /// <param name="validateName">Whether to validate the subreddit name.</param>
         /// <returns></returns>
-        public Task<Subreddit> GetSubredditAsync(string name)
+        public Task<Subreddit> GetSubredditAsync(string name, bool validateName = true)
         {
-            return Subreddit.GetByNameAsync(WebAgent, name);
+            return Subreddit.GetByNameAsync(WebAgent, name, validateName);
         }
 
         /// <summary>
@@ -215,10 +229,10 @@ namespace RedditSharp
                 nsfw = nsfw
             }).ConfigureAwait(false);
 
-            if (json["json"]["errors"].Any())
-                throw new Exception(json["json"]["errors"][0][0].ToString());
+            if (json["errors"].Any())
+                throw new Exception(json["errors"][0][0].ToString());
 
-            var id = json["json"]["data"]["id"].ToString();
+            var id = json["data"]["id"].ToString();
 
             return await GetLiveEvent(new Uri(String.Format(GetLiveEventUrl, id))).ConfigureAwait(false);
         }
@@ -233,7 +247,7 @@ namespace RedditSharp
             if (!uri.AbsoluteUri.EndsWith("about"))
                 uri = new Uri(uri.AbsoluteUri + "/about");
 
-            var token = await Helpers.GetTokenAsync(WebAgent, uri).ConfigureAwait(false);
+            var token = await Helpers.GetTokenAsync(WebAgent, uri,true).ConfigureAwait(false);
             return new LiveUpdateEvent(WebAgent, token);
         }
 
@@ -281,9 +295,9 @@ namespace RedditSharp
 
             ICaptchaSolver solver = CaptchaSolver; // Prevent race condition
 
-            if (json["json"]["errors"].Any() && json["json"]["errors"][0][0].ToString() == "BAD_CAPTCHA" && solver != null)
+            if (json["errors"].Any() && json["errors"][0][0].ToString() == "BAD_CAPTCHA" && solver != null)
             {
-                captchaId = json["json"]["captcha"].ToString();
+                captchaId = json["captcha"].ToString();
                 CaptchaResponse captchaResponse = solver.HandleCaptcha(new Captcha(captchaId));
 
                 if (!captchaResponse.Cancel) // Keep trying until we are told to cancel
@@ -381,6 +395,15 @@ namespace RedditSharp
             return Listing<T>.Create(this.WebAgent, string.Format(SearchUrl, query, sort, time), max, 100);
         }
 
+        public Listing<Post> AdvancedSearch(Expression<Func<AdvancedSearchFilter, bool>> searchFilter, Sorting sortE = Sorting.Relevance, TimeSorting timeE = TimeSorting.All)
+        {
+            string query = SearchFormatter.Format(searchFilter);
+            string sort = sortE.ToString().ToLower();
+            string time = timeE.ToString().ToLower();
+            string final = string.Format(SearchUrl, query, sort, time);
+            return new Listing<Post>(WebAgent, final);
+        }
+
         /// <summary>
         /// Return a <see cref="Listing{T}"/> of items matching search with a given time period.
         /// </summary>
@@ -393,6 +416,7 @@ namespace RedditSharp
         /// <param name="timeE">Order by <see cref="TimeSorting"/></param>
         /// <param name="max">Maximum number of records to return.  -1 for unlimited.</param>
         /// <returns></returns>
+        [Obsolete("time search was discontinued by reddit",true)]
         public Listing<T> SearchByTimestamp<T>(DateTime from, DateTime to, string query = "", string subreddit = "", Sorting sortE = Sorting.Relevance, TimeSorting timeE = TimeSorting.All, int max = -1) where T : Thing
         {
             string sort = sortE.ToString().ToLower();
@@ -441,5 +465,17 @@ namespace RedditSharp
 
         #endregion SubredditSearching
 
+        /// <summary>
+        /// Create a listing from the specified url.  Useful if you want to specify your own "before" and "after" values.
+        /// </summary>
+        /// <typeparam name="T">A <see cref="RedditSharp.Things.Thing"/></typeparam>
+        /// <param name="url">endpoint url.</param>
+        /// <param name="maxLimit">Maximum number of records to retrieve from reddit.</param>
+        /// <param name="limitPerRequest">Maximum number of records to return per request.  This number is endpoint specific.</param>
+        /// <returns></returns>
+        public Listing<T> GetListing<T>(string url, int maxLimit = -1, int limitPerRequest = -1) where T : Thing
+        {
+            return new Listing<T>(this.WebAgent, url, maxLimit, limitPerRequest);
+        }
     }
 }

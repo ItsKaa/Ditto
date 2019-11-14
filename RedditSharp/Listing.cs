@@ -10,7 +10,9 @@ using System.Threading.Tasks;
 
 namespace RedditSharp
 {
-#pragma warning disable 1591
+    /// <summary>
+    /// Method to sort by (e.g. relevance, new)
+    /// </summary>
     public enum Sorting
     {
         Relevance,
@@ -18,7 +20,9 @@ namespace RedditSharp
         Top,
         Comments
     }
-
+    /// <summary>
+    /// Length of time to go back by (e.g. all time, past year)
+    /// </summary>
     public enum TimeSorting
     {
         All,
@@ -28,7 +32,6 @@ namespace RedditSharp
         Month,
         Year
     }
-#pragma warning restore 1591
 
     /// <summary>
     /// A semi-realtime stream of <see cref="Thing"/> being posted to an item.
@@ -51,12 +54,14 @@ namespace RedditSharp
         public IDisposable Subscribe(IObserver<T> observer)
         {
             if (!_observers.Contains(observer))
+            {
                 _observers.Add(observer);
+            }
+
             return new Unsubscriber(_observers, observer);
         }
 
-#pragma warning disable 1591
-        public async Task Enumerate()
+        public async Task Enumerate(CancellationToken cancelationToken)
         {
             await Listing.ForEachAsync(thing =>
             {
@@ -65,9 +70,8 @@ namespace RedditSharp
                     observer.OnNext(thing);
                 }
 
-            });
+            }, cancelationToken);
         }
-#pragma warning restore 1591
 
         private class Unsubscriber : IDisposable
         {
@@ -85,7 +89,9 @@ namespace RedditSharp
             public void Dispose()
             {
                 if (_observer != null && _observers.Contains(_observer))
+                {
                     _observers.Remove(_observer);
+                }
             }
 
         }
@@ -131,7 +137,9 @@ namespace RedditSharp
         internal static Listing<T> Create(IWebAgent agent, string url, int max, int perRequest)
         {
             if (max > 0 && max <= perRequest)
+            {
                 perRequest = max;
+            }
 
             return new Listing<T>(agent, url, max, perRequest);
         }
@@ -167,7 +175,7 @@ namespace RedditSharp
         /// <inheritdoc/>
         public IAsyncEnumerator<T> GetEnumerator()
         {
-            return GetEnumerator(LimitPerRequest,MaximumLimit,IsStream);
+            return GetEnumerator(LimitPerRequest, MaximumLimit, IsStream);
         }
 
         /// <summary>
@@ -177,6 +185,11 @@ namespace RedditSharp
         public ListingStream<T> Stream()
         {
             return new ListingStream<T>(this);
+        }
+
+        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        {
+            return GetEnumerator().WithCancellation(cancellationToken);
         }
 
 #pragma warning disable 0693
@@ -219,9 +232,13 @@ namespace RedditSharp
             private Task FetchNextPageAsync()
             {
                 if (stream)
+                {
                     return PageForwardAsync();
+                }
                 else
+                {
                     return PageBackAsync();
+                }
             }
 
             string AppendQueryParam(string url, string param, string value) =>
@@ -232,9 +249,10 @@ namespace RedditSharp
                 if (LimitPerRequest > 0)
                 {
                     int limit = LimitPerRequest;
-                    if (MaximumLimit < 0)
+                    if (MaximumLimit > 0)
                     {
-                        limit = new[] { LimitPerRequest, MaximumLimit, Count + LimitPerRequest - MaximumLimit }.Min();
+                        limit = new[] { LimitPerRequest, MaximumLimit, (MaximumLimit - Count) }.Min();
+
                     }
                     if (limit > 0)
                     {
@@ -267,7 +285,10 @@ namespace RedditSharp
                 var json = await Listing.WebAgent.Get(url).ConfigureAwait(false);
                 //json = json.Last();
                 if (json["kind"].ValueOrDefault<string>() != "Listing")
+                {
                     throw new FormatException("Reddit responded with an object that is not a listing.");
+                }
+
                 Parse(json);
             }
 
@@ -285,7 +306,10 @@ namespace RedditSharp
                 url = AppendCommonParams(url);
                 var json = await Listing.WebAgent.Get(url).ConfigureAwait(false);
                 if (json["kind"].ValueOrDefault<string>() != "Listing")
+                {
                     throw new FormatException("Reddit responded with an object that is not a listingStream.");
+                }
+
                 Parse(json);
             }
 
@@ -297,7 +321,9 @@ namespace RedditSharp
                 for (int i = 0; i < children.Count; i++)
                 {
                     if (!stream)
+                    {
                         things.Add(Thing.Parse<T>(Listing.WebAgent, children[i]));
+                    }
                     else
                     {
                         var kind = children[i]["kind"].ValueOrDefault<string>();
@@ -311,7 +337,9 @@ namespace RedditSharp
                             {
                                 var replyId = reply["data"]["id"].ValueOrDefault<string>();
                                 if (done.Contains(replyId))
+                                {
                                     continue;
+                                }
 
                                 things.Add(Thing.Parse<T>(Listing.WebAgent, reply));
                                 done.Add(replyId);
@@ -319,7 +347,9 @@ namespace RedditSharp
                         }
 
                         if (String.IsNullOrEmpty(id) || done.Contains(id))
+                        {
                             continue;
+                        }
 
                         things.Add(Thing.Parse<T>(Listing.WebAgent, children[i]));
                         done.Add(id);
@@ -328,7 +358,9 @@ namespace RedditSharp
 
                 // this doesn't really work when we're processing messages with replies.
                 if (stream)
+                {
                     things.Reverse();
+                }
 
                 CurrentPage = new ReadOnlyCollection<T>(things);
                 // Increase the total count of items returned
@@ -347,22 +379,22 @@ namespace RedditSharp
             {
                 if (stream)
                 {
-                    return await MoveNextForwardAsync().ConfigureAwait(false);
+                    return await MoveNextForwardAsync(cancellationToken).ConfigureAwait(false);
                 }
                 else
                 {
-                    return await MoveNextBackAsync().ConfigureAwait(false);
+                    return await MoveNextBackAsync(cancellationToken).ConfigureAwait(false);
                 }
             }
 
-            private async Task<bool> MoveNextBackAsync()
+            private async Task<bool> MoveNextBackAsync(CancellationToken cancellationToken)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (CurrentIndex == -1)
                 {
                     //first call, get a page and set CurrentIndex
                     await FetchNextPageAsync().ConfigureAwait(false);
                     CurrentIndex = 0;
-                    Count = 1;
                     return CurrentPage.Count > 0; //if there are no results, return false
                 }
                 else
@@ -394,40 +426,49 @@ namespace RedditSharp
                 return true;
             }
 
-            private async Task<bool> MoveNextForwardAsync()
+            private async Task<bool> MoveNextForwardAsync(CancellationToken cancellationToken)
             {
                 CurrentIndex++;
-                int tries = 0;
-                while (true)
+
+                if (MaximumLimit != -1 && Count >= MaximumLimit)
                 {
-                    tries++;
-
-                    if (MaximumLimit != -1 && Count >= MaximumLimit)
-                        return false;
-
-                    try
+                    return false;
+                }
+                
+                if (CurrentIndex == 0 || CurrentIndex >= CurrentPage.Count)
+                {
+                    int tries = 0;
+                    while (true)
                     {
-                        await FetchNextPageAsync().ConfigureAwait(false);
-                        CurrentIndex = 0;
-                    }
-                    catch (Exception ex)
-                    {
-                        // sleep for a while to see if we can recover
-                        await Sleep(tries, ex).ConfigureAwait(false);
-                    }
+                        cancellationToken.ThrowIfCancellationRequested();
+                        tries++;
 
-                    // the page is only populated if there are *new* items to yielded from the listing.
-                    if (CurrentPage.Count > 0)
-                        break;
+                        try
+                        {
+                            await FetchNextPageAsync().ConfigureAwait(false);
+                            CurrentIndex = 0;
+                        }
+                        catch (Exception ex)
+                        {
+                            // sleep for a while to see if we can recover
+                            await Sleep(tries, cancellationToken, ex).ConfigureAwait(false);
+                        }
 
-                    // No listings were returned in the page.
-                    await Sleep(tries).ConfigureAwait(false);
+                        // the page is only populated if there are *new* items to yielded from the listing.
+                        if (CurrentPage.Count > 0)
+                        {
+                            break;
+                        }
+
+                        // No listings were returned in the page.
+                        await Sleep(tries, cancellationToken).ConfigureAwait(false);
+                    }
                 }
                 Count++;
                 return true;
             }
 
-            private async Task Sleep(int tries, Exception ex = null)
+            private async Task Sleep(int tries, CancellationToken cancellationToken, Exception ex = null)
             {
                 // wait up to 3 minutes between tries
                 // TODO: Make this configurable
@@ -437,13 +478,28 @@ namespace RedditSharp
                 if (tries > 36)
                 {
                     if (ex != null)
+                    {
                         throw ex;
+                    }
                 }
                 else
                 {
                     seconds = tries * 5;
                 }
-                await Task.Delay(seconds * 1000).ConfigureAwait(false);
+                await Task.Delay(seconds * 1000, cancellationToken).ConfigureAwait(false);
+            }
+
+            public ValueTask<bool> MoveNextAsync()
+            {
+                return new ValueTask<bool>(MoveNext(CancellationToken.None));
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                return new ValueTask(Task.Run(() =>
+                {
+                    Dispose();
+                }));
             }
         }
 #pragma warning restore

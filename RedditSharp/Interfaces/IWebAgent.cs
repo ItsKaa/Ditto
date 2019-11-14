@@ -1,7 +1,7 @@
 using Newtonsoft.Json.Linq;
 using System;
-using System.Threading.Tasks;
 using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace RedditSharp
 {
@@ -72,6 +72,6 @@ namespace RedditSharp
         /// <summary>
         /// <see cref="RateLimitManager"/> for this instance of IWebAgent
         /// </summary>
-        RateLimitManager RateLimiter { get; set; }
+        IRateLimiter RateLimiter { get; set; }
     }
 }

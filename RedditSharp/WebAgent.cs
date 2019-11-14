@@ -2,10 +2,10 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace RedditSharp
 {
@@ -19,7 +19,7 @@ namespace RedditSharp
         /// <summary>
         /// Additional values to append to the default RedditSharp user agent.
         /// </summary>
-        public static string DefaultUserAgent { get; set; }
+        public static string DefaultUserAgent { get; set; } = "RedditSharp";
 
         /// <summary>
         /// web protocol "http", "https"
@@ -35,12 +35,12 @@ namespace RedditSharp
         /// <summary>
         /// Global default RateLimitManager
         /// </summary>
-        public static RateLimitManager DefaultRateLimiter { get; private set; }
+        public static IRateLimiter DefaultRateLimiter { get; private set; }
 
         /// <summary>
         /// RateLimitManager for this Reddit instance.
         /// </summary>
-        public RateLimitManager RateLimiter { get; set; }
+        public IRateLimiter RateLimiter { get; set; }
 
         /// <inheritdoc />
         public string AccessToken { get; set; }
@@ -49,6 +49,11 @@ namespace RedditSharp
         /// String to override default useragent for this instance
         /// </summary>
         public string UserAgent { get; set; }
+
+        /// <summary>
+        /// Append the library to the end of the User-Agent string. Default is true.
+        /// </summary>
+        public bool AppendLibraryToUA { get; set; } = true;
 
         private static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
         private static bool IsOAuth => RootDomain == "oauth.reddit.com";
@@ -76,7 +81,7 @@ namespace RedditSharp
         /// <param name="accessToken">Valid access token</param>
         /// <param name="rateLimiter"><see cref="RateLimitManager"/> that controls the rate limit for this instance of the WebAgent. Defaults to the shared, static rate limiter.</param>
         /// <param name="userAgent">Optional userAgent string to override default UserAgent</param>
-        public WebAgent( string accessToken, RateLimitManager rateLimiter = null, string userAgent = "") {
+        public WebAgent( string accessToken, IRateLimiter rateLimiter = null, string userAgent = "") {
             RootDomain = OAuthDomainUrl;
             AccessToken = accessToken;
             if(rateLimiter == null)
@@ -109,10 +114,13 @@ namespace RedditSharp
               await RateLimiter.CheckRateLimitAsync(IsOAuth).ConfigureAwait(false);
               response = await _httpClient.SendAsync(request()).ConfigureAwait(false);
               await RateLimiter.ReadHeadersAsync(response);
+              ++tries;
             } while( 
-            //only retry if 500 or 503
+            // only retry if 500, 502, 503, or 504
                 (response.StatusCode == System.Net.HttpStatusCode.InternalServerError || 
-                 response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+                 response.StatusCode == System.Net.HttpStatusCode.BadGateway ||
+                 response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
+                 response.StatusCode == System.Net.HttpStatusCode.GatewayTimeout)
                 && tries < maxTries
             );
             if (!response.IsSuccessStatusCode)
@@ -129,9 +137,9 @@ namespace RedditSharp
                     {
                         json = json["json"]; //get json object if there is a root node
                     }
-                    if (json["error"] != null)
+                    if (json["errors"] != null)
                     {
-                        switch (json["error"].ToString())
+                        switch (json["errors"].ToString())
                         {
                             case "404":
                                 throw new Exception("File Not Found");
@@ -142,6 +150,8 @@ namespace RedditSharp
                                 //AccessToken = authProvider.GetRefreshToken();
                                 //ExecuteRequest(request);
                                 break;
+                            default:
+                                throw new Exception($"Error return by reddit: {json["errors"][0][0].ToString()}");
                         }
                     }
                 }
@@ -187,7 +197,8 @@ namespace RedditSharp
 
             request.Method = new HttpMethod(method);
             //request.Headers.UserAgent.ParseAdd(UserAgent);
-            request.Headers.TryAddWithoutValidation("User-Agent", $"{DefaultUserAgent} - with RedditSharp by meepster23");
+            var userAgentString = AppendLibraryToUA ? $"{UserAgent} - with RedditSharp by meepster23" : UserAgent;
+            request.Headers.TryAddWithoutValidation("User-Agent", userAgentString);
             return request;
         }
 
@@ -229,11 +240,11 @@ namespace RedditSharp
             }
             for (int i = 0; i < additionalFields.Length; i += 2)
             {
-                var entry = Convert.ToString(additionalFields[i + 1]) ?? string.Empty;
+                var entry = Convert.ToString(additionalFields[i + 1]);
                 content.Add(new KeyValuePair<string, string>(additionalFields[i], entry));
             }
-
-            request.Content = new FormUrlEncodedContent(content);
+            //new FormUrlEncodedContent has a limit on length which can cause issues;
+            request.Content = new StringContent(string.Join("&",content.Select(c=>c.Key + "=" + System.Net.WebUtility.UrlEncode(c.Value))), System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
         }
 
         /// <inheritdoc />

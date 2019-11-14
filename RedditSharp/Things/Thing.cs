@@ -1,8 +1,7 @@
-using System;
-using System.Security.Authentication;
 using Newtonsoft.Json.Linq;
-using System.Threading.Tasks;
 using RedditSharp.Extensions;
+using System;
+using System.Threading.Tasks;
 
 namespace RedditSharp.Things
 {
@@ -11,18 +10,13 @@ namespace RedditSharp.Things
     /// </summary>
     public class Thing : RedditObject
     {
-        
+
         #region Properties
 
         /// <summary>
         /// Current user
         /// </summary>
         public AuthenticatedUser User { get; set; }
-
-        /// <summary>
-        /// Shortlink to the item
-        /// </summary>
-        public virtual string Shortlink => "http://redd.it/" + Id;
 
         /// <summary>
         /// Base36 id.
@@ -48,13 +42,24 @@ namespace RedditSharp.Things
         /// Gets the time since last fetch from reddit servers.
         /// </summary>
         public TimeSpan TimeSinceFetch => DateTime.Now - FetchedAt;
+
+        public JToken RawJson { get; private set; }
+
+        /// <summary>
+        /// Gets a property of this Thing without any automatic conversion,
+        /// even to a <see cref="String"/>.
+        /// </summary>
+        /// <param name="property">The reddit API name of the property</param>
+        /// <returns>The property's value as a <see cref="String"/> or null if the property 
+        /// doesn't exist or is null.</returns>
+        public JToken this[String property] => RawJson[property];
         #endregion
 
 
         /// <summary>
         /// Create new Thing from given JSON data.
         /// </summary>
-        /// <param name="agent">WebAgent for requests</param>
+        /// <param name="agent">An <see cref="IWebAgent"/>to make requests with</param>
         /// <param name="json">JSON data containing thing's info</param>
         /// <param name="user">Optional authenticated user</param>
         public Thing(IWebAgent agent, JToken json, AuthenticatedUser user = null) : base(agent)
@@ -74,6 +79,7 @@ namespace RedditSharp.Things
             FullName = data["name"].ValueOrDefault<string>();
             Id = data["id"].ValueOrDefault<string>();
             Kind = json["kind"].ValueOrDefault<string>();
+            RawJson = data;
             FetchedAt = DateTime.Now;
             Helpers.PopulateObject(GetJsonData(json), this);
         }
@@ -164,8 +170,7 @@ namespace RedditSharp.Things
 
         /// <summary>
         /// Execute a simple POST request against the reddit api.
-        /// Supports endpoints that require only id and modhash as
-        /// parameters.
+        /// Supports endpoints that require only id as parameter.
         /// </summary>
         /// <param name="endpoint"></param>
         /// <returns></returns>
@@ -175,6 +180,21 @@ namespace RedditSharp.Things
             {
                 id = FullName
             }).ConfigureAwait(false);
+        }
+        /// <summary>
+        /// Execute a simple POST request against the reddit api.
+        /// Supports endpoints that require only id as parameter.
+        /// </summary>
+        /// <param name="agent"><see cref="IWebAgent"/> used to execute post</param>
+        /// <param name="fullname">FullName of thing to act on. eg. t1_66666</param>
+        /// <param name="endpoint">URL to post to</param>
+        /// <returns></returns>
+        protected static Task<JToken> SimpleActionAsync(IWebAgent agent, string fullname, string endpoint)
+        {
+            return agent.Post(endpoint, new
+            {
+                id = fullname
+            });
         }
     }
 }

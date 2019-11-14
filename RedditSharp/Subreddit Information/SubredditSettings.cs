@@ -2,8 +2,8 @@
 using Newtonsoft.Json.Linq;
 using RedditSharp.Extensions;
 using RedditSharp.Things;
-using System.Threading.Tasks;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace RedditSharp
 {
@@ -67,7 +67,7 @@ namespace RedditSharp
             UseDomainCss = data["domain_css"].ValueOrDefault<bool>();
             UseDomainSidebar = data["domain_sidebar"].ValueOrDefault<bool>();
             HeaderHoverText = data["header_hover_text"].ValueOrDefault<string>();
-            NSFW = data["over_18"].ValueOrDefault<bool>();
+            NSFW = data["over18"].ValueOrDefault<bool>();
             PublicDescription = WebUtility.HtmlDecode(data["public_description"].ValueOrDefault<string>() ?? string.Empty);
             SpamFilter = new SpamFilterSettings
             {
@@ -239,14 +239,32 @@ namespace RedditSharp
             }
             switch (SubredditType)
             {
-                case SubredditType.Public:
-                    type = "public";
+                case SubredditType.Archived:
+                    type = "archived";
+                    break;
+                case SubredditType.EmployeesOnly:
+                    type = "employees_only";
+                    break;
+                case SubredditType.GoldOnly:
+                    type = "gold_only";
+                    break;
+                case SubredditType.GoldRestricted:
+                    type = "gold_restricted";
                     break;
                 case SubredditType.Private:
                     type = "private";
                     break;
-                default:
+                case SubredditType.Public:
+                    type = "public";
+                    break;
+                case SubredditType.Restricted:
                     type = "restricted";
+                    break;
+                case SubredditType.User:
+                    type = "user";
+                    break;
+                default:
+                    type = "public";
                     break;
             }
             switch (WikiEditMode)
@@ -269,7 +287,7 @@ namespace RedditSharp
                 domain = Domain,
                 lang = Language,
                 link_type,
-                over_18 = NSFW,
+                over18 = NSFW,
                 public_description = PublicDescription,
                 show_media = ShowThumbnails,
                 sr = Subreddit.FullName,
@@ -278,9 +296,9 @@ namespace RedditSharp
                 wiki_edit_age = WikiEditAge,
                 wiki_edit_karma = WikiEditKarma,
                 wikimode,
-                spam_links = SpamFilter == null ? null : SpamFilter.LinkPostStrength.ToString().ToLowerInvariant(),
-                spam_selfposts = SpamFilter == null ? null : SpamFilter.SelfPostStrength.ToString().ToLowerInvariant(),
-                spam_comments = SpamFilter == null ? null : SpamFilter.CommentStrength.ToString().ToLowerInvariant(),
+                spam_links = SpamFilter?.LinkPostStrength.ToString().ToLowerInvariant(),
+                spam_selfposts = SpamFilter?.SelfPostStrength.ToString().ToLowerInvariant(),
+                spam_comments = SpamFilter?.CommentStrength.ToString().ToLowerInvariant(),
                 api_type = "json"
             }, "header-title", HeaderHoverText).ConfigureAwait(false);
         }
@@ -326,7 +344,7 @@ namespace RedditSharp
         /// </summary>
         Moderators,
         /// <summary>
-        /// Anyone who can submit to the subreddit may edit.
+        /// Anyone who can submit to the subreddit that meets the minimum thresholds may edit.
         /// </summary>
         All
     }
@@ -337,17 +355,46 @@ namespace RedditSharp
     public enum SubredditType
     {
         /// <summary>
+        /// Anyone can view, but only admins, moderators, and approved
+        /// submitters can submit posts. This has the same net effect as a
+        /// <see cref="Restricted"/> subreddit, however an archived subreddit
+        /// displays the UI somewhat differently.
+        /// </summary>
+        Archived,
+        /// <summary>
+        /// Only admins and employees can view or submit.
+        /// </summary>
+        EmployeesOnly,
+        /// <summary>
+        /// Only admins, moderators, gold members, gold charter members, and
+        /// approved submitters can view or submit.
+        /// </summary>
+        GoldOnly,
+        /// <summary>
+        /// Anyone can view, but only admins, moderators, gold members, and
+        /// approved submitters can submit.
+        /// </summary>
+        GoldRestricted,
+        /// <summary>
+        /// Only admins, moderators, and approved submiters can view 
+        /// and submit.
+        /// </summary>
+        Private,
+        /// <summary>
         /// Anyone can view and submit.
         /// </summary>
         Public,
         /// <summary>
-        /// Anyone can view, but only some are approved to submit links.
+        /// Anyone can view, but only admins, moderators, and approved
+        /// submitters can submit posts.
         /// </summary>
         Restricted,
         /// <summary>
-        /// Only approved members can view and submit.
+        /// Anyone can view, but only admins, moderators, and approved
+        /// submitters can submit posts. Most subreddit options are unable to
+        /// be changed. This is the subreddit type for the new user profiles.
         /// </summary>
-        Private
+        User,
     }
 
     /// <summary>

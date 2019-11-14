@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Microsoft.Extensions.Caching.Memory;
+using System;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.Extensions.Caching.Memory;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace RedditSharp
@@ -26,9 +26,8 @@ namespace RedditSharp
         public RateLimitMode DefaultRateLimitMode { get; set; }
 
         private List<RefreshTokenPoolEntry> poolEntries = new List<RefreshTokenPoolEntry>();
-        private MemoryCache activeAgentsCache = new MemoryCache(new MemoryCacheOptions() {
-            //CompactOnMemoryPressure = true
-        });
+        private MemoryCache activeAgentsCache = new MemoryCache(new MemoryCacheOptions());
+        private static readonly SemaphoreSlim cacheLock = new SemaphoreSlim(1, 1);
 
         private string ClientID;
         private string ClientSecret;
@@ -52,19 +51,36 @@ namespace RedditSharp
         /// </summary>
         /// <param name="username">Username of Reddit user attached to WebAgent</param>
         /// <returns></returns>
-        public IWebAgent GetWebAgent(string username)
+        public async Task<IWebAgent> GetWebAgentAsync(string username, int requestsPerMinuteWithOAuth = 60, int requestsPerMinuteWithoutOAuth = 30)
         {
             var poolEnt = poolEntries.SingleOrDefault(a => a.Username.ToLower() == username.ToLower());
+            return await GetWebAgentAsync(poolEnt, requestsPerMinuteWithOAuth, requestsPerMinuteWithoutOAuth);
+        }
+
+        private async Task<IWebAgent> GetWebAgentAsync(RefreshTokenPoolEntry poolEnt, int requestsPerMinuteWithOAuth, int requestsPerMinuteWithoutOAuth) {
             IWebAgent toReturn = null;
-            if (poolEnt != null)
-            {
-                toReturn = activeAgentsCache.GetOrCreate(poolEnt.WebAgentID, (i) =>
-                {
-                    i.RegisterPostEvictionCallback(UpdateAgentInfoOnCacheRemove);
-                    i.SlidingExpiration = new TimeSpan(0, SlidingExpirationMinutes, 0);
-                    var agent = new RefreshTokenWebAgent(poolEnt.RefreshToken, ClientID, ClientSecret, RedirectURI, poolEnt.UserAgentString, poolEnt.AccessToken, poolEnt.TokenExpires, new RateLimitManager(poolEnt.RateLimiterMode));
-                    return agent;
-                });
+            if(poolEnt != null) {
+                toReturn = activeAgentsCache.Get<IWebAgent>(poolEnt.WebAgentID);
+                if(toReturn == null) {
+                    await cacheLock.WaitAsync();
+                    RefreshTokenWebAgent agent = null;
+                    try {
+                        //check if someone else wrote it while waiting for lock.
+                        agent = activeAgentsCache.Get<RefreshTokenWebAgent>(poolEnt.WebAgentID);
+
+                        if(agent != null) return agent;
+                        var opts = new MemoryCacheEntryOptions() { AbsoluteExpiration = null, SlidingExpiration = new TimeSpan(0, SlidingExpirationMinutes, 0) };
+                        opts.RegisterPostEvictionCallback(UpdateAgentInfoOnCacheRemove);
+
+                        agent = new RefreshTokenWebAgent(poolEnt.RefreshToken, ClientID, ClientSecret, RedirectURI, poolEnt.UserAgentString, poolEnt.AccessToken, poolEnt.TokenExpires, new RateLimitManager(poolEnt.RateLimiterMode, requestsPerMinuteWithOAuth, requestsPerMinuteWithoutOAuth));
+
+                        activeAgentsCache.Set(poolEnt.WebAgentID, agent, opts);
+                        return agent;
+                    }
+                    finally {
+                        cacheLock.Release();
+                    }
+                }
             }
             return toReturn;
         }
@@ -75,7 +91,7 @@ namespace RedditSharp
         /// <param name="username">Username of Reddit user of <see cref="IWebAgent"/></param>
         /// <param name="createAsync">Async function to return a new <see cref="RefreshTokenPoolEntry"/>. Parameters (<see cref="string"/> username, <see cref="string"/> default useragent, <see cref="RateLimitMode"/> default rate limit mode)</param>
         /// <returns></returns>
-        public async Task<IWebAgent> GetOrCreateWebAgentAsync(string username, Func<string, string, RateLimitMode, Task<RefreshTokenPoolEntry>> createAsync)
+        public async Task<IWebAgent> GetOrCreateWebAgentAsync(string username, Func<string, string, RateLimitMode, Task<RefreshTokenPoolEntry>> createAsync, int requestsPerMinuteWithOAuth = 60, int requestsPerMinuteWithoutOAuth = 30)
         {
             if (string.IsNullOrWhiteSpace(username)) throw new ArgumentException("username cannot be null or empty");
 
@@ -83,17 +99,31 @@ namespace RedditSharp
 
             if (poolEnt == null)
             {
-                poolEnt = await createAsync(username, DefaultUserAgent, DefaultRateLimitMode);
-                poolEntries.Add(poolEnt);
+                await cacheLock.WaitAsync();
+                RefreshTokenWebAgent agent = null;
+                try {
+                    //check if someone else wrote it while waiting for lock.
+                    poolEnt = poolEntries.SingleOrDefault(a => a.Username.ToLower() == username.ToLower());
+
+                    if(poolEnt != null) return await GetWebAgentAsync(poolEnt, requestsPerMinuteWithOAuth, requestsPerMinuteWithoutOAuth);
+
+                    poolEnt = await createAsync(username, DefaultUserAgent, DefaultRateLimitMode);
+                    poolEntries.Add(poolEnt);
+                    var opts = new MemoryCacheEntryOptions() { AbsoluteExpiration = null, SlidingExpiration = new TimeSpan(0, SlidingExpirationMinutes, 0) };
+                    opts.RegisterPostEvictionCallback(UpdateAgentInfoOnCacheRemove);
+
+                    agent = new RefreshTokenWebAgent(poolEnt.RefreshToken, ClientID, ClientSecret, RedirectURI, poolEnt.UserAgentString, poolEnt.AccessToken, poolEnt.TokenExpires, new RateLimitManager(poolEnt.RateLimiterMode));
+
+                    activeAgentsCache.Set(poolEnt.WebAgentID, agent, opts);
+                    return agent;
+                }
+                finally {
+                    cacheLock.Release();
+                }
+                
             }
-            var toReturn = activeAgentsCache.GetOrCreate(poolEnt.WebAgentID, (i) =>
-            {
-                i.SlidingExpiration = new TimeSpan(0, SlidingExpirationMinutes, 0);
-                i.RegisterPostEvictionCallback(UpdateAgentInfoOnCacheRemove);
-                var agent = new RefreshTokenWebAgent(poolEnt.RefreshToken, ClientID, ClientSecret, RedirectURI, poolEnt.UserAgentString, poolEnt.AccessToken, poolEnt.TokenExpires, new RateLimitManager(DefaultRateLimitMode));
-                return agent;
-            });
-            return toReturn;
+           
+            return await GetWebAgentAsync(poolEnt, requestsPerMinuteWithOAuth, requestsPerMinuteWithoutOAuth);
         }
 
         /// <summary>

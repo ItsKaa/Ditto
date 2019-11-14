@@ -1,20 +1,20 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Authentication;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace RedditSharp.Things
 {
     /// <summary>
     /// A private message (or modmail).
     /// </summary>
-    public class PrivateMessage : Thing
+    public class PrivateMessage : ModeratableThing
     {
 
         #region Properties
+        private const string SetAsUnReadUrl = "/api/unread_message";
         private const string SetAsReadUrl = "/api/read_message";
         private const string CommentUrl = "/api/comment";
 
@@ -59,12 +59,6 @@ namespace RedditSharp.Things
         public string Destination { get; private set; }
 
         /// <summary>
-        /// Message author.
-        /// </summary>
-        [JsonProperty("author")]
-        public string Author { get; private set; }
-
-        /// <summary>
         /// Subreddit (for comments).
         /// </summary>
         [JsonProperty("subreddit")]
@@ -106,8 +100,7 @@ namespace RedditSharp.Things
         public PrivateMessage[] Replies { get; private set; }
 
         #endregion Properties
-
-#pragma warning disable 1591
+        /// <inheritdoc />
         public PrivateMessage(IWebAgent agent, JToken json) : base(agent, json)
         {
             var data = json["data"];
@@ -125,7 +118,6 @@ namespace RedditSharp.Things
                 }
             }
         }
-#pragma warning restore 1591
 
         /// <summary>
         /// Get the Original message.
@@ -139,7 +131,7 @@ namespace RedditSharp.Things
                     return null;
             }
             //TODO: Convert this into an async function
-            var firstPage = thread.First();
+            var firstPage = thread.FirstAsync().AsTask();
             firstPage.Wait();
             var firstMessage = firstPage.Result;
             if (firstMessage?.FullName == ParentID)
@@ -164,19 +156,7 @@ namespace RedditSharp.Things
         /// <inheritdoc />
         internal override JToken GetJsonData(JToken json) => json["data"];
 
-        /// <summary>
-        /// Mark the message read
-        /// </summary>
-        public async Task SetAsReadAsync()
-        {
-            await WebAgent.Post(SetAsReadUrl, new
-            {
-                id = FullName,
-                api_type = "json"
-            }).ConfigureAwait(false);
-        }
-
-        /// <summary>
+       /// <summary>
         /// Reply to the message
         /// </summary>
         /// <param name="message">Markdown text.</param>
@@ -186,6 +166,31 @@ namespace RedditSharp.Things
             {
                 text = message,
                 thing_id = FullName
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Mark this comment as read.
+        /// </summary>
+        public async Task SetAsReadAsync()
+        {
+            await SetReadStatusAsync(SetAsReadUrl);
+        }
+
+        /// <summary>
+        /// Mark this comment as unread.
+        /// </summary>
+        public async Task SetAsUnReadAsync()
+        {
+            await SetReadStatusAsync(SetAsUnReadUrl);
+        }
+
+        private async Task SetReadStatusAsync(string statusUrl)
+        {
+            await WebAgent.Post(statusUrl, new
+            {
+                id = FullName,
+                api_type = "json"
             }).ConfigureAwait(false);
         }
     }
