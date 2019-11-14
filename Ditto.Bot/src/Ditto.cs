@@ -1,18 +1,12 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Ditto.Bot.Data;
+using Ditto.Bot.Data.API;
 using Ditto.Bot.Data.Configuration;
-using Ditto.Bot.Database.Data;
-using Ditto.Bot.Database.Models;
-using Ditto.Bot.Modules.BDO;
 using Ditto.Bot.Services;
-using Ditto.Bot.Services.Data;
 using Ditto.Data;
 using Ditto.Data.Discord;
 using Ditto.Data.Exceptions;
-using Ditto.Extensions;
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,16 +20,20 @@ namespace Ditto.Bot
 
     public class Ditto
     {
+        public static BotType Type { get; private set; } = BotType.Bot;
+        public static bool Running { get; private set; } = false;
+        public static bool Reconnecting { get; private set; } = false;
+        public static bool Exiting { get; private set; } = false;
         public static ObjectLock<DiscordClientEx> Client { get; private set; }
         public static DatabaseHandler Database { get; private set; }
         public static CommandHandler CommandHandler { get; private set; }
-        public static BotType Type { get; private set; } = BotType.Bot;
-        public static bool Running { get; private set; } = false;
         public static CacheHandler Cache { get; private set; }
         public static GoogleService Google { get; private set; }
         public static Giphy Giphy { get; private set; }
         public static SettingsConfiguration Settings { get; private set; }
         public static ReactionHandler ReactionHandler { get; private set; }
+        
+        private static bool _firstStart = true;
 
         /// <summary>Fired when the bot connects for the first time.</summary>
         public static Func<Task> Connected;
@@ -43,15 +41,12 @@ namespace Ditto.Bot
         /// <summary>Fired when the bot shuts down.</summary>
         public static Func<Task> Exit;
 
-        private static bool _exiting = false;
-        private static bool _reconnecting = false;
-        private static bool _firstStart = true;
         
         static Ditto()
         {
             Program.Exit += async () =>
             {
-                _exiting = true;
+                Exiting = true;
                 Log.Warn("Shutting down...");
                 await Task.Delay(100);
                 
@@ -132,14 +127,12 @@ namespace Ditto.Bot
 
         private static async Task LoginAsync(DiscordClientEx client)
         {
-#pragma warning disable CS0618 // Type or member is obsolete
-            await client.LoginAsync((Type == BotType.Bot ? TokenType.Bot : TokenType.User), Settings.Credentials.BotToken, true).ConfigureAwait(false);
-#pragma warning restore CS0618 // Type or member is obsolete
+            await client.LoginAsync((Type == BotType.Bot ? TokenType.Bot : 0), Settings.Credentials.BotToken, true).ConfigureAwait(false);
         }
 
         public async Task ReconnectAsync()
         {
-            _reconnecting = true;
+            Reconnecting = true;
             await Task.Delay(1000);
             Log.Info("Reconnecting...");
             try
@@ -159,12 +152,23 @@ namespace Ditto.Bot
                 try { await Exit().ConfigureAwait(false); } catch(Exception ex) { Log.Warn("Error at Exit | {0}", ex); }
                 try { PlayingStatusHandler.Stop(); } catch (Exception ex) { Log.Warn("Error at PlayingStatusHandler.Stop | {0}", ex); }
                 try { PlayingStatusHandler.Clear(); } catch (Exception ex) { Log.Warn("Error at PlayingStatusHandler.Clear | {0}", ex); }
-                try { CommandHandler.Dispose(); } catch (Exception ex) { Log.Warn("Error at CommandHandler.Dispose | {0}", ex); }
-                try { ReactionHandler.Dispose(); } catch (Exception ex) { Log.Warn("Error at ReactionHandler.Dispose | {0}", ex); }
-                try { Client.Dispose(); } catch (Exception ex) { Log.Warn("Error at Client.Dispose | {0}", ex); }
+                try { CommandHandler?.Dispose(); } catch (Exception ex) { Log.Warn("Error at CommandHandler.Dispose | {0}", ex); }
+                try { ReactionHandler?.Dispose(); } catch (Exception ex) { Log.Warn("Error at ReactionHandler.Dispose | {0}", ex); }
+                try { Client?.Dispose(); } catch (Exception ex) { Log.Warn("Error at Client.Dispose | {0}", ex); }
                 Running = false;
 
-                await RunAsync().ConfigureAwait(false);
+                if(!await RunAsync().ConfigureAwait(false))
+                {
+                    throw new InvalidOperationException("Unable to connect");
+                }
+
+                await Task.Delay(10000).ConfigureAwait(false);
+                var currentUser = await Client.DoAsync(c => c.CurrentUser);
+                if (currentUser == null)
+                {
+                    throw new InvalidOperationException("Failed to validate discord connection.");
+                }
+
                 Log.Info("Bot has been reconnected to the server.");
             }
             catch (Exception ex)
@@ -174,11 +178,11 @@ namespace Ditto.Bot
                 //await ReconnectAsync().ConfigureAwait(false);
                 var _ = Task.Run(() => ReconnectAsync());
             }
-            _reconnecting = false;
+            Reconnecting = false;
         }
         
 
-        public async Task RunAsync()
+        public async Task<bool> RunAsync()
         {
             if (_firstStart)
             {
@@ -194,7 +198,7 @@ namespace Ditto.Bot
             }catch(Exception ex)
             {
                 Log.Fatal(ex);
-                return;
+                return false;
             }
             
             // Try to initialize the database
@@ -205,7 +209,7 @@ namespace Ditto.Bot
             catch(Exception ex)
             {
                 Log.Fatal("Unable to create a connection with the database, please check the file \"/data/settings.xml\"", ex);
-                return;
+                return false;
             }
             
             // Try to initialise the service 'Google'
@@ -215,7 +219,7 @@ namespace Ditto.Bot
             }
             catch (Exception ex)
             {
-                Log.Warn("Could not initialize Google {0}\n", ex.ToString());
+                Log.Error("Could not initialize Google {0}\n", ex.ToString());
             }
 
             // Try to initialise 'Giphy'
@@ -229,6 +233,7 @@ namespace Ditto.Bot
             }
 
             // Create our discord client
+            Client?.Dispose();
             Client = new ObjectLock<DiscordClientEx>(new DiscordClientEx(new DiscordSocketConfig()
             {
                 MessageCacheSize = Settings.AmountOfCachedMessages,
@@ -241,7 +246,11 @@ namespace Ditto.Bot
             }), 1, 1);
             
             // Various services
-            (Cache = new CacheHandler()).Setup(TimeSpan.FromSeconds(Settings.CacheTime));
+            if (Cache == null)
+            {
+                (Cache = new CacheHandler()).Setup(TimeSpan.FromSeconds(Settings.CacheTime));
+            }
+            CommandHandler?.Dispose();
             await (CommandHandler = new CommandHandler(Client)).SetupAsync().ConfigureAwait(false);
 
 
@@ -250,6 +259,7 @@ namespace Ditto.Bot
                 {
                     // Setup services
                     await CommandHandler.SetupAsync().ConfigureAwait(false);
+                    ReactionHandler?.Dispose();
                     await (ReactionHandler = new ReactionHandler()).SetupAsync(Client).ConfigureAwait(false);
                     PlayingStatusHandler.Setup(TimeSpan.FromMinutes(1));
                 }
@@ -286,14 +296,14 @@ namespace Ditto.Bot
             await Client.DoAsync((client)
                 => client.Disconnected += (e) =>
                 {
-                    if (_reconnecting)
+                    if (Reconnecting)
                     {
                         //_reconnecting = false;
                     }
                     else
                     {
-                        Log.Warn("Bot has been disconnected. {0}", (object)(_exiting ? null : $"| {e}"));
-                        if (!_exiting && Settings.AutoReconnect && !_reconnecting)
+                        Log.Warn("Bot has been disconnected. {0}", (object)(Exiting ? null : $"| {e}"));
+                        if (!Exiting && Settings.AutoReconnect && !Reconnecting)
                         {
                             var _ = Task.Run(() => ReconnectAsync());
                         }
@@ -306,82 +316,14 @@ namespace Ditto.Bot
                 => client.LoggedOut += () =>
                 {
                     Log.Warn("Bot has logged out.");
-                    if (!_exiting && Settings.AutoReconnect && !_reconnecting)
+                    if (!Exiting && Settings.AutoReconnect && !Reconnecting)
                     {
                         var _ = Task.Run(() => ReconnectAsync());
                     }
                     return Task.CompletedTask;
                 }
             ).ConfigureAwait(false);
-            
 
-            // Playing status Handler, Black Desert Online
-            PlayingStatusHandler.Register(PriorityLevel.Normal, (client) =>
-            {
-                var serverStatus = BDO.ServerStatus;
-                if (BDO.ServerStatus.Status == BdoServerStatus.Online)
-                {
-                    BDO.Clock.Update();
-                    return BDO.Clock.UntilNightOrDayString;
-                }
-                else if (serverStatus.Status == BdoServerStatus.Maintenance && serverStatus.MaintenanceTime.HasValue)
-                {
-                    var difference = serverStatus.MaintenanceTime.Value - DateTime.Now;
-                    if (serverStatus.MaintenanceTime.Value < DateTime.Now || difference.TotalSeconds <= 60)
-                    {
-                        return "Server up soon™";
-                    }
-                    return "Server up in " + difference.Get(TimeUnit.FromMinutes).Humanize(true, "");
-                }
-                return null;
-            });
-
-            BDO.ServerStatusChanged += async (@new, old) =>
-            {
-                bool found = false;
-                bool maintenanceStart = false;
-
-
-                if (old.Status == BdoServerStatus.Online && @new.Status == BdoServerStatus.Maintenance)
-                {
-                    // Maintenance started
-                    found = true;
-                    maintenanceStart = true;
-                }
-                else if(old.Status == BdoServerStatus.Maintenance && @new.Status == BdoServerStatus.Online)
-                {
-                    // Maintenance ended
-                    found = true;
-                    maintenanceStart = false;
-                }
-                
-
-                // >bdo link "maintenance #general"
-                if (found)
-                {
-                    var links = Enumerable.Empty<Link>();
-                    await Database.ReadAsync((uow) =>
-                    {
-                        links = uow.Links.GetAllWithLinks(i => i.Type == LinkType.BDO_Maintenance);
-                    }).ConfigureAwait(false);
-                    
-                    foreach (var link in links)
-                    {
-                        if (link.Type == LinkType.BDO_Maintenance)
-                        {
-                            if (link.Channel is ITextChannel textChannel)
-                            {
-                                if (maintenanceStart)
-                                {
-                                    //textChannel.EmbedAsync(new EmbedBuilder())
-                                }
-                            }
-                        }
-                    }
-                }
-            };
-
-            
             var autoReconnect = Settings.AutoReconnect;
             Settings.AutoReconnect = false;
             try
@@ -392,10 +334,11 @@ namespace Ditto.Bot
             catch(Exception ex)
             {
                 Log.Fatal("Failed to login, please check your internet connection and bot token.", ex);
-                return;
+                return false;
             }
             await Client.DoAsync((c) => c.StartAsync()).ConfigureAwait(false);
             _firstStart = false;
+            return true;
         }
         
 
