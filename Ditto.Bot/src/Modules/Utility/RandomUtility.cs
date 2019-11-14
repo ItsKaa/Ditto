@@ -175,10 +175,10 @@ namespace Ditto.Bot.Modules.Utility
         }
 
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        public Task Joke()
+        public async Task Joke()
         {
-            // http://webknox.com/api#!/jokes/randomJoke_GET
-            return Task.CompletedTask;
+            var joke = new DadJokeApi().Joke();
+            await Context.Channel.SendMessageAsync($"{Context.User.Mention} {joke}").ConfigureAwait(false);
         }
 
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
