@@ -132,10 +132,17 @@ namespace Ditto.Bot.Modules.Utility
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
-        public Task Cat([Multiword] string query = null)
+        public async Task Cat([Multiword] string query = null)
         {
-            // use http://thecatapi.com/docs.html#get
-            return Task.CompletedTask;
+            var url = new TheCatApi().Random();
+            if (url?.IsWellFormedOriginalString() == true)
+            {
+                await Context.Channel.SendMessageAsync($"{Context.User.Mention} {url}").ConfigureAwait(false);
+            }
+            else
+            {
+                await Context.EmbedAsync("An error occured while calling this method.", ContextMessageOption.ReplyWithError);
+            }
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
