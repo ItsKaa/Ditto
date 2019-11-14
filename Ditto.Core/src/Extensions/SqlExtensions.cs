@@ -12,22 +12,18 @@ namespace Ditto.Extensions
             foreach (IMutableEntityType entity in @this.Model.GetEntityTypes())
             {
                 // table name
-                var relationalTable = entity.Relational();
-                //var tableName = System.Threading.Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(relationalTable.TableName);
-                //var tableName = relationalTable.TableName.ToTileCaseExtended();
-                var tableName = Regex.Replace(relationalTable.TableName, @"((?<=\p{Ll})\p{Lu})|((?!\A)\p{Lu}(?>\p{Ll}))", " $0", RegexOptions.Compiled).ToTitleCase().Replace(" ", "");
-                relationalTable.TableName = Globals.RegularExpression.SqlUnderscore.Replace(tableName, @"_$1$2").ToLower();
+                var tableName = Regex.Replace(entity.GetTableName(), @"((?<=\p{Ll})\p{Lu})|((?!\A)\p{Lu}(?>\p{Ll}))", " $0", RegexOptions.Compiled).ToTitleCase().Replace(" ", "");
+                entity.SetTableName(Globals.RegularExpression.SqlUnderscore.Replace(tableName, @"_$1$2").ToLower());
 
                 // properties
                 var entityProperties = entity.GetProperties();
                 foreach (var property in entityProperties)
                 {
-                    var relationalProperty = property.Relational();
-                    //relationalProperty.ColumnName = Globals.RegularExpression.SqlUnderscore.Replace(relationalProperty.ColumnName, @"_$1$2").ToLower();
-                    var propertyName = Regex.Replace(relationalProperty.ColumnName, @"((?<=\p{Ll})\p{Lu})|((?!\A)\p{Lu}(?>\p{Ll}))", " $0", RegexOptions.Compiled).ToTitleCase().Replace(" ", "");
-                    relationalProperty.ColumnName = Globals.RegularExpression.SqlUnderscore.Replace(propertyName, @"_$1$2").ToLower();
+                    var propertyName = Regex.Replace(property.GetColumnName(), @"((?<=\p{Ll})\p{Lu})|((?!\A)\p{Lu}(?>\p{Ll}))", " $0", RegexOptions.Compiled).ToTitleCase().Replace(" ", "");
+                    property.SetColumnName(Globals.RegularExpression.SqlUnderscore.Replace(propertyName, @"_$1$2").ToLower());
                 }
             }
+
         }
         public static void SetIdentities(this ModelBuilder @this)
         {
@@ -36,8 +32,9 @@ namespace Ditto.Extensions
                 var properties = entity.GetProperties();
                 foreach (var property in properties)
                 {
-                    var relationalProperty = property.Relational();
-                    if(property.IsPrimaryKey() && property.ClrType == typeof(int) && relationalProperty.ColumnName == "id")
+                    if (property.IsPrimaryKey()
+                        && property.ClrType == typeof(int)
+                        && string.Equals(property.GetColumnName(), "id", System.StringComparison.CurrentCultureIgnoreCase))
                     {
                         var exist = entity.FindIndex(property);
                         if (exist == null)

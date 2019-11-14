@@ -7,7 +7,7 @@
   
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
     <DisableImplicitAssetTargetFallback>true</DisableImplicitAssetTargetFallback>
     <!--<PackageTargetFallback>$(PackageTargetFallback);dnxcore50;portable-net45+win8+wpa81</PackageTargetFallback>-->
     <!--<PackageTargetFallback>dnxcore50;portable-net45+win8+wpa81</PackageTargetFallback>-->
@@ -52,11 +52,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.32.0.896" />
-    <PackageReference Include="Google.Apis.Urlshortener.v1" Version="1.32.0.138" />
-    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.32.0.1079" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="2.0.1" />
-    <PackageReference Include="TweetinviAPI" Version="2.1.0" />
+    <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.42.0.1369" />
+    <PackageReference Include="Google.Apis.Urlshortener.v1" Version="1.41.1.138" />
+    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.42.0.1758" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="3.1.0-preview2.19525.5" />
+    <PackageReference Include="MoonSharp" Version="2.0.0" />
+    <PackageReference Include="System.Linq" Version="4.3.0" />
+    <PackageReference Include="System.Security.Principal.Windows" Version="4.6.0" />
+    <PackageReference Include="TweetinviAPI" Version="4.0.2" />
     <!--<PackageReference Include="libvideo" Version="1.0.1" />-->
   </ItemGroup>
 

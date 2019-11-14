@@ -39,7 +39,8 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     .Where(i => i.CreatedUTC > link.Date.ToUniversalTime())
                     .Where(i => !i.Url.LocalPath.EndsWith(".py")) // avoid virusses
                     .Reverse()
-                    .ToList();
+                    .ToListAsync();
+
                 for (int i = 0; i < posts.Count; i++)
                 {
                     var post = posts[i];
