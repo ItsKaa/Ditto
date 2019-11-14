@@ -12,16 +12,22 @@ namespace Ditto.Attributes
         public CommandAccessLevel AccessLevel { get; private set; }
         public bool RequireBotTag { get; set; } = false;
         public bool AcceptBotTag { get; set; } = true;
-
+        public bool DeleteUserMessage { get; set; } = false;
+        public TimeSpan DeleteUserMessageTimer { get; set; } = TimeSpan.Zero;
+        
         public DiscordCommandAttribute(CommandSourceLevel sourceLevel = CommandSourceLevel.All,
             CommandAccessLevel accessLevel = CommandAccessLevel.Local,
             bool acceptBotTag = true,
-            bool requireBotTag = false)
+            bool requireBotTag = false,
+            bool deleteUserMessage = false,
+            double deleteUserMessageAfterSeconds = 0.0)
         {
             SourceLevel = sourceLevel;
             AccessLevel = accessLevel;
             RequireBotTag = requireBotTag;
             AcceptBotTag = acceptBotTag;
+            DeleteUserMessage = deleteUserMessage;
+            DeleteUserMessageTimer = TimeSpan.FromSeconds(deleteUserMessageAfterSeconds); //new TimeSpan(0,0,0,0, deleteUserMessageAfterMs);
         }
         
         public DiscordCommandAttribute WithSourceLevel(CommandSourceLevel sourceLevel)
@@ -40,6 +46,14 @@ namespace Ditto.Attributes
             AcceptBotTag = accept;
             return this;
         }
+        public DiscordCommandAttribute WithDeleteUserMessage(bool delete = true, TimeSpan? timer = null)
+        {
+            //SourceLevel = sourceLevel;
+            DeleteUserMessage = delete;
+            DeleteUserMessageTimer = timer ?? TimeSpan.Zero;
+            return this;
+        }
+        public DiscordCommandAttribute WithDeleteUserMessage(TimeSpan timer) => WithDeleteUserMessage(true, timer);
 
         public Task<ConditionResult> VerifyAsync(ICommandContextEx context)
         {

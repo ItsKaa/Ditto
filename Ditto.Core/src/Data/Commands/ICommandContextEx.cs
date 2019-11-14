@@ -24,10 +24,10 @@ namespace Ditto.Data.Commands
         //string Mention { get; }
         bool IsBotUserTagged { get; }
 
-        Task<IUserMessage> EmbedAsync(string message, ContextMessageOption options = ContextMessageOption.None);
-        Task<IUserMessage> EmbedAsync(string message, EmbedBuilder embedBuilder, ContextMessageOption options = ContextMessageOption.None);
+        Task<IUserMessage> EmbedAsync(string message, ContextMessageOption options = ContextMessageOption.None, RetryMode retyMode = RetryMode.AlwaysRetry);
+        Task<IUserMessage> EmbedAsync(string message, EmbedBuilder embedBuilder, ContextMessageOption options = ContextMessageOption.None, RetryMode retyMode = RetryMode.AlwaysRetry);
         Task<IUserMessage> EmbedAsync(string format, params object[] args);
         Task<IUserMessage> EmbedAsync(ContextMessageOption options, string format, params object[] args);
-        Task<IUserMessage> EmbedAsync(EmbedBuilder embedBuilder, ContextMessageOption options = ContextMessageOption.None);
+        Task<IUserMessage> EmbedAsync(EmbedBuilder embedBuilder, ContextMessageOption options = ContextMessageOption.None, RetryMode retyMode = RetryMode.AlwaysRetry);
     }
 }
