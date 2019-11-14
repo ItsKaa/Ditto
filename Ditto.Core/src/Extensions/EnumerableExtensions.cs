@@ -186,6 +186,15 @@ namespace Ditto.Extensions
         {
             return source.Where(selector).Count();
         }
+
+
+        public static IEnumerable<IEnumerable<TSource>> ChunkBy<TSource>(this IEnumerable<TSource> source, int chunkSize)
+        {
+            return source
+                .Select((x, i) => new { Index = i, Value = x })
+                .GroupBy(x => x.Index / chunkSize)
+                .Select(x => x.Select(v => v.Value));
+        }
     }
 
 
