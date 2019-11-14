@@ -1,6 +1,7 @@
 ﻿using Ditto.Data;
 using System;
 using System.Linq;
+using System.Text;
 
 namespace Ditto.Extensions
 {
@@ -49,6 +50,134 @@ namespace Ditto.Extensions
             }
             return result;
         }
+
+        public static string ToShortString(this TimeSpan timeSpan, TimeUnit units = TimeUnit.Hours | TimeUnit.Minutes | TimeUnit.Seconds)
+        {
+            var stringBuilder = new StringBuilder();
+
+            if(units.HasFlag(TimeUnit.Days))
+            {
+                if (stringBuilder.Length > 0)
+                {
+                    stringBuilder.Append(":");
+                }
+                var unit = timeSpan.Days;
+                if (unit > 99)
+                {
+                    stringBuilder.Append(unit.ToString("00##"));
+                }
+                else
+                {
+                    stringBuilder.Append($"{unit:00}");
+                }
+            }
+            if (units.HasFlag(TimeUnit.Hours))
+            {
+                if (stringBuilder.Length > 0)
+                {
+                    stringBuilder.Append(":");
+                }
+                int unit = timeSpan.Hours;
+                if (!units.HasFlag(TimeUnit.Days))
+                {
+                    unit += (timeSpan.Days * 24);
+                }
+                if (unit > 99)
+                {
+                    stringBuilder.Append(unit.ToString("00##"));
+                }
+                else
+                {
+                    stringBuilder.Append($"{unit:00}");
+                }
+            }
+            if (units.HasFlag(TimeUnit.Minutes))
+            {
+                if (stringBuilder.Length > 0)
+                {
+                    stringBuilder.Append(":");
+                }
+                int unit = timeSpan.Minutes;
+                if(!units.HasFlag(TimeUnit.Hours))
+                {
+                    unit += timeSpan.Hours * 60;
+                    if(!units.HasFlag(TimeUnit.Days))
+                    {
+                        unit += timeSpan.Days * 24 * 60;
+                    }
+                }
+                if (unit > 99)
+                {
+                    stringBuilder.Append(unit.ToString("00##"));
+                }
+                else
+                {
+                    stringBuilder.Append($"{unit:00}");
+                }
+            }
+            if (units.HasFlag(TimeUnit.Seconds))
+            {
+                if (stringBuilder.Length > 0)
+                {
+                    stringBuilder.Append(":");
+                }
+                int unit = timeSpan.Seconds;
+                if (!units.HasFlag(TimeUnit.Minutes))
+                {
+                    unit += timeSpan.Minutes * 60;
+                    if (!units.HasFlag(TimeUnit.Hours))
+                    {
+                        unit += timeSpan.Hours * 3600;
+                        if(!units.HasFlag(TimeUnit.Days))
+                        {
+                            unit += timeSpan.Days * 24 * 3600;
+                        }
+                    }
+                }
+                if (unit > 99)
+                {
+                    stringBuilder.Append(unit.ToString("00##"));
+                }
+                else
+                {
+                    stringBuilder.Append($"{unit:00}");
+                }
+            }
+            if (units.HasFlag(TimeUnit.Milliseconds))
+            {
+                if (stringBuilder.Length > 0)
+                {
+                    stringBuilder.Append(":");
+                }
+                int unit = timeSpan.Milliseconds;
+                if (!units.HasFlag(TimeUnit.Seconds))
+                {
+                    unit += timeSpan.Seconds * 1000;
+                    if (!units.HasFlag(TimeUnit.Minutes))
+                    {
+                        unit += timeSpan.Minutes * 60 * 1000;
+                        if (!units.HasFlag(TimeUnit.Hours))
+                        {
+                            unit += timeSpan.Hours * 3600 * 1000;
+                            if (!units.HasFlag(TimeUnit.Days))
+                            {
+                                unit += timeSpan.Days * 24 * 3600 * 1000;
+                            }
+                        }
+                    }
+                }
+                if (unit > 99)
+                {
+                    stringBuilder.Append(unit.ToString("00##"));
+                }
+                else
+                {
+                    stringBuilder.Append($"{unit:00}");
+                }
+            }
+            return stringBuilder.ToString();
+        }
+
         
         public static TimeSpan Get(this TimeSpan time, TimeUnit unit)
         {
