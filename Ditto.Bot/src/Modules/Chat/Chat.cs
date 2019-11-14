@@ -1,8 +1,10 @@
-﻿using Discord.Commands;
+﻿using Discord;
 using Ditto.Attributes;
+using Ditto.Bot.Data.API.Rest;
 using Ditto.Data.Chatting;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
+using Ditto.Extensions;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -10,12 +12,11 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Chat
 {
-    [Alias("chat")]
-    class ChatModule : DiscordModule
+    public class Chat : DiscordModule
     {
         public static ConcurrentDictionary<ulong, Lazy<CleverbotSession>> CleverbotSessions { get; private set; }
 
-        static ChatModule()
+        static Chat()
         {
             Ditto.Connected += async () =>
             {
@@ -56,6 +57,7 @@ namespace Ditto.Bot.Modules.Chat
                     if (cleverbot.Value.Valid)
                     {
                         await Context.Channel.TriggerTypingAsync().ConfigureAwait(false);
+                        var tags = message.ParseDiscordTags();
                         var response = await cleverbot.Value.GetResponseAsync(message).ConfigureAwait(false);
                         await Context.Channel.SendMessageAsync(response.Response).ConfigureAwait(false);
                     }

@@ -1,6 +1,5 @@
 ﻿using Discord.Commands;
 using Ditto.Attributes;
-using Ditto.Bot.Modules.Chat;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using System.Threading.Tasks;
@@ -38,9 +37,10 @@ namespace Ditto.Bot.Modules.Help
             }
             else
             {
+                // Chat bot
                 if(Context.IsBotUserTagged)
                 {
-                    await Module<ChatModule>().Talk(value).ConfigureAwait(false);
+                    await Module<Chat.Chat>().Talk(value).ConfigureAwait(false);
                 }
             }
         }
