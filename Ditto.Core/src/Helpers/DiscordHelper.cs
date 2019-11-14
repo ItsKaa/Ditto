@@ -4,8 +4,6 @@ using Ditto.Data.Commands.Readers;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Ditto.Helpers
@@ -65,16 +63,19 @@ namespace Ditto.Helpers
             entityTypeReaders.Add(new Tuple<Type, Type>(typeof(IMessage), Type.GetType("Discord.Commands.MessageTypeReader`1, " + DiscordCommandsAssemblyName)));
             entityTypeReaders.Add(new Tuple<Type, Type>(typeof(IChannel), typeof(ChannelTypeReaderEx<>))); //ChannelTypeReader<>
             entityTypeReaders.Add(new Tuple<Type, Type>(typeof(IRole), Type.GetType("Discord.Commands.RoleTypeReader`1, " + DiscordCommandsAssemblyName)));
-            entityTypeReaders.Add(new Tuple<Type, Type>(typeof(IUser), Type.GetType("Discord.Commands.UserTypeReader`1, " + DiscordCommandsAssemblyName)));
+            //entityTypeReaders.Add(new Tuple<Type, Type>(typeof(IUser), Type.GetType("Discord.Commands.UserTypeReader`1, " + DiscordCommandsAssemblyName)));
+            entityTypeReaders.Add(new Tuple<Type, Type>(typeof(IUser), typeof(UserTypeReaderEx<>)));
+            entityTypeReaders.Add(new Tuple<Type, Type>(typeof(IEmote), typeof(EmoteTypeReader<>)));
+            entityTypeReaders.Add(new Tuple<Type, Type>(typeof(IEnumerable<IEmote>), typeof(EmoteTypeReaderList<>)));
 
             return entityTypeReaders.ToImmutable();
         }
 
         public static TypeReader GetTypeReader(Type type)
         {
-            var method = Type.GetType("Discord.Commands.EnumTypeReader, " + DiscordCommandsAssemblyName).GetMethod("GetReader", BindingFlags.Static | BindingFlags.NonPublic);
-            var typeReader = (TypeReader)method.Invoke(null, new object[] { type });
             //return EnumTypeReader.GetReader(type);
+            var method = Type.GetType("Discord.Commands.EnumTypeReader, " + DiscordCommandsAssemblyName).GetMethod("GetReader", BindingFlags.Static | BindingFlags.Public);
+            var typeReader = (TypeReader)method.Invoke(null, new object[] { type });
             return typeReader;
         }
 
