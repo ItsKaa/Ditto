@@ -43,9 +43,13 @@ namespace Ditto.Bot.Modules.Utility.Linking
                             listUrls.Add(item.Guid ?? item.Link);
                             retryCount = 0;
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            if (!await LinkUtility.SendRetryLinkAsync(link.Type, retryCount++))
+                            if (!await LinkUtility.SendRetryLinkAsync(
+                                link.Type,
+                                retryCount++,
+                                ex is Discord.Net.RateLimitedException ? null : ex
+                                ))
                             {
                                 break;
                             }

@@ -119,11 +119,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
             return Enumerable.Empty<LinkItem>();
         }
 
-        public static async Task<bool> SendRetryLinkAsync(LinkType linkType, int repostCount)
+        public static async Task<bool> SendRetryLinkAsync(LinkType linkType, int repostCount, Exception ex = null)
         {
             if (Ditto.Running && await Ditto.IsClientConnectedAsync())
             {
-                Log.Warn($"Attempting to repost link ({linkType.ToString()})... {repostCount}");
+                Log.Warn($"Attempting to repost link ({linkType.ToString()})... {repostCount}{(ex == null ? string.Empty : $" | {ex}")}");
                 await Task.Delay(1000).ConfigureAwait(false);
                 return true;
             }
