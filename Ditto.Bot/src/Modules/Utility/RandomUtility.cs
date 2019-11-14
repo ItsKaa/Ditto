@@ -49,7 +49,7 @@ namespace Ditto.Bot.Modules.Utility
         
         public async Task NumbersApi(NumbersApi.Result result)
         {
-            if(result == null)
+            if (result == null)
             {
                 // error
                 await Context.EmbedAsync("Please enter a valid number", ContextMessageOption.ReplyWithError).ConfigureAwait(false);

@@ -29,7 +29,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
         static LinkUtility()
         {
-            // On client connected
+            //On client connected
             Ditto.Connected += () =>
             {
                 _links?.Clear();
@@ -45,14 +45,14 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
                 var _ = Task.Run(async () =>
                 {
-                    while(Ditto.Running)
+                    while (Ditto.Running)
                     {
                         var databaseModified = false;
                         var tasks = new List<Task>();
                         var links = _links.Select(i => i.Value).ToList();
                         foreach (var link in links)
                         {
-                            if(!(Ditto.Running  && await Ditto.IsClientConnectedAsync()))
+                            if (!(Ditto.Running && await Ditto.IsClientConnectedAsync()))
                             {
                                 break;
                             }
@@ -162,7 +162,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
         }
 
         public static Task<bool> TryAddLinkAsync(LinkType linkType, ITextChannel textChannel, string value, DateTime? date = null)
-            => TryAddLinkAsync(linkType, textChannel, value, ((left, right) => left.Equals(right)), date);
+            => TryAddLinkAsync(linkType, textChannel, value, ((left, right) => Equals(left, right)), date);
         
         public static bool LinkItemExists(Link link, string value, StringComparison stringComparison = StringComparison.CurrentCulture)
             => link.Links.Exists(item => item.Identity.Equals(value, stringComparison));

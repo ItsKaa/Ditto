@@ -97,7 +97,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 ?? "";
             var linkImage = linkMeta.FirstOrDefault(e => e.Name.Equals("og:image", StringComparison.CurrentCultureIgnoreCase))?.Value;
 
-            var date = post.Created;
+            var date = post.CreatedUTC;
             return new EmbedBuilder()
                 .WithAuthor(new EmbedAuthorBuilder()
                     .WithName(WebUtility.HtmlDecode(title))

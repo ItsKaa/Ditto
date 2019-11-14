@@ -26,10 +26,10 @@ namespace Ditto.Data
 
         public void Dispose()
         {
-            SemaphoreSlim.Dispose();
+            try { SemaphoreSlim?.Dispose(); } catch { }
             if (Value is IDisposable disposableValue)
             {
-                disposableValue.Dispose();
+                try { disposableValue?.Dispose(); } catch { }
             }
             //Value = null;
         }

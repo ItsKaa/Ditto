@@ -28,7 +28,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     .Where(item => item.PublishDate > link.Date)
                     .Reverse();
 
-                if (items.Count() > 0)
+               if (items.Count() > 0)
                 {
                     var retryCount = 0;
                     for (int i = 0; i < items.Count(); i++)

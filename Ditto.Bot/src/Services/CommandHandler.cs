@@ -48,16 +48,20 @@ namespace Ditto.Bot.Services
         
         public void Dispose()
         {
-            if (_discordClient != null)
+            try
             {
-                _discordClient.Do((client) =>
+                _discordClient?.Do((client) =>
                 {
-                    client.MessageReceived -= MessageReceivedHandler;
-                    client.JoinedGuild -= JoinedGuildHandler;
-                    client.LeftGuild -= LeftGuildHandler;
+                    if (client != null)
+                    {
+                        client.MessageReceived -= MessageReceivedHandler;
+                        client.JoinedGuild -= JoinedGuildHandler;
+                        client.LeftGuild -= LeftGuildHandler;
+                    }
                 });
             }
-            _modules.Clear();
+            catch { }
+            try { _modules?.Clear(); } catch { }
         }
 
         public async Task StartAsync()
@@ -348,6 +352,7 @@ namespace Ditto.Bot.Services
                                 // Select one
                                 var resultId = await context.SendOptionDialogueAsync("Please select one of the following items by adding a reaction with the number of your choice.",
                                     options,
+                                    true, null, null,
                                     30000
                                 ).ConfigureAwait(false);
                                 if (resultId < 0)

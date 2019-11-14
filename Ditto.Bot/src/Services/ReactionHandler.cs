@@ -31,20 +31,20 @@ namespace Ditto.Bot.Services
         }
         public void Uninstall()
         {
-            if (_discordClient != null)
+            _discordClient?.Do((client) =>
             {
-                _discordClient.Do((client) =>
+                if (client != null)
                 {
                     client.ReactionAdded -= DiscordClient_ReactionAdded;
                     client.ReactionRemoved -= DiscordClient_ReactionRemoved;
                     client.ReactionsCleared -= DiscordClient_ReactionsCleared;
-                });
-            }
+                }
+            });
             _messageData.Clear();
         }
         public void Dispose()
         {
-            Uninstall();
+            try { Uninstall(); } catch { }
         }
 
         public bool Add(IUserMessage userMessage, Action<SocketReaction> onReactionAdded, Action<SocketReaction> onReactionRemoved = null, Action onReactionCleared = null)

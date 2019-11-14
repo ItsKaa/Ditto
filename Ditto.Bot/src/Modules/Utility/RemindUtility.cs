@@ -102,7 +102,7 @@ namespace Ditto.Bot.Modules.Utility
                                             {
                                                 // target everyone in a specific voice channel
                                                 dmChannels.AddRange(
-                                                        (await (reminder.Channel as IVoiceChannel).GetUsersAsync().ToList()).SelectMany(e => e)
+                                                        (await (reminder.Channel as IVoiceChannel).GetUsersAsync().ToListAsync()).SelectMany(e => e)
                                                         .Where(u => !u.IsBot)
                                                         .Select(async u => await u.GetOrCreateDMChannelAsync()).Select(t => t.Result)
                                                     );
