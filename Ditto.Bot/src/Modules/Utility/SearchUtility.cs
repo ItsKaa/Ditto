@@ -6,9 +6,7 @@ using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
 using Ditto.Helpers;
-using Newtonsoft.Json.Linq;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Utility
@@ -40,19 +38,28 @@ namespace Ditto.Bot.Modules.Utility
         }
         
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
-        public Task Define([Multiword] string query)
+        public async Task Define([Multiword] string query)
         {
             var result = UrbanDictionary.Define(query);
             if(result != null)
             {
                 var definition = result.Definitions.FirstOrDefault();
-                Context.EmbedAsync(new EmbedBuilder()
-                    .WithTitle($":bookmark_tabs: {definition.Word.ToTitleCase()}")
-                    .WithDescription(definition.Value)
-                    .WithUrl(definition.Link)
-                );
+                await Context.SendPagedMessageAsync(
+                    new EmbedBuilder()
+                     .WithTitle($":bookmark_tabs: {definition.Word.ToTitleCase()}")
+                     .WithDescription(definition.Value)
+                     .WithUrl(definition.Link),
+                    (message, page) =>
+                    {
+                        definition = result.Definitions.ElementAt(page - 1);
+                        return new EmbedBuilder()
+                         .WithTitle($":bookmark_tabs: {definition.Word.ToTitleCase()}")
+                         .WithDescription(definition.Value)
+                         .WithUrl(definition.Link);
+                    },
+                    result.Definitions.Count()
+                ).ConfigureAwait(false);
             }
-            return Task.CompletedTask;
         }
     }
 }
