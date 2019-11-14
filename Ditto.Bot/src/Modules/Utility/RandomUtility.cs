@@ -14,6 +14,14 @@ namespace Ditto.Bot.Modules.Utility
 {
     public class RandomUtility : DiscordModule<Utility>
     {
+        public enum QuoteType
+        {
+            Default,
+            Trump,
+            Random = Default,
+            Any = Random,
+        }
+
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
         public async Task Flip()
         {
@@ -146,13 +154,6 @@ namespace Ditto.Bot.Modules.Utility
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
-        public Task TrumpQuote()
-        {
-            // use https://whatdoestrumpthink.com/api-docs/index.html#introduction
-            return Task.CompletedTask;
-        }
-
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
         public Task RandomUser()
         {
             // https://randomuser.me
@@ -182,11 +183,39 @@ namespace Ditto.Bot.Modules.Utility
         }
 
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        public Task Quote()
+        public async Task Quote(QuoteType type = QuoteType.Random, [Multiword] string text = "")
         {
-            // https://api.forismatic.com/api/1.0/?method=getQuote&lang=en&format=json
-            return Task.CompletedTask;
+            if (type == QuoteType.Default)
+            {
+                var quote = new QuoteApi().Quote();
+                if (quote != null)
+                {
+                    await Context.EmbedAsync(new EmbedBuilder()
+                        .WithDescription(quote.QuoteText)
+                        .WithFooter(quote.QuoteAuthor.Length > 0 ? $"by {quote.QuoteAuthor}" : "")
+                    ).ConfigureAwait(false);
+                }
+                else
+                {
+                    await Context.EmbedAsync("An error occured while calling this method.", ContextMessageOption.ReplyWithError);
+                }
+            }
+            else if (type == QuoteType.Trump)
+            {
+                var quote = new TrumpQuoteApi().Quote(text?.Length > 0 ? text : null);
+                await Context.EmbedAsync(new EmbedBuilder()
+                        .WithDescription(quote)
+                        .WithFooter(new EmbedFooterBuilder()
+                        {
+                            Text = @"by Donald Trump"
+                        })
+                ).ConfigureAwait(false);
+            }
         }
+
+        [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
+        public Task TrumpQuote([Multiword] string text = "")
+           => Quote(QuoteType.Trump, text);
 
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
         public async Task Fortune()
