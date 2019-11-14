@@ -153,25 +153,10 @@ namespace Ditto.Bot.Modules.Utility
             }
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
-        public Task RandomUser()
-        {
-            // https://randomuser.me
-            return Task.CompletedTask;
-        }
-
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
         public Task Praise(IUser target, string reason)
         {
             // http://webknox.com/api#!/jokes/praise_GET
-            return Task.CompletedTask;
-        }
-
-        [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        public Task Insult(IUser target, string reason)
-        {
-
-            // http://webknox.com/api#!/jokes/insult_GET
             return Task.CompletedTask;
         }
 
