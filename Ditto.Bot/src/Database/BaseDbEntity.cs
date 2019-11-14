@@ -11,17 +11,34 @@ namespace Ditto.Bot.Database
     /// </summary>
     public abstract class BaseDbEntity : IBaseDbEntity
     {
-        public string GetAliases(IEnumerable<string> list)
+        //public string GetAliases(IEnumerable<string> list)
+        //{
+        //    if (list == null)
+        //        return null;
+        //    return string.Join(';', list);
+        //}
+        //public List<string> GetAliases(string @string)
+        //{
+        //    if (@string == null)
+        //        return new List<string>();
+        //    return @string.Split(';').ToList();
+        //}
+
+        public string GetStringFromList(IEnumerable<string> list, string seperator = ";")
         {
-            if (list == null)
-                return null;
-            return string.Join(';', list);
+            if (list != null)
+            {
+                return string.Join(';', list);
+            }
+            return string.Empty;
         }
-        public List<string> GetAliases(string @string)
+        public List<string> GetListFromString(string value, string seperator = ";")
         {
-            if (@string == null)
+            if(string.IsNullOrEmpty(value))
+            {
                 return new List<string>();
-            return @string.Split(';').ToList();
+            }
+            return value.Split(seperator).ToList();
         }
 
         public IGuild GetGuild(ulong? guildId)
@@ -29,6 +46,9 @@ namespace Ditto.Bot.Database
 
         public IChannel GetChannel(ulong? channelId)
             => channelId.HasValue ? Ditto.Client.Do((c) => c?.GetChannel(channelId.Value)) : null;
+
+        public IMessage GetMessage(ulong? channelId, ulong? messageId)
+            => messageId.HasValue && channelId.HasValue ? Ditto.Client.Do((c) => (c?.GetChannel(channelId.Value) as IMessageChannel)?.GetMessageAsync(messageId.Value).GetAwaiter().GetResult()) : null;
 
         public IUser GetUser(ulong? userId)
             => userId.HasValue ? Ditto.Client.Do((c) => c?.GetUser(userId.Value)) : null;

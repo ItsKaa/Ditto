@@ -15,8 +15,8 @@ namespace Ditto.Bot.Database.Models
         [Column(nameof(Aliases))]
         public string AliasesString
         {
-            get { return GetAliases(Aliases); }
-            set { Aliases = GetAliases(value); }
+            get { return GetStringFromList(Aliases); }
+            set { Aliases = GetListFromString(value); }
         }
 
         [NotMapped]
