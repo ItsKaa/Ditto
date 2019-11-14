@@ -1,7 +1,7 @@
 ﻿using Discord;
 using Ditto.Attributes;
+using Ditto.Bot.Data.API.Rest;
 using Ditto.Common;
-using Ditto.Data;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
@@ -100,10 +100,35 @@ namespace Ditto.Bot.Modules.Utility
             => DateFact((uint)date.Day, (uint)date.Month);
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
-        public Task Dog([Multiword] string query = null)
+        public async Task Dog(string masterBreed = "", string subBreed = "")
         {
-            // use https://dog.ceo/dog-api/
-            return Task.CompletedTask;
+            var dogApi = new DogApi();
+            const int columnLength = 20;
+
+            var url = dogApi.Random(masterBreed, subBreed);
+            if (url != null)
+            {
+                await Context.Channel.SendMessageAsync(
+                    $"{Context.User.Mention} {url}"
+                ).ConfigureAwait(false);
+            }
+            else
+            {
+                var breeds = dogApi.GetBreeds();
+                string lines = "";
+                for (int i = 0; i < breeds.Count(); i += 3)
+                {
+                    lines += $"{breeds.ElementAt(i).Key.PadRight(columnLength)}"
+                        + $"{(breeds.Count > i + 1 ? breeds.ElementAt(i + 1).Key.PadRight(columnLength) : "")}"
+                        + $"{(breeds.Count > i + 2 ? breeds.ElementAt(i + 2).Key : "")}"
+                        + "\n"
+                    ;
+                }
+                await Context.EmbedAsync(
+                    $"Could not find the specified breed, please use one of the following:\n```Markdown\n{lines}\n```",
+                    ContextMessageOption.ReplyWithError
+                ).ConfigureAwait(false);
+            }
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
