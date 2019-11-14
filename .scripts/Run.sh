@@ -9,7 +9,7 @@ else
 	exit 1
 fi
 
-cd "..\Kaa.Discord"
+cd "../Ditto.Bot"
 dotnet run --configuration Release
 
 echo "Done"
