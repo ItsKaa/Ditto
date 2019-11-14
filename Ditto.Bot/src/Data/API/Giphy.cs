@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
-namespace Ditto.Bot.Data
+namespace Ditto.Bot.Data.API
 {
     public struct GiphyResult
     {
@@ -133,6 +133,11 @@ namespace Ditto.Bot.Data
                 {
                     Rating rating = Rating.Any;
                     Enum.TryParse(obj.Value<string>("rating"), true, out rating);
+
+                    DateTime importTime = DateTime.MinValue, trendingTime = DateTime.MinValue;
+                    DateTime.TryParse(obj.Value<string>("import_datetime"), out importTime);
+                    DateTime.TryParse(obj.Value<string>("trending_datetime"), out trendingTime);
+                    
                     list.Add(new GiphyResult()
                     {
                         Type = obj.Value<string>("type"),
@@ -141,8 +146,8 @@ namespace Ditto.Bot.Data
                         Rating = rating,
                         SourceSite = obj.Value<string>("source"),
                         SourceUrl = obj.Value<string>("source_post_url"),
-                        ImportTime = obj.Value<DateTime>("import_datetime"),
-                        TrendingTime = obj.Value<DateTime>("trending_datetime"),
+                        ImportTime = importTime, //obj.Value<DateTime>("import_datetime"),
+                        TrendingTime = trendingTime, //obj.Value<DateTime>("trending_datetime"),
                         ShortDirectUrl = obj.Value<string>("bitly_gif_url"),
                     });
                 }
