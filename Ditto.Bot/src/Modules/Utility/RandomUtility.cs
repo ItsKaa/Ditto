@@ -189,10 +189,11 @@ namespace Ditto.Bot.Modules.Utility
         }
 
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        public Task Fortune()
+        public async Task Fortune()
         {
-            // http://fullerdatasvc.azurewebsites.net/fortune/
-            return Task.CompletedTask;
+            await Context.Channel.SendMessageAsync(
+                $"{Context.User.Mention} {new FortuneCookieApi().Fortune()}"
+            ).ConfigureAwait(false);
         }
 
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
