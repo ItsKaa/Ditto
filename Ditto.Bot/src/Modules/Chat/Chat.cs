@@ -72,5 +72,12 @@ namespace Ditto.Bot.Modules.Chat
                 Log.Error(ex);
             }
         }
+
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All, DeleteUserMessage = true)]
+        public async Task Insult(IUser user)
+        {
+            var insult = new InsultApi().Insult("");
+            await Context.Channel.SendMessageAsync(user?.Mention + insult.Insult).ConfigureAwait(false);
+        }
     }
 }
