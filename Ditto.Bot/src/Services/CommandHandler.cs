@@ -14,10 +14,11 @@ using System.Collections.Immutable;
 using Ditto.Data.Discord;
 using Ditto.Helpers;
 using Ditto.Extensions;
-using Ditto.Bot.Data;
 using Ditto.Data.Commands;
 using Ditto.Attributes;
 using Ditto.Data;
+using Ditto.Extensions.Discord;
+using Ditto.Bot.Data.Discord;
 
 namespace Ditto.Bot.Services
 {
@@ -25,7 +26,8 @@ namespace Ditto.Bot.Services
     {
         private readonly ObjectLock<DiscordClientEx> _discordClient;
 
-        private static readonly Regex _regexParameterSeperator = new Regex(@"[\""].+?[\""]|[^ ]+", RegexOptions.Compiled);
+        //private static readonly Regex _regexParameterSeperator = new Regex(@"[\""].+?[\""]|[^ ]+", RegexOptions.Compiled);
+        private static readonly Regex _regexParameterSeperator = new Regex(@"[\""`]+.+?[\""`]+|[^ ]+", RegexOptions.Compiled);
 
         private readonly ConcurrentDictionary<Type, TypeReader> _defaultTypeReaders;
         private readonly ImmutableList<Tuple<Type, Type>> _entityTypeReaders;
@@ -393,6 +395,11 @@ namespace Ditto.Bot.Services
                     {
                         await ((Task)@return).ConfigureAwait(false);
                     }
+                    var cmdAttribute = methodInfo.GetCustomAttribute<DiscordCommandAttribute>();
+                    if (cmdAttribute?.DeleteUserMessage == true)
+                    {
+                        await context.Message.DeleteAfterAsync(cmdAttribute?.DeleteUserMessageTimer ?? TimeSpan.Zero);
+                    }
                 }
             }
             catch (Exception ex)
@@ -702,9 +709,18 @@ namespace Ditto.Bot.Services
                         }
                         catch (Exception ex)
                         {
-                            // Parsing failed, score drop
-                            score += Globals.Command.Score.ParseFail;
-                            throw ex;
+                            // If available, use the default value.
+                            if (param.IsOptional())
+                            {
+                                objects[i][0] = param.DefaultValue;
+                                score += Globals.Command.Score.Optional;
+                            }
+                            else
+                            {
+                                // Parsing failed, score drop
+                                score += Globals.Command.Score.ParseFail;
+                                throw ex;
+                            }
                         }
                     }
                 }
@@ -717,9 +733,9 @@ namespace Ditto.Bot.Services
             }
         }
 
-        private async Task<object[]> ConvertObjectAsync(ICommandContext context, System.Reflection.ParameterInfo parameterInfo, string input)
+        public async Task<object> ConvertObjectAsync(ICommandContext context, Type type, string input)
         {
-            var typeReader = GetDefaultTypeReader(parameterInfo.ParameterType);
+            var typeReader = GetDefaultTypeReader(type);
             var typeResult = await typeReader.ReadAsync(context, input, null).ConfigureAwait(false);
             if (typeResult.IsSuccess)
             {
@@ -727,10 +743,15 @@ namespace Ditto.Bot.Services
                 {
                     return typeResult.Values.OrderByDescending(x => x.Score).Select(x => x.Value).ToArray();
                 }
-                return new[] { typeResult.Values.OrderByDescending(a => a.Score).FirstOrDefault().Value };
+                return typeResult.Values.OrderByDescending(a => a.Score).FirstOrDefault().Value;
             }
             // try default
-            return new[] { UniversalTypeConverter.Convert(input, parameterInfo.ParameterType, CultureInfo.CurrentCulture, ConversionOptions.Default) };
+            return UniversalTypeConverter.Convert(input, type, CultureInfo.CurrentCulture, ConversionOptions.Default);
+        }
+
+        private async Task<object[]> ConvertObjectAsync(ICommandContext context, System.Reflection.ParameterInfo parameterInfo, string input)
+        {
+            return new[] { await ConvertObjectAsync(context, parameterInfo.ParameterType, input).ConfigureAwait(false) };
         }
 
         private TypeReader GetDefaultTypeReader(Type type)
