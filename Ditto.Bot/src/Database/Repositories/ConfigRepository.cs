@@ -13,6 +13,8 @@ namespace Ditto.Bot.Database.Repositories
         private const string _keyEmbedOkColour = "embed_colour_ok";
         private const string _keyEmbedErrorColour = "embed_colour_error";
         private const string _keyEmbedRssColour = "embed_colour_rss";
+        private const string _keyEmbedMusicPlayingColour = "embed_colour_music-playing";
+        private const string _keyEmbedMusicPausedColour = "embed_colour_music-paused";
         private const string _keyPrefix = "prefix";
         private const string _keyBdoMaintenanceChannel = "bdo_maintenance_channel";
 
@@ -20,6 +22,9 @@ namespace Ditto.Bot.Database.Repositories
              {_keyEmbedOkColour , Color.Blue.ToString() },
             {_keyEmbedErrorColour, "#C42F1F" },
             {_keyEmbedRssColour, "#F26522" },
+            //{_keyEmbedMusicPlayingColour, "#763ba5" },
+            {_keyEmbedMusicPlayingColour, "735bc1" },
+            {_keyEmbedMusicPausedColour, "#666666" },
             {_keyPrefix, ">"},
             {_keyBdoMaintenanceChannel, null}
         });
@@ -76,6 +81,13 @@ namespace Ditto.Bot.Database.Repositories
         public Config GetEmbedRssColour(IGuild guild) => GetConfigItem(guild, _keyEmbedRssColour);
         public void SetEmbedRssColour(IGuild guild, Color colour) => GetEmbedRssColour(guild).Value = colour.ToString();
         
+        public Config GetEmbedMusicPlayingColour(IGuild guild) => GetConfigItem(guild, _keyEmbedMusicPlayingColour);
+        public void SetEmbedMusicPlayingColour(IGuild guild, Color colour) => GetEmbedMusicPlayingColour(guild).Value = colour.ToString();
+
+        public Config GetEmbedMusicPausedColour(IGuild guild) => GetConfigItem(guild, _keyEmbedMusicPausedColour);
+        public void SetMusicPausedColour(IGuild guild, Color colour) => GetEmbedMusicPausedColour(guild).Value = colour.ToString();
+
+
         public Config GetBdoMaintenanceChannel(IGuild guild) => GetConfigItem(guild, _keyBdoMaintenanceChannel);
         public void SetBdoMaintenanceChannel(IGuild guild, ulong channelId) => GetBdoMaintenanceChannel(guild).Value = channelId.ToString();
         public void SetBdoMaintenanceChannel(IGuild guild, ITextChannel textChannel) => SetBdoMaintenanceChannel(guild, textChannel.Id);

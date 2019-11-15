@@ -80,17 +80,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ContentWithTargetPath Include="..\.libs\libopus.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <TargetPath>libopus.so</TargetPath>
-    </ContentWithTargetPath>
     <ContentWithTargetPath Include="..\.libs\libsodium.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>libsodium.dll</TargetPath>
-    </ContentWithTargetPath>
-    <ContentWithTargetPath Include="..\.libs\libsodium.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <TargetPath>libsodium.so</TargetPath>
     </ContentWithTargetPath>
     <ContentWithTargetPath Include="..\.libs\opus.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -2,6 +2,7 @@
 using Ditto.Attributes;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
+using Ditto.Extensions.Discord;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Help
@@ -26,14 +27,8 @@ namespace Ditto.Bot.Modules.Help
             // Youtube parsing
             if (Ditto.Google.Youtube.IsValidPlaylist(value) || Ditto.Google.Youtube.IsValidVideo(value))
             {
-                // play playlist/song
-                await Context.EmbedAsync(
-                    "Youtube not yet implemented.",
-                    ContextMessageOption.ReplyUser
-                ).ConfigureAwait(false);
-#if TESTING
-                await new Music.Music() { Context = this.Context}.Play(value);
-#endif
+                await Module<Music.Music>().Play(value).ConfigureAwait(false);
+                await Context.Message.DeleteAfterAsync();
             }
             else
             {

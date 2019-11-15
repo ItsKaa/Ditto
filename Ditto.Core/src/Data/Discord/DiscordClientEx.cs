@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Ditto.Extensions;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Ditto.Data.Discord
@@ -29,6 +30,17 @@ namespace Ditto.Data.Discord
         public async Task<ChannelPermissions> GetPermissionsAsync(IGuildChannel guildChannel)
         {
             return (await GetGuildUserAsync(guildChannel.Guild))?.GetPermissions(guildChannel) ?? ChannelPermissions.None;
+        }
+
+        public async Task<bool> CanJoinChannel(IVoiceChannel voiceChannel)
+        {
+            var permissions = await GetPermissionsAsync(voiceChannel);
+            if(voiceChannel.UserLimit.HasValue)
+            {
+                var userCount = await voiceChannel.GetUsersAsync().CountAsync();
+                return permissions.Connect && (voiceChannel.UserLimit < userCount+1);
+            }
+            return permissions.Connect;
         }
     }
 }

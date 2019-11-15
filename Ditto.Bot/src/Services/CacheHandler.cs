@@ -48,6 +48,16 @@ namespace Ditto.Bot.Services
                 , Globals.Cache.DefaultCacheTime
             );
 
+            public Color EmbedMusicPlayingColour(IGuild guild) => GetOrAddCachededItem(GetCacheName(guild),
+                (uow) => uow.Configs.GetEmbedMusicPlayingColour(guild).Value.ToColour()
+                , Globals.Cache.DefaultCacheTime
+            );
+
+            public Color EmbedMusicPausedColour(IGuild guild) => GetOrAddCachededItem(GetCacheName(guild),
+                (uow) => uow.Configs.GetEmbedMusicPausedColour(guild).Value.ToColour()
+                , Globals.Cache.DefaultCacheTime
+            );
+
             public string Prefix(IGuild guild) => GetOrAddCachededItem(GetCacheName(guild),
                 (uow) => uow.Configs.GetPrefix(guild).Value
                 , Globals.Cache.DefaultCacheTime

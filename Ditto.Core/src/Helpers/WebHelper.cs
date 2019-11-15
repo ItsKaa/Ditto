@@ -1,6 +1,7 @@
 ﻿using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -54,6 +55,15 @@ namespace Ditto.Helpers
         }
         public static string GetSourceCode(Uri uri)
             => GetSourceCode(uri.ToString());
+
+        public static Stream GetStream(string url)
+        {
+            var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
+            var httpWebReponse = (HttpWebResponse)httpWebRequest.GetResponse();
+            return httpWebReponse.GetResponseStream();
+        }
+        public static Stream GetStream(Uri uri)
+            => GetStream(uri.ToString());
 
         public static async Task<string> GetSourceCodeAsync(string url)
         {
