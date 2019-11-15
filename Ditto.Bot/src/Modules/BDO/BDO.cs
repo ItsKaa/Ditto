@@ -1,16 +1,22 @@
 ﻿using Discord;
+using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Database.Data;
 using Ditto.Bot.Database.Models;
 using Ditto.Bot.Modules.BDO.Data;
+using Ditto.Bot.Modules.Utility.Linking;
+using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
+using Ditto.Extensions.Discord;
+using Ditto.Helpers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,6 +25,7 @@ namespace Ditto.Bot.Modules.BDO
     public class BDO : DiscordModule
     {
         public static bool Initialized { get; private set; } = false;
+        public static bool Running { get; private set; } = false;
         public static TimeSpan Delay { get; private set; } = new TimeSpan();
         public static BDOClock Clock { get; private set; } = new BDOClock();
         public static BdoStatusResult ServerStatus { get; private set; } = BdoStatusResult.InvalidResult;
@@ -104,43 +111,76 @@ namespace Ditto.Bot.Modules.BDO
                     Error = bdoStatus.Error
                 };
 
-                ServerStatusChanged += async (@new, old) =>
+                ServerStatusChanged += (@new, old) =>
                 {
-                    BdoStatus dbStatus = null;
-                    await Ditto.Database.ReadAsync(uow =>
-                        dbStatus = uow.BdoStatus.GetAll().FirstOrDefault()
-                    ).ConfigureAwait(false);
-
-                    if (dbStatus == null)
+                    // Update database
+                    var changed = @new != old;
+                    var dbTask = Task.Run(async () =>
                     {
-                        dbStatus = await Ditto.Database.WriteAsync(uow =>
-                            uow.BdoStatus.Add(new BdoStatus()
-                            {
-                                Status = @new.Status,
-                                Error = @new.Error,
-                                MaintenanceTime = @new.MaintenanceTime,
-                                DateUpdated = DateTime.Now
-                            })
+
+                        BdoStatus dbStatus = null;
+                        await Ditto.Database.ReadAsync(uow =>
+                            dbStatus = uow.BdoStatus.GetAll().FirstOrDefault()
                         ).ConfigureAwait(false);
-                    }
+
+                        if (dbStatus == null)
+                        {
+                            dbStatus = await Ditto.Database.WriteAsync(uow =>
+                                uow.BdoStatus.Add(new BdoStatus()
+                                {
+                                    Status = @new.Status,
+                                    Error = @new.Error,
+                                    MaintenanceTime = @new.MaintenanceTime,
+                                    DateUpdated = DateTime.Now
+                                })
+                            ).ConfigureAwait(false);
+                        }
+                        else if (changed)
+                        {
+                            bdoStatus.Status = @new.Status;
+                            bdoStatus.Error = @new.Error;
+                            bdoStatus.MaintenanceTime = @new.MaintenanceTime;
+                            bdoStatus.DateUpdated = DateTime.Now;
+
+                            await Ditto.Database.WriteAsync(uow =>
+                            {
+                                uow.BdoStatus.Update(bdoStatus);
+                            });
+                        }
+                    });
+                    return Task.CompletedTask;
                 };
 
+                // Automatically update the server status
+                Running = true;
                 var _ = Task.Run(async () =>
                 {
                     await Task.Delay(1000).ConfigureAwait(false);
-                    while (Ditto.Running)
+                    while (Running)
                     {
                         // Update status
                         await GetServerStatusAsync().ConfigureAwait(false);
                         await Task.Delay(TimeSpan.FromMinutes(1), _cancellationTokenSource.Token).ConfigureAwait(false);
                     }
                 }, _cancellationTokenSource.Token);
+
+
+                // Post channel updates
+                //ServerStatusChanged += async (status, old) =>
+                //{
+                //    foreach (var channel in BdoMaintenanceLinking.GetLinkedChannels())
+                //    {
+                //        // TODO
+                //    }
+                //};
+
                 Initialized = true;
             };
 
             Ditto.Exit += () =>
             {
-                _cancellationTokenSource.Cancel();
+                Running = false;
+                _cancellationTokenSource?.Cancel();
                 return Task.CompletedTask;
             };
         }
@@ -184,12 +224,14 @@ namespace Ditto.Bot.Modules.BDO
                             {
                                 // Read maintenance time
                                 var launcherHtmlCode = await client.GetStringAsync(_launcherUrl).ConfigureAwait(false);
-                                var maintenance = launcherHtmlCode.Between("'error_maintenance':\"", "\",");
+                                var maintenance = launcherHtmlCode.Between("'error_maintenance':\"", "\",").Replace("\\n", "\n");
                                 if (maintenance != null)
                                 {
-                                    var maintenanceTimeString = maintenance.Between("~", ")")
-                                        .Replace("UTC", "")
-                                        .Trim();
+                                    //var maintenanceTimeString = maintenance.Between("~", ")")
+                                    //    .Replace("UTC", "")
+                                    //    .Trim();
+                                    //var maintenanceTimeString = maintenance.From("time:").Between(" to ", "UTC").Trim();
+                                    var maintenanceTimeString = Regex.Match(maintenance, @"(?:(?<time>\d+:\d+) UTC)").Groups?.Values?.LastOrDefault()?.Value;
                                     DateTime? maintenanceDateTime = null;
                                     if (TimeSpan.TryParse(maintenanceTimeString, out TimeSpan maintenanceTime))
                                     {
@@ -224,14 +266,75 @@ namespace Ditto.Bot.Modules.BDO
             {
                 if(_lastServerStatusTime != DateTime.MinValue)
                 {
-                    var _ = Task.Run(async ()
-                        => await ServerStatusChanged(statusResult, ServerStatus).ConfigureAwait(false)
-                    );
+                    //var _ = Task.Run(async ()
+                    //    => await ServerStatusChanged(statusResult, ServerStatus).ConfigureAwait(false)
+                    //);
+                    await ServerStatusChanged(statusResult, ServerStatus).ConfigureAwait(false);
                 }
                 ServerStatus = statusResult;
             }
             _lastServerStatusTime = DateTime.Now;
             return statusResult;
+        }
+
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents, DeleteUserMessage = true)]
+        public async Task Status(ITextChannel textChannel)
+        {
+            var success = false;
+            var channel = (textChannel ?? Context.Channel as ITextChannel);
+            if (channel != null)
+            {
+                if (!(await Ditto.Client.DoAsync(async c => await c.GetPermissionsAsync(textChannel)).ConfigureAwait(false)).HasAccess())
+                {
+                    await Context.Channel.SendMessageAsync($"💢 {Context.User.Mention} Unable to access the channel {channel.Mention}");
+                }
+                else
+                {
+                    success = await LinkUtility.TryAddLinkAsync(LinkType.BDO_Maintenance, channel, null).ConfigureAwait(false);
+                    await Context.EmbedAsync(
+                        success
+                        ? $"Successfully linked BDO maintenance to {textChannel.Mention}"
+                        : $"",
+                        success ? ContextMessageOption.ReplyUser : ContextMessageOption.ReplyWithError,
+                        new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }
+                    ).DeleteAfterAsync(10).ConfigureAwait(false);
+                }
+            }
+            else
+            {
+
+            }
+        }
+
+        public static EmbedBuilder GetStatusEmbedBuilder()
+        {
+            return new EmbedBuilder()
+                .WithAuthor(
+                    $"Black Desert Online - Maintenance",
+                    @"https://akamai-webcdn.blackdesertonline.com/bdo/web/images/logo.og.png"
+                )
+                .WithDescription(
+                    "```" +
+                    $"Login: {(ServerStatus.Status == BdoServerStatus.Online ? "Online ✅" : "Offline ⛔")}\n\n" +
+                    $"{(string.IsNullOrWhiteSpace(ServerStatus.Error) ? "" : ServerStatus.Error)}" +
+                    "```"
+                )
+                .WithFooter(
+                    $"⏰ ending at {ServerStatus.MaintenanceTime:dd-MM-yyyy}" +
+                    $" at {ServerStatus.MaintenanceTime:HH:mm}"
+                );
+        }
+
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents, DeleteUserMessage = true)]
+        public async Task Status()
+        {
+            await Context.EmbedAsync(GetStatusEmbedBuilder(), ContextMessageOption.None, RetryMode.AlwaysRetry);
+        }
+
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All, DeleteUserMessage = true)]
+        public Task BdoStatus()
+        {
+            return Status();
         }
     }
 }
