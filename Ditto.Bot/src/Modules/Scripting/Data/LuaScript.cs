@@ -14,5 +14,7 @@ namespace Ditto.Bot.Modules.Scripting.Data
         public string FileName { get; set; }
         
         public string FilePath => FileName == null ? null : $"{Globals.AppDirectory}\\data\\lua\\{Guild?.Id}\\{FileName}";
+
+        public string Code { get; set; }
     }
 }

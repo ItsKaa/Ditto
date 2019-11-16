@@ -142,27 +142,38 @@ namespace Ditto.Bot.Modules.Scripting
             foreach (var value in Enum.GetValues(typeof(LuaScriptMethods)).OfType<LuaScriptMethods>())
             {
                 // Enum.Parse
-                if(scriptMethod.HasFlag(value))
-                try
+                if (scriptMethod.HasFlag(value))
                 {
-                    if (luaScript.Script.Globals[value.ToString()] is Closure func)
+                    try
                     {
-                        return func;
+                        var scriptMethodKey = luaScript.Script.Globals.Keys.FirstOrDefault(k =>
+                            k.Type == DataType.String && string.Equals(k.String, value.ToString(), StringComparison.CurrentCultureIgnoreCase)
+                        );
+
+                        if (scriptMethodKey != null && luaScript.Script.Globals[scriptMethodKey.String] is Closure func)
+                        {
+                            return func;
+                        }
                     }
+                    catch { }
                 }
-                catch { }
             }
             return null;
         }
 
-        public static void ExecuteMethod(LuaScript luaScript, LuaScriptMethods scriptMethods)
+        public static bool ExecuteMethod(LuaScript luaScript, LuaScriptMethods scriptMethods)
         {
             var scriptResult = LuaHandler.Run(luaScript);
-            var func = GetMethodFromScript(luaScript, scriptMethods);
-            if (func != null)
+            if (scriptResult != null)
             {
-                var funcResult = luaScript.Script.Call(func);
+                var func = GetMethodFromScript(luaScript, scriptMethods);
+                if (func != null)
+                {
+                    var funcResult = luaScript.Script.Call(func);
+                    return true;
+                }
             }
+            return false;
         }
 
         public static void ExecuteMethods(
@@ -239,5 +250,21 @@ namespace Ditto.Bot.Modules.Scripting
             }
             return Task.CompletedTask;
         }
+
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
+        public async Task Run([Multiword] string luaCode)
+        {
+            if (Context.GuildUser?.GuildPermissions.Administrator == true)
+            {
+                var luaScript = Validate(luaCode, false);
+                ExecuteMethod(luaScript, LuaScriptMethods.Main);
+                await Context.ApplyResultReaction(luaScript != null ? CommandResult.Success : CommandResult.Failed).ConfigureAwait(false);
+            }
+            else
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+            }
+        }
+
     }
 }

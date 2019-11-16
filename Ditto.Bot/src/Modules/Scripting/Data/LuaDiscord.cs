@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using Ditto.Bot.Data.Discord;
 using Ditto.Data.Commands;
 using MoonSharp.Interpreter;
+using MoonSharp.Interpreter.Interop;
 using System;
 using System.Reflection;
 using System.Threading;
@@ -76,6 +77,19 @@ namespace Ditto.Bot.Modules.Scripting.Data
         {
         }
 
+        [MoonSharpHidden]
+        private T GetObject<T>(string input) where T : class, ISnowflakeEntity
+        {
+            try
+            {
+                var result = Ditto.CommandHandler.ConvertObjectAsync(Context.Value, typeof(T), input).GetAwaiter().GetResult();
+                return result as T;
+            }
+            catch { }
+            return null;
+        }
+
+        [MoonSharpHidden]
         private string SetVariables(string text)
         {
             return text
@@ -138,18 +152,6 @@ namespace Ditto.Bot.Modules.Scripting.Data
             var answer = WaitForResponse(message);
             return answer.Content;
         }
-        
-        private T GetObject<T>(string input) where T: class, ISnowflakeEntity
-        {
-            try
-            {
-                var result = Ditto.CommandHandler.ConvertObjectAsync(Context.Value, typeof(T), input).GetAwaiter().GetResult();
-                return result as T;
-            }
-            catch { }
-            return null;
-        }
-
 
         // ================================================================================================
         //   User

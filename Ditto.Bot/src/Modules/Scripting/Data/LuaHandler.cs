@@ -121,9 +121,25 @@ namespace Ditto.Bot.Modules.Scripting.Data
 
         public static DynValue Run(LuaScript luaScript)
         {
-            SetScriptVariables(luaScript);
-            var value = luaScript.Script.DoFile(luaScript.FilePath);
-            ApplyScriptVariables(luaScript);
+            DynValue value = null;
+            if (luaScript != null)
+            {
+                SetScriptVariables(luaScript);
+
+                if (File.Exists(luaScript.FilePath))
+                {
+                    value = luaScript.Script.DoFile(luaScript.FilePath);
+                }
+                else if (luaScript.Code != null)
+                {
+                    value = luaScript.Script.DoString(luaScript.Code);
+                }
+
+                if (value != null)
+                {
+                    ApplyScriptVariables(luaScript);
+                }
+            }
             return value;
         }
 
@@ -146,6 +162,7 @@ namespace Ditto.Bot.Modules.Scripting.Data
             luaScript = new LuaScript
             {
                 Guild = context?.Guild,
+                Code = null,
                 //Code = CleanupCode(luaCode),
                 //Script = new Script(CoreModules.Preset_HardSandbox),
                 Script = new Script(),
@@ -161,12 +178,13 @@ namespace Ditto.Bot.Modules.Scripting.Data
             
 
             SetScriptVariables(luaScript);
+            luaCode = CleanupCode(luaCode);
+
             if (fileName != null)
             {
                 //luaScript.Script.Options.ScriptLoader = new FileSystemScriptLoader();
 
                 // Add data to our code
-                luaCode = CleanupCode(luaCode);
                 luaCode =
 $@"function Initialise()
     ChannelId = '{luaScript?.Lua?.Channel?.Id ?? 0}';
@@ -191,6 +209,10 @@ end
                 {
                     sw.Write(luaCode);
                 }
+            }
+            else
+            {
+                luaScript.Code = luaCode;
             }
             return true;
         }

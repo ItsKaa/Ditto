@@ -6,8 +6,9 @@ namespace Ditto.Bot.Modules.Scripting.Data
     public enum LuaScriptMethods
     {
         Initialise      = 1 << 0,
-        UserJoined      = 1 << 1,
-        RoleChanged     = 1 << 2,
-        MessageReceived = 1 << 3,
+        Main            = 1 << 1,
+        UserJoined      = 1 << 2,
+        RoleChanged     = 1 << 3,
+        MessageReceived = 1 << 4,
     }
 }
