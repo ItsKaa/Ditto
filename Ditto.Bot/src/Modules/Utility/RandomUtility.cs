@@ -153,14 +153,6 @@ namespace Ditto.Bot.Modules.Utility
                 await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
             }
         }
-
-        [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        public Task Praise(IUser target, string reason)
-        {
-            // http://webknox.com/api#!/jokes/praise_GET
-            return Task.CompletedTask;
-        }
-
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
         public async Task Joke()
         {
@@ -238,6 +230,62 @@ namespace Ditto.Bot.Modules.Utility
         {
             // https://api.adorable.io/avatars/face/eyes7/nose1/mouth9/ffaaaa
             return Task.CompletedTask;
+        }
+
+        [Alias("thonk")]
+        public async Task Thonkify([Multiword] string text)
+        {
+            var tracking = new System.Drawing.Bitmap(ImageHelper.Base64ToImage("iVBORw0KGgoAAAANSUhEUgAAAAYAAAOACAYAAAAZzQIQAAAALElEQVR4nO3BAQ0AAADCoPdPbQ8HFAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwZV4AAAfA8WFIAAAAASUVORK5CYII="));
+
+            var images = new List<System.Drawing.Bitmap>();
+            try
+            {
+                foreach (var c in text)
+                {
+                    var filePath = "data/images/thonkify/" + ((c >= 'A' && c <= 'Z') ? $"letters/{c}cap" : (c >= 'a' && c <= 'z') ? $"letters/{c.ToString().ToUpper()}low" : "misc/nothing");
+                    if (File.Exists(filePath + ".png"))
+                    {
+                        filePath += ".png";
+                    }
+                    else if (File.Exists(filePath + ".gif"))
+                    {
+                        filePath += ".gif";
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    var letterImage = new System.Drawing.Bitmap(filePath);
+                    images.Add(letterImage);
+                    images.Add(tracking);
+                }
+
+                using (var bmp = ImageHelper.CombineBitmap(images, System.Drawing.Color.Transparent))
+                {
+                    using (var ms = new MemoryStream())
+                    {
+                        bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+
+                        // Ensure the stream is at the beginning, very important otherwise discord will send a 0kb file.
+                        ms.Position = 0;
+
+                        await Context.Channel.SendFileAsync(ms, $"thonkify.png").ConfigureAwait(false);
+                    }
+                }
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                foreach (var image in images)
+                {
+                    image.Dispose();
+                }
+                tracking.Dispose();
+            }
         }
 
     }
