@@ -18,23 +18,29 @@ namespace Ditto.Bot.Modules.Utility
         public async Task Gif([Multiword] string query = null)
         {
             var result = await Ditto.Giphy.RandomAsync(query);
+            if (!string.IsNullOrEmpty(result.DirectUrl))
+            {
+                // Slower but prettier, however limited by the discord size:
+                //var httpWebRequest = (HttpWebRequest)WebRequest.Create(result.DirectUrl);
+                //var httpWebReponse = (HttpWebResponse)httpWebRequest.GetResponse();
+                //Stream stream = httpWebReponse.GetResponseStream();
+                //await Context.Channel.SendFileAsync(stream, (Path.GetFileName(result.Url)?.Replace($"-{result.Id}", "") ?? "kaa") + ".gif").ConfigureAwait(false);
 
-            // Slower but prettier, however limited by the discord size:
-            //var httpWebRequest = (HttpWebRequest)WebRequest.Create(result.DirectUrl);
-            //var httpWebReponse = (HttpWebResponse)httpWebRequest.GetResponse();
-            //Stream stream = httpWebReponse.GetResponseStream();
-            //await Context.Channel.SendFileAsync(stream, (Path.GetFileName(result.Url)?.Replace($"-{result.Id}", "") ?? "kaa") + ".gif").ConfigureAwait(false);
+                // Faster, bit small but still pretty
+                //await Context.Channel.EmbedAsync(new EmbedBuilder()
+                //        .WithImageUrl(result.DirectUrl)
+                //        .WithDescription(Context.Mention)
+                //).ConfigureAwait(false);
 
-            // Faster, bit small but still pretty
-            //await Context.Channel.EmbedAsync(new EmbedBuilder()
-            //        .WithImageUrl(result.DirectUrl)
-            //        .WithDescription(Context.Mention)
-            //).ConfigureAwait(false);
-
-            // Fastest, bigger but ugly:
-            await Context.Channel.SendMessageAsync(
-                $"{Context.User.Mention} {result.ShortDirectUrl ?? result.DirectUrl}"
-            ).ConfigureAwait(false);
+                // Fastest, bigger but ugly:
+                await Context.Channel.SendMessageAsync(
+                    $"{Context.User.Mention} {result.ShortDirectUrl ?? result.DirectUrl}"
+                ).ConfigureAwait(false);
+            }
+            else
+            {
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+            }
         }
         
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
@@ -59,6 +65,10 @@ namespace Ditto.Bot.Modules.Utility
                     },
                     result.Definitions.Count()
                 ).ConfigureAwait(false);
+            }
+            else
+            {
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
             }
         }
     }

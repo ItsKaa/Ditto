@@ -63,6 +63,7 @@ namespace Ditto.Bot.Modules.Chat
                     }
                     else
                     {
+                        await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                         throw new Exception("Invalid Cleverbot API key.");
                     }
                 }
@@ -77,7 +78,14 @@ namespace Ditto.Bot.Modules.Chat
         public async Task Insult(IUser user)
         {
             var insult = new InsultApi().Insult("");
-            await Context.Channel.SendMessageAsync(user?.Mention + insult.Insult).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(insult?.Insult))
+            {
+                await Context.Channel.SendMessageAsync(user?.Mention + insult.Insult).ConfigureAwait(false);
+            }
+            else
+            {
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+            }
         }
     }
 }

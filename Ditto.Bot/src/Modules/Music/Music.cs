@@ -78,10 +78,7 @@ namespace Ditto.Bot.Modules.Music
                 _musicPlayers.TryRemove(Context.Guild.Id, out MusicPlayer mp);
                 if (!_musicPlayers.TryAdd(Context.Guild.Id, (musicPlayer = new MusicPlayer(Context))))
                 {
-                    await Context.EmbedAsync(
-                        "An unexpected error occured while initialising a new music player.",
-                        ContextMessageOption.ReplyWithError
-                    ).DeleteAfterAsync(10).ConfigureAwait(false);
+                    await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                 }
             }
             
@@ -97,6 +94,7 @@ namespace Ditto.Bot.Modules.Music
                     "Please join a voice channel or include it in the arguments of the command Play.",
                     ContextMessageOption.ReplyWithError
                 ).DeleteAfterAsync(10).ConfigureAwait(false);
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
             }
             else
             {
@@ -106,6 +104,7 @@ namespace Ditto.Bot.Modules.Music
                         "I'm unable to join the selected voice channel.",
                         ContextMessageOption.ReplyWithError
                     ).DeleteAfterAsync(10).ConfigureAwait(false);
+                    await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
                 }
                 else
                 {

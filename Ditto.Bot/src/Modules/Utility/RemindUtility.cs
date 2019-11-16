@@ -358,6 +358,7 @@ namespace Ditto.Bot.Modules.Utility
             }
             else
             {
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                 await Context.EmbedAsync(
                     result.Error,
                     ContextMessageOption.ReplyWithError

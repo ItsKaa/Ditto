@@ -73,17 +73,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     c => c.GetPermissionsAsync(textChannel)
                 ).ConfigureAwait(false)).HasAccess())
             {
-                await Context.EmbedAsync(
-                    $"I do not have the proper permissions to access {textChannel.Mention}.",
-                    ContextMessageOption.ReplyWithError
-                ).ConfigureAwait(false);
+                await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
             }
             else if(!WebHelper.IsValidWebsite(url))
             {
-                await Context.EmbedAsync(
-                    $"Could not parse that url.",
-                    ContextMessageOption.ReplyWithError
-                ).ConfigureAwait(false);
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
             }
             else
             {
@@ -93,6 +87,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     return WebHelper.Compare(WebHelper.ToUri(left), WebHelper.ToUri(right));
                 }, fromDate))
                 {
+                    await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                     await Context.EmbedAsync(
                         $"That url is already linked to {textChannel.Mention}",
                         ContextMessageOption.ReplyWithError

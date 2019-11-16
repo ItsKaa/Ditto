@@ -1,4 +1,6 @@
 ﻿using Discord;
+using Ditto.Data.Commands;
+using Ditto.Data.Discord;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,5 +27,35 @@ namespace Ditto.Extensions.Discord
 
         public static Task DeleteAfterAsync(this Task<IUserMessage> messageTask, double seconds, RetryMode retryMode = RetryMode.AlwaysRetry, CancellationToken? cancellationToken = null)
             => DeleteAfterAsync(messageTask, TimeSpan.FromSeconds(seconds), retryMode, cancellationToken);
+
+        /// <summary> Set a reaction to confirm the exeuction or failure of the used command. </summary>
+        public static async Task SetResultAsync(this IUserMessage message, CommandResult commandResult)
+        {
+            Emotes? reaction = null;
+            switch (commandResult)
+            {
+                case CommandResult.Success:
+                    reaction = Emotes.WhiteCheckMark;
+                    break;
+                case CommandResult.Failed:
+                    reaction = Emotes.X;
+                    break;
+                case CommandResult.InvalidParameters:
+                    reaction = Emotes.Anger;
+                    break;
+                case CommandResult.FailedBotPermission:
+                    reaction = Emotes.NoEntrySign;
+                    break;
+                case CommandResult.FailedUserPermission:
+                    reaction = Emotes.NoEntry;
+                    break;
+            }
+
+            if (reaction.HasValue)
+            {
+                await message.AddReactionsAsync(reaction.Value).ConfigureAwait(false);
+            }
+        }
+
     }
 }

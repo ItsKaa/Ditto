@@ -6,6 +6,7 @@ using Ditto.Data.Commands;
 using Ditto.Extensions;
 using Ditto.Data.Discord;
 using Discord.WebSocket;
+using Ditto.Extensions.Discord;
 
 namespace Ditto.Bot.Data.Discord
 {
@@ -55,5 +56,12 @@ namespace Ditto.Bot.Data.Discord
         public Task<IUserMessage> EmbedAsync(EmbedBuilder embedBuilder, ContextMessageOption options = ContextMessageOption.None, RetryMode retryMode = RetryMode.AlwaysRetry)
             => EmbedAsync("", embedBuilder, options, retryMode: retryMode);
 
+        public async Task ApplyResultReaction(CommandResult result)
+        {
+            if (Message != null)
+            {
+                await Message.SetResultAsync(result).ConfigureAwait(false);
+            }
+        }
     }
 }

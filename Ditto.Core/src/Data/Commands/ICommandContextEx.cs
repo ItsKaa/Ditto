@@ -29,5 +29,6 @@ namespace Ditto.Data.Commands
         Task<IUserMessage> EmbedAsync(string format, params object[] args);
         Task<IUserMessage> EmbedAsync(ContextMessageOption options, string format, params object[] args);
         Task<IUserMessage> EmbedAsync(EmbedBuilder embedBuilder, ContextMessageOption options = ContextMessageOption.None, RetryMode retyMode = RetryMode.AlwaysRetry);
+        Task ApplyResultReaction(CommandResult result);
     }
 }

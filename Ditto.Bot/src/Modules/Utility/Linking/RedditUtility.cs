@@ -134,10 +134,8 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     c => c.GetPermissionsAsync(textChannel)
                 ).ConfigureAwait(false)).HasAccess())
             {
-                await Context.EmbedAsync(
-                    $"I do not have the proper permissions to access {textChannel.Mention}.",
-                    ContextMessageOption.ReplyWithError
-                ).ConfigureAwait(false);
+                await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
+                return;
             }
             //else if (!WebHelper.IsValidWebsite(url))
             //{
@@ -171,15 +169,13 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
                 if (redditError)
                 {
-                    await Context.EmbedAsync(
-                        $"Could not find that subreddit.",
-                        ContextMessageOption.ReplyWithError
-                    ).ConfigureAwait(false);
+                    await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                     return;
                 }
 
                 if (!await LinkUtility.TryAddLinkAsync(LinkType.Reddit, textChannel, subRedditLink, fromDate))
                 {
+                    await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                     await Context.EmbedAsync(
                         $"That url is already linked to {textChannel.Mention}",
                         ContextMessageOption.ReplyWithError

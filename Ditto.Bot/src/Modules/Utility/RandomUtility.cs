@@ -1,11 +1,14 @@
 ﻿using Discord;
+using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Data.API.Rest;
+using Ditto.Bot.Helpers;
 using Ditto.Common;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -38,10 +41,7 @@ namespace Ditto.Bot.Modules.Utility
             var files = Directory.GetFiles(rngDirectory, $"{coinFileName}.*", SearchOption.AllDirectories).ToList();
             if (files.Count == 0)
             {
-                await Context.EmbedAsync(new EmbedBuilder()
-                    .WithDescription($"💢 {Context.User.Mention} Something went wrong")
-                    .WithErrorColour(Context.Guild)
-                ).ConfigureAwait(false);
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                 return;
             }
             var rngFile = files[Randomizer.New(0, files.Count-1)];
@@ -59,8 +59,7 @@ namespace Ditto.Bot.Modules.Utility
         {
             if (result == null)
             {
-                // error
-                await Context.EmbedAsync("Please enter a valid number", ContextMessageOption.ReplyWithError).ConfigureAwait(false);
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
             }
             else
             {
@@ -122,6 +121,8 @@ namespace Ditto.Bot.Modules.Utility
             }
             else
             {
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+
                 var breeds = dogApi.GetBreeds();
                 string lines = "";
                 for (int i = 0; i < breeds.Count(); i += 3)
@@ -149,7 +150,7 @@ namespace Ditto.Bot.Modules.Utility
             }
             else
             {
-                await Context.EmbedAsync("An error occured while calling this method.", ContextMessageOption.ReplyWithError);
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
             }
         }
 
@@ -164,7 +165,14 @@ namespace Ditto.Bot.Modules.Utility
         public async Task Joke()
         {
             var joke = new DadJokeApi().Joke();
-            await Context.Channel.SendMessageAsync($"{Context.User.Mention} {joke}").ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(joke))
+            {
+                await Context.Channel.SendMessageAsync($"{Context.User.Mention} {joke}").ConfigureAwait(false);
+            }
+            else
+            {
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+            }
         }
 
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
@@ -182,19 +190,26 @@ namespace Ditto.Bot.Modules.Utility
                 }
                 else
                 {
-                    await Context.EmbedAsync("An error occured while calling this method.", ContextMessageOption.ReplyWithError);
+                    await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                 }
             }
             else if (type == QuoteType.Trump)
             {
                 var quote = new TrumpQuoteApi().Quote(text?.Length > 0 ? text : null);
-                await Context.EmbedAsync(new EmbedBuilder()
-                        .WithDescription(quote)
-                        .WithFooter(new EmbedFooterBuilder()
-                        {
-                            Text = @"by Donald Trump"
-                        })
-                ).ConfigureAwait(false);
+                if (!string.IsNullOrEmpty(quote))
+                {
+                    await Context.EmbedAsync(new EmbedBuilder()
+                            .WithDescription(quote)
+                            .WithFooter(new EmbedFooterBuilder()
+                            {
+                                Text = @"by Donald Trump"
+                            })
+                    ).ConfigureAwait(false);
+                }
+                else
+                {
+                    await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+                }
             }
         }
 
@@ -205,9 +220,17 @@ namespace Ditto.Bot.Modules.Utility
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
         public async Task Fortune()
         {
-            await Context.Channel.SendMessageAsync(
-                $"{Context.User.Mention} {new FortuneCookieApi().Fortune()}"
-            ).ConfigureAwait(false);
+            var fortune = new FortuneCookieApi().Fortune();
+            if (!string.IsNullOrEmpty(fortune))
+            {
+                await Context.Channel.SendMessageAsync(
+                    $"{Context.User.Mention} {fortune}"
+                ).ConfigureAwait(false);
+            }
+            else
+            {
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+            }
         }
 
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]

@@ -286,7 +286,7 @@ namespace Ditto.Bot.Modules.BDO
             {
                 if (!(await Ditto.Client.DoAsync(async c => await c.GetPermissionsAsync(textChannel)).ConfigureAwait(false)).HasAccess())
                 {
-                    await Context.Channel.SendMessageAsync($"💢 {Context.User.Mention} Unable to access the channel {channel.Mention}");
+                    await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
                 }
                 else
                 {

@@ -204,11 +204,12 @@ namespace Ditto.Bot.Modules.Scripting
         {
             if (Context.GuildUser?.GuildPermissions.Administrator == false)
             {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
                 return null;
             }
-            var luaScript = Validate(luaCode, false);
-            await Context.Message.AddReactionsAsync(luaScript != null ? Emotes.WhiteCheckMark : Emotes.X).ConfigureAwait(false);
 
+            var luaScript = Validate(luaCode, false);
+            await Context.ApplyResultReaction(luaScript != null ? CommandResult.Success : CommandResult.Failed).ConfigureAwait(false);
             return luaScript;
         }
 
