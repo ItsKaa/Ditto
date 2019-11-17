@@ -11,13 +11,13 @@ namespace Ditto.Attributes
         public CommandSourceLevel SourceLevel { get; private set; }
         public CommandAccessLevel AccessLevel { get; private set; }
         public bool RequireBotTag { get; set; } = false;
-        public bool AcceptBotTag { get; set; } = true;
+        public bool AcceptBotTag { get; set; } = false;
         public bool DeleteUserMessage { get; set; } = false;
         public TimeSpan DeleteUserMessageTimer { get; set; } = TimeSpan.Zero;
         
         public DiscordCommandAttribute(CommandSourceLevel sourceLevel = CommandSourceLevel.All,
             CommandAccessLevel accessLevel = CommandAccessLevel.Local,
-            bool acceptBotTag = true,
+            bool acceptBotTag = false,
             bool requireBotTag = false,
             bool deleteUserMessage = false,
             double deleteUserMessageAfterSeconds = 0.0)
@@ -57,9 +57,11 @@ namespace Ditto.Attributes
 
         public Task<ConditionResult> VerifyAsync(ICommandContextEx context)
         {
+            // Verify that a tag has been supplied where necessary and that 
             if (RequireBotTag && !context.IsBotUserTagged)
                 return Task.FromResult(ConditionResult.FromError("Invalid use of command, @tag required.", true));
-            else if(!AcceptBotTag && context.IsBotUserTagged)
+            // Tagged commands without a prefix value.
+            else if(!context.IsProperCommand && !AcceptBotTag && context.IsBotUserTagged)
                 return Task.FromResult(ConditionResult.FromError("Invalid use of command, @tag is not accepted.", true));
 
             var valid = false;

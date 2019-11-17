@@ -47,7 +47,7 @@ namespace Ditto.Bot.Modules.Chat
             };
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All, RequireBotTag = true)]
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All, RequireBotTag = false)]
         public async Task Talk([Multiword] string message)
         {
             try

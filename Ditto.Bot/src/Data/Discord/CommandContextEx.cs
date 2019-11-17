@@ -18,6 +18,7 @@ namespace Ditto.Bot.Data.Discord
         public IUser User { get; set; }
         public IUserMessage Message { get; set; }
         public bool IsPrivate => Channel is IPrivateChannel;
+        public ITextChannel TextChannel { get; set; }
 
         public IGuildUser GuildUser => User as IGuildUser;
         //public string Mention => GuildUser?.Mention ?? User?.Mention ?? "";
@@ -25,7 +26,8 @@ namespace Ditto.Bot.Data.Discord
         public string GlobalUsername => (User?.Username ?? "") + "#" + (User?.Discriminator ?? "0000");
         public string NicknameAndGlobalUsername => $"{Nickname} ({GlobalUsername})";
         public bool IsBotUserTagged { get; private set; } = false;
-        
+        public bool IsProperCommand { get; private set; } = false;
+
         public CommandContextEx(IDiscordClient client, IUserMessage msg)
         {
             Client = client;
@@ -33,12 +35,28 @@ namespace Ditto.Bot.Data.Discord
             Channel = msg?.Channel;
             User = msg?.Author;
             Message = msg;
+            TextChannel = msg?.Channel as ITextChannel;
 
-            IsBotUserTagged = null != (
-                (Message?.Content?.TrimStart() ?? "")
-                .ParseDiscordTags()
-                .FirstOrDefault(x => x.IsSuccess && x.Type == DiscordTagType.USER && x.Id == client?.CurrentUser?.Id)
+            // Check if the bot user is tagged
+            var botTagged = (Message?.Content?.TrimStart() ?? "").ParseDiscordTags()
+                .FirstOrDefault(x => x.IsSuccess
+                    && x.Type == DiscordTagType.USER
+                    && x.Id == client?.CurrentUser?.Id
             );
+            IsBotUserTagged = (botTagged != null);
+
+            // Check if the message contains the configured prefix, see 'IsPropertCommand'.
+            var config = Ditto.Database.Do(uow => uow.Configs.GetPrefix(Guild), complete: false);
+            if (!string.IsNullOrEmpty(config?.Value))
+            {
+                var content = Message.Content;
+                if (botTagged?.IsSuccess == true)
+                {
+                    content = content.Remove(botTagged.Index, botTagged.Length).TrimStart();
+                }
+
+                IsProperCommand = content.TrimStart().StartsWith(config.Value) == true;
+            }
         }
 
         public Task<IUserMessage> EmbedAsync(string message, EmbedBuilder embedBuilder, ContextMessageOption options = ContextMessageOption.None, RetryMode retryMode = RetryMode.AlwaysRetry)
