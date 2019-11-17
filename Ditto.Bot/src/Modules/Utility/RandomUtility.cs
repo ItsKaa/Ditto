@@ -226,10 +226,14 @@ namespace Ditto.Bot.Modules.Utility
         }
 
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        public Task AdorableAvatar()
+        public async Task AdorableAvatar()
         {
-            // https://api.adorable.io/avatars/face/eyes7/nose1/mouth9/ffaaaa
-            return Task.CompletedTask;
+            var avatarUrl = new AdorableApi().RandomAvatar();
+            await Context.Channel.EmbedAsync(
+                new EmbedBuilder()
+                .WithImageUrl(avatarUrl.ToString())
+                .WithAuthor(Context.User)
+            ).ConfigureAwait(false);
         }
 
         [Alias("thonk")]
