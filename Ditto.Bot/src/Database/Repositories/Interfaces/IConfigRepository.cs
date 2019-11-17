@@ -13,6 +13,7 @@ namespace Ditto.Bot.Database.Repositories.Interfaces
         Config GetEmbedMusicPausedColour(IGuild guild);
         Config GetPrefix(IGuild guild);
         Config GetBdoMaintenanceChannel(IGuild guild);
+        Config GetBdoNewsIdentifier(IGuild guild);
 
         void SetEmbedColour(IGuild guild, Color colour);
         void SetEmbedErrorColour(IGuild guild, Color colour);
@@ -23,5 +24,6 @@ namespace Ditto.Bot.Database.Repositories.Interfaces
         void SetPrefix(IGuild guild, string prefix);
         void SetBdoMaintenanceChannel(IGuild guild, ulong channelId);
         void SetBdoMaintenanceChannel(IGuild guild, ITextChannel textChannel);
+        void SetBdoNewsIdentifier(IGuild guild, ulong identifier);
     }
 }

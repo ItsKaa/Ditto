@@ -17,6 +17,7 @@ namespace Ditto.Bot.Database.Repositories
         private const string _keyEmbedMusicPausedColour = "embed_colour_music-paused";
         private const string _keyPrefix = "prefix";
         private const string _keyBdoMaintenanceChannel = "bdo_maintenance_channel";
+        private const string _keyBdoNewsIdentifier = "bdo_news_id";
 
         private static ConcurrentDictionary<string, string> _defaultConfigValues = new ConcurrentDictionary<string, string>(new Dictionary<string, string>() {
              {_keyEmbedOkColour , Color.Blue.ToString() },
@@ -26,7 +27,8 @@ namespace Ditto.Bot.Database.Repositories
             {_keyEmbedMusicPlayingColour, "735bc1" },
             {_keyEmbedMusicPausedColour, "#666666" },
             {_keyPrefix, ">"},
-            {_keyBdoMaintenanceChannel, null}
+            {_keyBdoMaintenanceChannel, null},
+            {_keyBdoNewsIdentifier, "0" }
         });
         
         public ConfigRepository(DbContext dbContext) : base(dbContext)
@@ -97,5 +99,9 @@ namespace Ditto.Bot.Database.Repositories
         private Config GetOrAddBdoMaintenanceChannel(IGuild guild) => GetOrAddConfigItem(guild, _keyBdoMaintenanceChannel);
         public void SetBdoMaintenanceChannel(IGuild guild, ulong channelId) => GetOrAddBdoMaintenanceChannel(guild).Value = channelId.ToString();
         public void SetBdoMaintenanceChannel(IGuild guild, ITextChannel textChannel) => SetBdoMaintenanceChannel(guild, textChannel.Id);
+
+        public Config GetBdoNewsIdentifier(IGuild guild) => GetConfigItem(guild, _keyBdoNewsIdentifier);
+        private Config GetOrAddBdoNewsIdentifier(IGuild guild) => GetOrAddConfigItem(guild, _keyBdoNewsIdentifier);
+        public void SetBdoNewsIdentifier(IGuild guild, ulong identifier) => GetOrAddBdoNewsIdentifier(guild).Value = identifier.ToString();
     }
 }
