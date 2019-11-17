@@ -582,7 +582,7 @@ namespace Ditto.Bot.Services
             int score = 0;
             
             // Check if we have enough parameters
-            var optionalCount = parameterInfo.Sum(x => x.IsOptional());
+            var optionalCount = parameterInfo.Sum(x => x.IsOptional);
             if ((parameterInfo.Count() - optionalCount) <= commandInputs.Count())
             {
                 // Possible functions:
@@ -625,10 +625,9 @@ namespace Ditto.Bot.Services
                                     if (inputsMultiword.Count() < k)
                                     {
                                         // Check if optional, if not: fail.
-                                        if (paramMultiword.IsOptional())
+                                        if (paramMultiword.IsOptional)
                                         {
-                                            //objects[j] = paramMultiword.DefaultValue;
-                                            objects[objects.Count - l - 1][0] = paramMultiword.DefaultValue;
+                                            objects[objects.Count - l - 1][0] = paramMultiword.GetDefaultValue();
                                             score += Globals.Command.Score.Optional;
                                             l++;
                                         }
@@ -652,9 +651,9 @@ namespace Ditto.Bot.Services
                                     catch (Exception ex)
                                     {
                                         // TODO: If optional, try that first?
-                                        if (paramMultiword.IsOptional())
+                                        if (paramMultiword.IsOptional)
                                         {
-                                            objects[objects.Count - l - 1][0] = paramMultiword.DefaultValue;
+                                            objects[objects.Count - l - 1][0] = paramMultiword.GetDefaultValue();
                                             score += Globals.Command.Score.Optional;
                                             l++;
                                         }
@@ -689,9 +688,9 @@ namespace Ditto.Bot.Services
                         catch (Exception ex)
                         {
                             // If available, use the default value.
-                            if (param.IsOptional())
+                            if (param.IsOptional)
                             {
-                                objects[i][0] = param.DefaultValue;
+                                objects[i][0] = param.GetDefaultValue();
                                 score += Globals.Command.Score.Optional;
                             }
                             else

@@ -17,12 +17,14 @@ namespace Ditto.Extensions
     // ParameterInfo
     public static partial class ReflectionExtensions
     {
-        public static bool IsOptional(this ParameterInfo @this)
+        /// <summary>
+        /// Retrieve the specified default value or get the default value from the parameter type.
+        /// </summary>
+        public static object GetDefaultValue(this ParameterInfo parameterInfo)
         {
-            // HasDefaultValue: declared a default within the method declaration
-            // IsOptional could be an attribute.
-
-            return @this.HasDefaultValue;
+            return parameterInfo.HasDefaultValue
+                ? parameterInfo.DefaultValue
+                : parameterInfo.ParameterType.GetDefaultValue();
         }
     }
 }
