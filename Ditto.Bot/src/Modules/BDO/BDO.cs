@@ -290,7 +290,7 @@ namespace Ditto.Bot.Modules.BDO
                 }
                 else
                 {
-                    success = await LinkUtility.TryAddLinkAsync(LinkType.BDO_Maintenance, channel, null).ConfigureAwait(false);
+                    success = null != await LinkUtility.TryAddLinkAsync(LinkType.BDO_Maintenance, channel, null).ConfigureAwait(false);
                     await Context.EmbedAsync(
                         success
                         ? $"Successfully linked BDO maintenance to {textChannel.Mention}"

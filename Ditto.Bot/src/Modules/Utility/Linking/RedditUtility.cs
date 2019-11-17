@@ -173,7 +173,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     return;
                 }
 
-                if (!await LinkUtility.TryAddLinkAsync(LinkType.Reddit, textChannel, subRedditLink, fromDate))
+                if (null == await LinkUtility.TryAddLinkAsync(LinkType.Reddit, textChannel, subRedditLink, fromDate))
                 {
                     await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                     await Context.EmbedAsync(

@@ -130,25 +130,22 @@ namespace Ditto.Bot.Modules.Utility.Linking
             return false;
         }
 
-        public static async Task<bool> TryAddLinkAsync(LinkType linkType, ITextChannel textChannel, string value, Func<string, string, bool> comparer, DateTime? date = null)
+        public static async Task<Link> TryAddLinkAsync(LinkType linkType, ITextChannel textChannel, string value, Func<string, string, bool> comparer, DateTime? date = null)
         {
             // Check if value already exists
-            if (await Ditto.Database.ReadAsync(uow =>
+            if (!(await Ditto.Database.ReadAsync(uow =>
             {
                 return uow.Links.GetAll(i =>
                     i.GuildId == textChannel.GuildId
                     && i.ChannelId == textChannel.Id
                     && comparer(i.Value, value)
                 ).Count() > 0;
-            }))
+            })))
             {
-                return false;
-            }
-            else
-            {
+                Link link = null;
                 await Ditto.Database.WriteAsync((uow) =>
                 {
-                    uow.Links.Add(new Link()
+                    link = uow.Links.Add(new Link()
                     {
                         Type = linkType,
                         Value = value,
@@ -157,11 +154,17 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         Date = date ?? DateTime.Now,
                     });
                 });
-                return true;
+
+                if (link != null)
+                {
+                    _links?.TryAdd(link.Id, link);
+                }
+                return link;
             }
+            return null;
         }
 
-        public static Task<bool> TryAddLinkAsync(LinkType linkType, ITextChannel textChannel, string value, DateTime? date = null)
+        public static Task<Link> TryAddLinkAsync(LinkType linkType, ITextChannel textChannel, string value, DateTime? date = null)
             => TryAddLinkAsync(linkType, textChannel, value, ((left, right) => Equals(left, right)), date);
         
         public static bool LinkItemExists(Link link, string value, StringComparison stringComparison = StringComparison.CurrentCulture)

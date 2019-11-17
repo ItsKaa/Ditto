@@ -83,7 +83,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
             {
                 // Check for an existing item
                 var uri = WebHelper.ToUri(url);
-                if(await LinkUtility.TryAddLinkAsync(LinkType.RSS, textChannel, uri.ToString(), (left, right) => {
+                if(null == await LinkUtility.TryAddLinkAsync(LinkType.RSS, textChannel, uri.ToString(), (left, right) => {
                     return WebHelper.Compare(WebHelper.ToUri(left), WebHelper.ToUri(right));
                 }, fromDate))
                 {
@@ -97,7 +97,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
             }
         }
 
-        private static EmbedBuilder ParseEmbed(string url, IGuild guild, string channelName)
+        protected static EmbedBuilder ParseEmbed(string url, IGuild guild, string channelName)
         {
             var htmlCode = WebHelper.GetSourceCode(url);
             var metaInfo = WebHelper.GetMetaInfoFromHtml(htmlCode);
