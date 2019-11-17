@@ -61,6 +61,7 @@
     <PackageReference Include="System.Linq" Version="4.3.0" />
     <PackageReference Include="System.Security.Principal.Windows" Version="4.6.0" />
     <PackageReference Include="TweetinviAPI" Version="4.0.2" />
+    <PackageReference Include="TwitchLib" Version="3.0.1" />
     <!--<PackageReference Include="libvideo" Version="1.0.1" />-->
   </ItemGroup>
 

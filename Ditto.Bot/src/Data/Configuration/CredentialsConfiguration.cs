@@ -14,5 +14,6 @@ namespace Ditto.Bot.Data.Configuration
         public string GoogleApiKey { get; set; }
         public string GiphyApiKey { get; set; }
         public string CleverbotApiKey { get; set; }
+        public string TwitchApiClientId { get; set; }
     }
 }

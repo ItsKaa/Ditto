@@ -29,6 +29,7 @@ namespace Ditto.Bot
         public static CommandHandler CommandHandler { get; private set; }
         public static CacheHandler Cache { get; private set; }
         public static GoogleService Google { get; private set; }
+        public static TwitchLib.Api.TwitchAPI Twitch { get; private set; }
         public static Giphy Giphy { get; private set; }
         public static SettingsConfiguration Settings { get; private set; }
         public static ReactionHandler ReactionHandler { get; private set; }
@@ -230,6 +231,23 @@ namespace Ditto.Bot
             catch (ApiException ex)
             {
                 Log.Warn("Could not initialize Giphy {0}\n", ex.ToString());
+            }
+
+            // Try to initialise 'Twitch'
+            try
+            {
+                Twitch = new TwitchLib.Api.TwitchAPI();
+                Twitch.Settings.ClientId = Settings.Credentials.TwitchApiClientId;
+                var twitchResult = await Twitch.V5.Auth.CheckCredentialsAsync().ConfigureAwait(false);
+                if(Twitch.Settings.ClientId == null || !twitchResult.Result)
+                {
+                    Twitch = null;
+                    throw new ApiException("Twitch credentials check failed.");
+                }
+            }
+            catch(Exception ex)
+            {
+                Log.Warn("Could not initialize Twitch {0}\n", ex.ToString());
             }
 
             // Create our discord client

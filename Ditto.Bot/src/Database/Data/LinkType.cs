@@ -8,5 +8,7 @@
         // Black Desert Online (BDO)
         BDO,
         BDO_Maintenance,
+
+        Twitch,
     }
 }
