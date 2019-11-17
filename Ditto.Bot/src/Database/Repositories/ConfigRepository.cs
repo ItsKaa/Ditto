@@ -70,26 +70,32 @@ namespace Ditto.Bot.Database.Repositories
         }
 
         public Config GetEmbedColour(IGuild guild) => GetConfigItem(guild, _keyEmbedOkColour);
-        public void SetEmbedColour(IGuild guild, Color colour) => GetEmbedColour(guild).Value = colour.ToString();
+        private Config GetOrAddEmbedColour(IGuild guild) => GetOrAddConfigItem(guild, _keyEmbedOkColour);
+        public void SetEmbedColour(IGuild guild, Color colour) => GetOrAddEmbedColour(guild).Value = colour.ToString();
         
         public Config GetEmbedErrorColour(IGuild guild) => GetConfigItem(guild, _keyEmbedErrorColour);
-        public void SetEmbedErrorColour(IGuild guild, Color colour) => GetEmbedErrorColour(guild).Value = colour.ToString();
+        private Config GetOrAddEmbedErrorColour(IGuild guild) => GetOrAddConfigItem(guild, _keyEmbedErrorColour);
+        public void SetEmbedErrorColour(IGuild guild, Color colour) => GetOrAddEmbedErrorColour(guild).Value = colour.ToString();
 
         public Config GetPrefix(IGuild guild) => GetConfigItem(guild, _keyPrefix);
-        public void SetPrefix(IGuild guild, string prefix) => GetPrefix(guild).Value = prefix;
+        private Config GetOrAddPrefix(IGuild guild) => GetOrAddConfigItem(guild, _keyPrefix);
+        public void SetPrefix(IGuild guild, string prefix) => GetOrAddPrefix(guild).Value = prefix;
         
         public Config GetEmbedRssColour(IGuild guild) => GetConfigItem(guild, _keyEmbedRssColour);
-        public void SetEmbedRssColour(IGuild guild, Color colour) => GetEmbedRssColour(guild).Value = colour.ToString();
-        
+        private Config GetOrAddEmbedRssColour(IGuild guild) => GetOrAddConfigItem(guild, _keyEmbedRssColour);
+        public void SetEmbedRssColour(IGuild guild, Color colour) => GetOrAddEmbedRssColour(guild).Value = colour.ToString();
+
         public Config GetEmbedMusicPlayingColour(IGuild guild) => GetConfigItem(guild, _keyEmbedMusicPlayingColour);
-        public void SetEmbedMusicPlayingColour(IGuild guild, Color colour) => GetEmbedMusicPlayingColour(guild).Value = colour.ToString();
+        private Config GetOrAddEmbedMusicPlayingColour(IGuild guild) => GetOrAddConfigItem(guild, _keyEmbedMusicPlayingColour);
+        public void SetEmbedMusicPlayingColour(IGuild guild, Color colour) => GetOrAddEmbedMusicPlayingColour(guild).Value = colour.ToString();
 
         public Config GetEmbedMusicPausedColour(IGuild guild) => GetConfigItem(guild, _keyEmbedMusicPausedColour);
-        public void SetMusicPausedColour(IGuild guild, Color colour) => GetEmbedMusicPausedColour(guild).Value = colour.ToString();
-
+        private Config GetOrAddEmbedMusicPausedColour(IGuild guild) => GetOrAddConfigItem(guild, _keyEmbedMusicPausedColour);
+        public void SetMusicPausedColour(IGuild guild, Color colour) => GetOrAddEmbedMusicPausedColour(guild).Value = colour.ToString();
 
         public Config GetBdoMaintenanceChannel(IGuild guild) => GetConfigItem(guild, _keyBdoMaintenanceChannel);
-        public void SetBdoMaintenanceChannel(IGuild guild, ulong channelId) => GetBdoMaintenanceChannel(guild).Value = channelId.ToString();
+        private Config GetOrAddBdoMaintenanceChannel(IGuild guild) => GetOrAddConfigItem(guild, _keyBdoMaintenanceChannel);
+        public void SetBdoMaintenanceChannel(IGuild guild, ulong channelId) => GetOrAddBdoMaintenanceChannel(guild).Value = channelId.ToString();
         public void SetBdoMaintenanceChannel(IGuild guild, ITextChannel textChannel) => SetBdoMaintenanceChannel(guild, textChannel.Id);
     }
 }
