@@ -167,16 +167,22 @@ namespace Ditto.Bot.Modules.Music.Data
                 FFmpegProcess.StandardInput.BaseStream
             );
 
-            // Write FFmpeg-Out to Audio-Out
-            await RedirectStream(
+            // Write FFmpeg-Out to Audio-Out using a buffer.
+            using (var audioBuffer = new AudioBuffer(
                 FFmpegProcess.StandardOutput.BaseStream,
-                audioOutStream,
-                (readCount, buffer) =>
+                audioOutStream
+            ))
+            {
+                audioBuffer.ProcessBuffer += (inBuffer) =>
                 {
-                    return Task.FromResult(AdjustVolume(buffer, Volume / 100.0));
-                }
-            ).ConfigureAwait(false);
-            
+                    //return new Memory<byte>(AdjustVolume(inBuffer.Value.Span.ToArray(), Volume));
+                    return AdjustVolume(inBuffer, this.Volume / 100.0);
+                };
+
+                audioBuffer.Start(CancellationTokenSource.Token);
+                await audioBuffer.WaitAsync().ConfigureAwait(false);
+            }
+
             KillAndDisposeProcesses();
             await mapStreamsTask.ConfigureAwait(false);
             Running = false;
@@ -265,6 +271,25 @@ namespace Ditto.Bot.Modules.Music.Data
             return audioSamples;
         }
         
+        private static unsafe Memory<byte> AdjustVolume(Memory<byte> audioSamplesMemory, double volume)
+        {
+            if (Math.Abs(volume - 1.0) < 0.0001)
+                return audioSamplesMemory;
+
+            // 16-bit precision
+            var volumeMultiplier = (int)Math.Round(volume * ushort.MaxValue);
+            using (var pin = audioSamplesMemory.Pin())
+            {
+                byte* srcBytes = (byte*)pin.Pointer;
+                var src = (short*)srcBytes;
+                for (var i = 0; i < audioSamplesMemory.Length / 2; i++, src++)
+                {
+                    *src = (short)(((*src) * volumeMultiplier) >> 16);
+                }
+            }
+            return audioSamplesMemory;
+        }
+
         private void KillAndDisposeProcesses()
         {
             try
