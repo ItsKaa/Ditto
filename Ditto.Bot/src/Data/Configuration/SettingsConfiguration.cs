@@ -13,6 +13,7 @@ namespace Ditto.Bot.Data.Configuration
         public BotType BotType { get; set; } = BotType.Bot;
         public bool AutoReconnect { get; set; } = true;
         public int AmountOfCachedMessages { get; set; } = 10;
+        public ulong BotOwnerDiscordId { get; set; } = 156746832381345792;
 
         /// <summary>Sets the time, in seconds to wait for a connection/event to complete before aborting</summary>
         [Comment("\n  Sets the time, in seconds to wait for a connection/event to complete before aborting\n")]
