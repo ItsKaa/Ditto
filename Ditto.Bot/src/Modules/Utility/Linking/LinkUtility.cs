@@ -138,9 +138,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 return uow.Links.GetAll(i =>
                     i.GuildId == textChannel.GuildId
                     && i.ChannelId == textChannel.Id
-                    && comparer(i.Value, value)
-                ).Count() > 0;
-            })))
+                )
+                .Where(i => comparer(i.Value, value))
+                .Count() > 0;
+            }).ConfigureAwait(false)))
             {
                 Link link = null;
                 await Ditto.Database.WriteAsync((uow) =>

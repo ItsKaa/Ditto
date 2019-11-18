@@ -63,7 +63,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         MonitorChannels(channels);
 
                         // Instantly update the monitoring service on load.
-                        await Monitor.UpdateLiveStreamersAsync(true).ConfigureAwait(false);
+                        if (Links.Count > 0)
+                        {
+                            await Monitor.UpdateLiveStreamersAsync(true).ConfigureAwait(false);
+                        }
                     }
                     catch(Exception ex)
                     {
@@ -157,9 +160,17 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     .WithOkColour(link.Guild)
                 ;
 
-                await link.Channel.EmbedAsync(embedBuilder,
-                    options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit | RetryMode.RetryTimeouts }
-                ).ConfigureAwait(false);
+                if (link.Channel != null)
+                {
+                    await link.Channel.EmbedAsync(embedBuilder,
+                        options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit | RetryMode.RetryTimeouts }
+                    ).ConfigureAwait(false);
+                }
+                else
+                {
+                    // TODO: We should make certain that we this channel exists by invoking Ditto.Client.DoAsync(...) and then delete it if necessary.
+                    Log.Debug($"Twitch | Link #{link.Id} doesn't have a channel, clean-up database?");
+                }
             }
         }
 
@@ -171,7 +182,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
         [Alias("add", "link", "hook", "register")]
         public async Task Add([Optional] ITextChannel textChannel, [Multiword] string channelOrUrl)
         {
-            if (!(await Ditto.Client.DoAsync(c => c.GetPermissionsAsync(textChannel ?? Context.TextChannel)).ConfigureAwait(false)).HasAccess())
+            if(textChannel == null)
+                textChannel = Context.TextChannel;
+
+            if (!(await Ditto.Client.DoAsync(c => c.GetPermissionsAsync(textChannel)).ConfigureAwait(false)).HasAccess())
             {
                 await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
                 return;
@@ -199,7 +213,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     if (link == null)
                     {
                         await Context.EmbedAsync(
-                            $"That url is already linked to {textChannel.Mention}",
+                            $"That url is already linked to {textChannel?.Mention}",
                             ContextMessageOption.ReplyWithError
                         ).ConfigureAwait(false);
                         await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
