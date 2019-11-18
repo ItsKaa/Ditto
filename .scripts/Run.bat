@@ -1,8 +1,7 @@
 @ECHO off
-@TITLE KaaBot
-REM cd /D "..\Ditto.Bot"
+@TITLE Ditto
 cd /D "..\Ditto.Bot"
 dotnet run --configuration Release
-TITLE KaaBot - Stopped
+TITLE Ditto - Stopped
 CD /D "%~dp0"
 PAUSE >nul 2>&1

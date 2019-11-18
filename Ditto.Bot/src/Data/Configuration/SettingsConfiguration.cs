@@ -25,6 +25,7 @@ namespace Ditto.Bot.Data.Configuration
         
         public int TimeoutInMilliseconds => (int)(Timeout * 60);
         
+        public PathConfiguration Paths { get; set; } = new PathConfiguration();
         public CredentialsConfiguration Credentials { get; set; } = new CredentialsConfiguration();
         public BDOSettings BlackDesertOnline { get; set; } = new BDOSettings()
         {

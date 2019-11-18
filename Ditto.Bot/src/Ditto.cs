@@ -22,6 +22,7 @@ namespace Ditto.Bot
     {
         public static BotType Type { get; private set; } = BotType.Bot;
         public static bool Running { get; private set; } = false;
+        private static bool Stopping { get; set; } = false;
         public static bool Reconnecting { get; private set; } = false;
         public static bool Exiting { get; private set; } = false;
         public static ObjectLock<DiscordClientEx> Client { get; private set; }
@@ -68,6 +69,24 @@ namespace Ditto.Bot
                 Log.Info("OK.");
                 await Task.Delay(1000);
             };
+        }
+
+        public static async Task StopAsync()
+        {
+            Stopping = true;
+            if (Exit != null)
+            {
+                try { await Exit().ConfigureAwait(false); } catch { }
+            }
+            if (Client != null && Client.HasValue)
+            {
+                await LogOutAsync().ConfigureAwait(false);
+            }
+
+            Client?.Dispose();
+            ReactionHandler?.Dispose();
+            Database = null;
+            Cache = null;
         }
 
         private static async Task LogOutAsync() => await Client.DoAsync((c) =>
@@ -133,6 +152,9 @@ namespace Ditto.Bot
 
         public async Task ReconnectAsync()
         {
+            if (Stopping)
+                return;
+
             Reconnecting = true;
             await Task.Delay(1000);
             Log.Info("Reconnecting...");

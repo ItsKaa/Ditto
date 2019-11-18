@@ -1,14 +1,18 @@
 ﻿namespace Ditto.Bot.Database.Data
 {
+    // Links are saved in the database and their values cannot be edited unless a full purge or upgrade is done.
     public enum LinkType
     {
-        RSS,
-        Reddit,
+        RSS             = 0,
+        Reddit          = 1,
+        Twitch          = 4,
+        Twitter         = 5,
 
-        // Black Desert Online (BDO)
-        BDO,
-        BDO_Maintenance,
+        // Black Desert Online (BDO).
+        BDO             = 2,
+        BDO_Maintenance = 3,
 
-        Twitch,
+        // Update information, Last git commit hash.
+        Update          = 6,
     }
 }
