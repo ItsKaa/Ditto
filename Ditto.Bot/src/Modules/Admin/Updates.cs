@@ -20,19 +20,17 @@ namespace Ditto.Bot.Modules.Admin
 {
     public class Updates : DiscordModule
     {
-        public class BuildInfo
+        public struct BuildInfo
         {
-            public BuildInfo(bool fetch, string localHash, string remoteHash)
+            public BuildInfo(string localHash, string remoteHash)
             {
-                FetchSuccess = fetch;
                 LocalHash = localHash;
                 RemoteHash = remoteHash;
             }
 
-            public bool FetchSuccess { get; set; }
             public string LocalHash { get; set; }
             public string RemoteHash { get; set; }
-            public bool HasUpdates => !string.Equals(LocalHash.Trim(), RemoteHash.Trim(), StringComparison.CurrentCultureIgnoreCase);
+            public bool IsEqual => LocalHash?.Equals(RemoteHash, StringComparison.CurrentCultureIgnoreCase) ?? false;
         }
 
         static Updates()
@@ -97,7 +95,7 @@ namespace Ditto.Bot.Modules.Admin
             };
         }
 
-        private static Tuple<bool, string> RunGit(string args, bool checkForErrors = true)
+        private static string RunGit(string args)
         {
             using var process = new Process
             {
@@ -113,9 +111,7 @@ namespace Ditto.Bot.Modules.Admin
                 }
             };
 
-            bool errorReceived = false;
             var outputBuilder = new StringBuilder();
-
             process.OutputDataReceived += (o, e) =>
             {
                 if (!string.IsNullOrEmpty(e?.Data))
@@ -124,24 +120,12 @@ namespace Ditto.Bot.Modules.Admin
                                  .Append(Environment.NewLine);
                 }
             };
-            process.ErrorDataReceived += (o, e) =>
-            {
-                if (!string.IsNullOrEmpty(e?.Data) && checkForErrors)
-                {
-                    Log.Debug($"Updates: GIT Error | {e.Data}");
-                    errorReceived = true;
-                }
-            };
 
             process.Start();
             process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
             process.WaitForExit();
 
-            return new Tuple<bool, string>(
-                !errorReceived,
-                outputBuilder.ToString()
-            );
+            return outputBuilder.ToString();
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
@@ -151,23 +135,28 @@ namespace Ditto.Bot.Modules.Admin
             {
                 // Git fetch to retrieve all updates
                 var fetch = RunGit("fetch");
-                if (fetch.Item1)
-                {
-                    // Compare the local and remote hash.
-                    var localHash = RunGit("rev-parse HEAD");
-                    var remoteHash = RunGit("rev-parse origin/master");
-                    var buildInfo = new BuildInfo(fetch.Item1, localHash.Item2.Trim(), remoteHash.Item2.Trim());
 
-                    if (!buildInfo.HasUpdates && reactions)
+                // Compare the local and remote hash.
+                var localHash = RunGit("rev-parse HEAD");
+                var remoteHash = RunGit("rev-parse origin/master");
+                if (!string.IsNullOrEmpty(localHash) && !string.IsNullOrEmpty(remoteHash))
+                {
+                    var buildInfo = new BuildInfo(localHash.Trim(), remoteHash.Trim());
+                    if(reactions && buildInfo.LocalHash == null || buildInfo.RemoteHash == null)
                     {
+                        await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+                    }
+                    else if (reactions && buildInfo.IsEqual)
+                    {
+                        // Branch is already up to date
                         await Context.ApplyResultReaction(CommandResult.SuccessAlt1).ConfigureAwait(false);
                     }
                     return buildInfo;
                 }
                 else
                 {
-                    // Git fetch failed.
-                    Log.Error($"Updates | GIT fetch failed. {fetch.Item2 ?? string.Empty}");
+                    // Git fetch or rev-parse failed.
+                    Log.Error($"Git failed to find branch info | Fetch: '{fetch}'; Local Hash: '{localHash}'; Remote Hash '{remoteHash}'.");
                     if (reactions)
                         await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                 }
@@ -177,7 +166,7 @@ namespace Ditto.Bot.Modules.Admin
                 await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
             }
 
-            return new BuildInfo(false, null, null);
+            return new BuildInfo(null, null);
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
@@ -187,7 +176,7 @@ namespace Ditto.Bot.Modules.Admin
             if (Permissions.IsAdministratorOrBotOwner(Context))
             {
                 var buildInfo = await CheckForUpdates().ConfigureAwait(false);
-                if (buildInfo.HasUpdates)
+                if (!buildInfo.IsEqual && (await UpdateList(null, false).ConfigureAwait(false)).Count() > 0)
                 {
                     // Add a database link containing the current local branch.
                     await Ditto.Database.DoAsync((uow) =>
@@ -208,36 +197,37 @@ namespace Ditto.Bot.Modules.Admin
                     }, true).ConfigureAwait(false);
 
 
-                    var pull = RunGit("pull origin master", false);
-                    if (pull.Item1)
-                    {
-                        var startInfo = new ProcessStartInfo()
-                        {
-                            FileName = "bash",
-                            Arguments = $"{Ditto.Settings.Paths.BaseDir}/{Ditto.Settings.Paths.ScriptDir}/Run.{(global::Ditto.Data.BaseClass.IsLinux() ? "sh" : "bat")}",
-                            WorkingDirectory = $"{Ditto.Settings.Paths.BaseDir}/{Ditto.Settings.Paths.ScriptDir}",
-                            UseShellExecute = false,
-                            CreateNoWindow = false,
-                        };
-                        if (global::Ditto.Data.BaseClass.IsWindows())
-                        {
-                            startInfo.FileName = "cmd";
-                            startInfo.Arguments = "/c " + startInfo.Arguments;
-                        }
+                    var pull = RunGit("pull origin master");
 
-                        // Start a new instance and close the current process.
-                        Log.Debug($"Updating bot...");
-                        await Ditto.StopAsync().ConfigureAwait(false);
-                        using var process = new Process() { StartInfo = startInfo };
-                        process.Start();
-                        Program.Close();
-                    }
-                    else
+                    var startInfo = new ProcessStartInfo()
                     {
-                        Log.Error($"Updates | GIT pull failed. {pull.Item2 ?? string.Empty}");
-                        await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+                        FileName = "bash",
+                        Arguments = $"{Ditto.Settings.Paths.BaseDir}/{Ditto.Settings.Paths.ScriptDir}/Run.{(BaseClass.IsLinux() ? "sh" : "bat")}",
+                        WorkingDirectory = $"{Ditto.Settings.Paths.BaseDir}/{Ditto.Settings.Paths.ScriptDir}",
+                        UseShellExecute = false,
+                        CreateNoWindow = false,
+                    };
+                    if (BaseClass.IsWindows())
+                    {
+                        startInfo.FileName = "cmd";
+                        startInfo.Arguments = "/c " + startInfo.Arguments;
                     }
+
+                    // Start a new instance and close the current process.
+                    Log.Info($"Updating bot...");
+                    await Ditto.StopAsync().ConfigureAwait(false);
+                    using var process = new Process() { StartInfo = startInfo };
+                    process.Start();
+                    Program.Close();
                 }
+                else
+                {
+                    await Context.ApplyResultReaction(CommandResult.SuccessAlt1).ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
             }
         }
 
@@ -248,36 +238,34 @@ namespace Ditto.Bot.Modules.Admin
             if (Permissions.IsAdministratorOrBotOwner(Context))
             {
                 var buildInfo = await CheckForUpdates(false).ConfigureAwait(false);
-                if (buildInfo.FetchSuccess)
+
+                var commitData = RunGit($"log {fromHash ?? buildInfo.LocalHash}..{buildInfo.RemoteHash} --pretty=tformat:\"%h|%an|%cI|%s\"");
+                if (!string.IsNullOrEmpty(commitData))
                 {
-                    var commits = RunGit($"log {fromHash ?? buildInfo.LocalHash}..{buildInfo.RemoteHash} --pretty=tformat:\"%h|%an|%cI|%s\"");
-                    if (commits.Item1)
+                    var embedBuilder = new EmbedBuilder()
+                        .WithTitle("Updates")
+                        .WithOkColour(Context.Guild);
+
+                    var entries = commitData.Split("\n", StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
+                    foreach (var data in entries.Select(x => x.Split("|")))
                     {
-                        var commitData = commits.Item2;
-                        if (!string.IsNullOrEmpty(commitData))
+                        var date = DateTime.Parse(data[2]);
+                        var fieldBuilder = new EmbedFieldBuilder()
                         {
-                            var embedBuilder = new EmbedBuilder()
-                                .WithTitle("Updates")
-                                .WithOkColour(Context.Guild);
+                            Name = $"{date:dd-MM-yyyy hh:mm:ss} ({data[0]})",
+                            Value = data[3].TrimTo(200),
+                        };
 
-                            var entries = commitData.Split("\n", StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
-                            foreach (var data in entries.Select(x => x.Split("|")))
-                            {
-                                var date = DateTime.Parse(data[2]);
-                                var fieldBuilder = new EmbedFieldBuilder()
-                                {
-                                    Name = $"{date:dd-MM-yyyy hh:mm:ss} ({data[0]})",
-                                    Value = data[3].TrimTo(200),
-                                };
-
-                                values.Add(fieldBuilder.Build());
-                                embedBuilder.AddField(fieldBuilder);
-                            }
-
-                            if (post)
-                                await Context.Channel.EmbedAsync(embedBuilder, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit }).ConfigureAwait(false);
-                        }
+                        values.Add(fieldBuilder.Build());
+                        embedBuilder.AddField(fieldBuilder);
                     }
+
+                    if (post)
+                        await Context.Channel.EmbedAsync(embedBuilder, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit }).ConfigureAwait(false);
+                }
+                else if(post)
+                {
+                    await Context.ApplyResultReaction(CommandResult.SuccessAlt1).ConfigureAwait(false);
                 }
             }
             else if(post)
@@ -293,7 +281,7 @@ namespace Ditto.Bot.Modules.Admin
             if (Permissions.IsAdministratorOrBotOwner(Context))
             {
                 var buildInfo = await CheckForUpdates(false).ConfigureAwait(false);
-                if (buildInfo.FetchSuccess)
+                if (buildInfo.LocalHash != null && buildInfo.RemoteHash != null)
                 {
                     var embedBuilder = new EmbedBuilder()
                         .WithTitle($"\\{EmotesHelper.GetString(Emotes.HammerPick)} Build Info")
@@ -313,6 +301,10 @@ namespace Ditto.Bot.Modules.Admin
                     }
 
                     await Context.Channel.EmbedAsync(embedBuilder, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit }).ConfigureAwait(false);
+                }
+                else
+                {
+                    await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                 }
             }
             else
