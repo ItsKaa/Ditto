@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,67 +16,66 @@ namespace Ditto.Bot.Modules.Music.Data
         private Task _readTask, _writeTask;
         private CancellationTokenSource _cancellationTokenSource;
 
+        private bool ReadFinished { get; set; }
         public bool Running { get; private set; }
         public Stream InStream { get; private set; }
         public Stream OutStream { get; private set; }
         /// <summary>
         /// The queue that holds the buffered chunks from the input stream and written to the output stream.
         /// </summary>
-        private ConcurrentQueue<Memory<byte>> Queue { get; set; }
+        private ConcurrentQueue<AudioChunk> Queue { get; set; }
         /// <summary>
         /// The amount of chunks (in bytes) the buffer reads from the input stream.
-        /// Defaults to 1024.
         /// </summary>
         public ushort BufferReadSize { get; set; }
         /// <summary>
-        /// The amount of allowed buffered chunks (in bytes) stored while writing to the output stream.
-        /// Defaults to 50 MiB
+        /// The amount of allowed buffered chunks (in megabytes) stored while writing to the output stream.
         /// </summary>
         public uint BufferLimit { get; set; }
         /// <summary>
         /// The function that is invoked right before writing an audio buffer to the output stream.
         /// </summary>
-        public Func<Memory<byte>, Memory<byte>> ProcessBuffer;
+        public Func<byte[], byte[]> ProcessBuffer;
 
-        public AudioBuffer(Stream inStream, Stream outStream, ushort bufferSize = 0, ushort bufferLimit = 0)
+        public AudioBuffer(Stream inStream, Stream outStream, ushort bufferSize = 1024, uint bufferLimit = 50)
         {
             InStream = inStream;
             OutStream = outStream;
             Running = false;
-            Queue = new ConcurrentQueue<Memory<byte>>();
+            Queue = new ConcurrentQueue<AudioChunk>();
 
             BufferReadSize = bufferSize > 0 ? bufferSize : (ushort)1.KiB();
             BufferLimit = bufferLimit > 0 ? bufferLimit : (uint)50.MiB();
         }
 
-        public void Start(CancellationToken cancellationToken)
+        public void Start()
         {
             Stop();
             Running = true;
-            if (cancellationToken == CancellationToken.None)
-            {
-                _cancellationTokenSource = new CancellationTokenSource();
-                cancellationToken = _cancellationTokenSource.Token;
-            }
+            _cancellationTokenSource = new CancellationTokenSource();
 
+            ReadFinished = false;
             _readTask = Task.Run(async () =>
             {
-                while (Running)
+                while (Running && _cancellationTokenSource?.IsCancellationRequested == false)
                 {
                     try
                     {
                         if (InStream.CanRead)
                         {
-                            Memory<byte> buffer = new Memory<byte>(new byte[BufferReadSize]);
-                            int bytesRead = await InStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                            AudioChunk chunk = new AudioChunk(BufferReadSize);
+
+                            int bytesRead = await InStream.ReadAsync(chunk.Memory, _cancellationTokenSource.Token).ConfigureAwait(false);
                             if (bytesRead > 0)
                             {
-                                buffer = buffer.Slice(0, bytesRead);
-                                while (Running && (Queue.Count * BufferReadSize) > BufferLimit)
+                                chunk.Length = bytesRead;
+
+                                // Wait for the dequeue, comparing in megabytes.
+                                while (Running && (Queue.Count * (BufferReadSize * 0.000001)) > BufferLimit)
                                 {
-                                    await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+                                    await Task.Delay(100, _cancellationTokenSource?.Token ?? CancellationToken.None).ConfigureAwait(false);
                                 }
-                                Queue.Enqueue(buffer);
+                                Queue.Enqueue(chunk);
                             }
                             else
                             {
@@ -98,30 +98,46 @@ namespace Ditto.Bot.Modules.Music.Data
                         Log.Error($"AudioBuffer | {ex}");
                     }
                 }
-            }, cancellationToken);
+
+                ReadFinished = true;
+
+            }, _cancellationTokenSource.Token);
 
             _writeTask = Task.Run(async () =>
             {
-                while (Running)
+                while (Running && _cancellationTokenSource?.IsCancellationRequested == false)
                 {
+                    if (ReadFinished && Queue.IsEmpty)
+                        break;
+
                     try
                     {
-                        if (Queue.TryDequeue(out var buffer))
+                        if (Queue.TryDequeue(out var audioChunk))
                         {
-                            if (OutStream.CanWrite)
+                            using (audioChunk)
                             {
-                                // We're required to process the chunks in the write task, it's far slower which allows us to change the volume while it's still playing.
-                                if (ProcessBuffer != null)
+                                if (OutStream.CanWrite)
                                 {
-                                    buffer = ProcessBuffer.Invoke(buffer);
-                                }
+                                    // We're required to process the chunks in the write task, it's far slower which allows us to change the volume while it's still playing.
+                                    if (ProcessBuffer != null)
+                                    {
+                                        var bytes = audioChunk.Memory;
+                                        if (audioChunk.Length != audioChunk.Memory.Length)
+                                        {
+                                            bytes = audioChunk.Memory.Part(0, audioChunk.Length, false).ToArray();
+                                        }
+                                        var processedBytes = ProcessBuffer?.Invoke(bytes);
+                                        processedBytes.CopyTo(audioChunk.Memory, 0);
+                                        audioChunk.Length = processedBytes.Length;
+                                    }
 
-                                await OutStream.WriteAsync(buffer, cancellationToken);
-                            }
-                            else
-                            {
-                                Log.Error("AudioBuffer: Could not write to OutStream.");
-                                await Task.Delay(25).ConfigureAwait(false);
+                                    await OutStream.WriteAsync(audioChunk.Memory, 0, audioChunk.Length, _cancellationTokenSource.Token);
+                                }
+                                else
+                                {
+                                    Log.Error("AudioBuffer: Could not write to OutStream.");
+                                    await Task.Delay(25).ConfigureAwait(false);
+                                }
                             }
                         }
                     }
@@ -136,13 +152,14 @@ namespace Ditto.Bot.Modules.Music.Data
                         await Task.Delay(25).ConfigureAwait(false);
                     }
                 }
-            }, cancellationToken);
+            }, _cancellationTokenSource.Token);
         }
 
         public void Stop()
         {
+            try { _cancellationTokenSource?.Cancel(); } catch { }
             Running = false;
-            _cancellationTokenSource?.Cancel();
+            ReadFinished = true;
             Queue.Clear();
         }
 
@@ -152,7 +169,7 @@ namespace Ditto.Bot.Modules.Music.Data
             await _writeTask.ConfigureAwait(false);
         }
 
-        private bool _disposed = true;
+        private bool _disposed = false;
         public void Dispose()
         {
             Dispose(true);
@@ -165,12 +182,6 @@ namespace Ditto.Bot.Modules.Music.Data
                 if (disposing)
                 {
                     Stop();
-                    try
-                    {
-                        _readTask?.Dispose();
-                        _writeTask?.Dispose();
-                    }
-                    catch { }
                 }
                 _disposed = true;
             }

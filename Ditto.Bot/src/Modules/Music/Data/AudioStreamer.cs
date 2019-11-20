@@ -4,6 +4,7 @@ using Ditto.Extensions;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,6 +16,7 @@ namespace Ditto.Bot.Modules.Music.Data
         private ProcessStartInfo FFmpegStartInfo { get; set; }
         private Process YoutubeDLProcess { get; set; }
         private Process FFmpegProcess { get; set; }
+        private AudioBuffer AudioBuffer { get; set; }
 
         private CancellationTokenSource CancellationTokenSource { get; set; }
         public bool Running { get; private set; } = false;
@@ -105,17 +107,10 @@ namespace Ditto.Bot.Modules.Music.Data
 
         public async Task StreamAsync(string url, AudioOutStream audioOutStream)
         {
-            if(Running)
-            {
-                CancellationTokenSource.Cancel();
-            }
-            if (CancellationTokenSource.IsCancellationRequested)
-            {
-                CancellationTokenSource = new CancellationTokenSource();
-            }
+            StopStreaming();
+            CancellationTokenSource = new CancellationTokenSource();
             Running = true;
 
-            KillAndDisposeProcesses();
             YoutubeDLProcess = new Process()
             {
                 StartInfo = CopyStartInfo(YoutubeDLStartInfo)
@@ -168,26 +163,23 @@ namespace Ditto.Bot.Modules.Music.Data
             );
 
             // Write FFmpeg-Out to Audio-Out using a buffer.
-            using (var audioBuffer = new AudioBuffer(
+            using (AudioBuffer = new AudioBuffer(
                 FFmpegProcess.StandardOutput.BaseStream,
                 audioOutStream,
                 Ditto.Settings.Cache.AudioBufferSize,
                 Ditto.Settings.Cache.AudioBufferLimit
             ))
             {
-                audioBuffer.ProcessBuffer += (inBuffer) =>
+                AudioBuffer.ProcessBuffer += (buffer) =>
                 {
-                    //return new Memory<byte>(AdjustVolume(inBuffer.Value.Span.ToArray(), Volume));
-                    return AdjustVolume(inBuffer, this.Volume / 100.0);
+                    return AdjustVolume(buffer, this.Volume / 100.0);
                 };
 
-                audioBuffer.Start(CancellationTokenSource.Token);
-                await audioBuffer.WaitAsync().ConfigureAwait(false);
+                AudioBuffer.Start();
+                await AudioBuffer.WaitAsync().ConfigureAwait(false);
             }
 
-            KillAndDisposeProcesses();
             await mapStreamsTask.ConfigureAwait(false);
-            Running = false;
         }
 
         public void Pause(bool pause)
@@ -252,7 +244,23 @@ namespace Ditto.Bot.Modules.Music.Data
 
         public void StopStreaming()
         {
+            Running = false;
             try { CancellationTokenSource?.Cancel(); } catch { }
+
+            try
+            {
+                FFmpegProcess?.Kill();
+                FFmpegProcess?.Dispose();
+            }
+            catch { }
+            try
+            {
+                YoutubeDLProcess?.Kill();
+                YoutubeDLProcess?.Dispose();
+            }
+            catch { }
+
+            AudioBuffer?.Stop();
         }
 
         private static unsafe byte[] AdjustVolume(byte[] audioSamples, double volume)
@@ -292,22 +300,6 @@ namespace Ditto.Bot.Modules.Music.Data
             return audioSamplesMemory;
         }
 
-        private void KillAndDisposeProcesses()
-        {
-            try
-            {
-                FFmpegProcess?.Kill();
-                FFmpegProcess?.Dispose();
-            }
-            catch { }
-            try
-            {
-                YoutubeDLProcess?.Kill();
-                YoutubeDLProcess?.Dispose();
-            }
-            catch { }
-        }
-
         public void Dispose()
         {
             Dispose(true);
@@ -320,7 +312,6 @@ namespace Ditto.Bot.Modules.Music.Data
                 if (disposing)
                 {
                     StopStreaming();
-                    KillAndDisposeProcesses();
                 }
                 _disposed = true;
             }
