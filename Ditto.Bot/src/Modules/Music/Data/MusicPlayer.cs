@@ -65,9 +65,8 @@ namespace Ditto.Bot.Modules.Music.Data
             //Playlist = new ConcurrentQueue<PlaylistItem>();
             Playlist = new ConcurrentList<PlaylistItem>();
             AudioStreamer = new AudioStreamer(
-                // TODO: Store these in settings
-                IsLinux() ? @"/usr/local/bin/youtube-dl" : @"C:\youtube-dl\youtube-dl.exe",
-                IsLinux() ? @"/usr/bin/ffmpeg" : @"C:\ffmpeg\bin\ffmpeg.exe",
+                Ditto.Settings.Paths.YoutubeDL,
+                Ditto.Settings.Paths.FFmpeg,
                 "--prefer-ffmpeg --hls-prefer-ffmpeg --buffer-size 100M --audio-quality 48K --force-ipv4", // --format bestaudio
                 "-ac 2 -f s16le -ar 48000"
             );

@@ -170,7 +170,9 @@ namespace Ditto.Bot.Modules.Music.Data
             // Write FFmpeg-Out to Audio-Out using a buffer.
             using (var audioBuffer = new AudioBuffer(
                 FFmpegProcess.StandardOutput.BaseStream,
-                audioOutStream
+                audioOutStream,
+                Ditto.Settings.Cache.AudioBufferSize,
+                Ditto.Settings.Cache.AudioBufferLimit
             ))
             {
                 audioBuffer.ProcessBuffer += (inBuffer) =>

@@ -218,7 +218,10 @@ namespace Ditto.Bot
             try
             {
                 Settings = await SettingsConfiguration.ReadAsync("data/settings.xml");
-            }catch(Exception ex)
+                // Write the settings again to update it with any new properties that might have been added.
+                await Settings.WriteAsync("data/settings.xml").ConfigureAwait(false);
+            }
+            catch(Exception ex)
             {
                 Log.Fatal(ex);
                 return false;
@@ -276,11 +279,11 @@ namespace Ditto.Bot
             Client?.Dispose();
             Client = new ObjectLock<DiscordClientEx>(new DiscordClientEx(new DiscordSocketConfig()
             {
-                MessageCacheSize = Settings.AmountOfCachedMessages,
+                MessageCacheSize = Settings.Cache.AmountOfCachedMessages,
                 LogLevel = LogSeverity.Warning,
                 //TotalShards = 1,
-                ConnectionTimeout = Settings.TimeoutInMilliseconds,
-                HandlerTimeout = Settings.TimeoutInMilliseconds,
+                ConnectionTimeout = (int)(Settings.Timeout * 60),
+                HandlerTimeout = (int)(Settings.Timeout * 60),
                 DefaultRetryMode = RetryMode.AlwaysRetry,
                 //AlwaysDownloadUsers = true,
             }), 1, 1);
@@ -288,7 +291,7 @@ namespace Ditto.Bot
             // Various services
             if (Cache == null)
             {
-                (Cache = new CacheHandler()).Setup(TimeSpan.FromSeconds(Settings.CacheTime));
+                (Cache = new CacheHandler()).Setup(TimeSpan.FromSeconds(Settings.Cache.CacheTime));
             }
             CommandHandler?.Dispose();
             await (CommandHandler = new CommandHandler(Client)).SetupAsync().ConfigureAwait(false);

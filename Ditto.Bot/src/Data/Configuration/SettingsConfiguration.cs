@@ -12,21 +12,15 @@ namespace Ditto.Bot.Data.Configuration
         )]
         public BotType BotType { get; set; } = BotType.Bot;
         public bool AutoReconnect { get; set; } = true;
-        public int AmountOfCachedMessages { get; set; } = 10;
         public ulong BotOwnerDiscordId { get; set; } = 156746832381345792;
 
-        /// <summary>Sets the time, in seconds to wait for a connection/event to complete before aborting</summary>
         [Comment("\n  Sets the time, in seconds to wait for a connection/event to complete before aborting\n")]
         public double Timeout { get; set; } = 500;
         
-        /// <summary>Sets how long the internal cache handler should store values, in seconds.</summary>
-        [Comment("\n  Sets how long the internal cache handler should store values, in seconds.\n")]
-        public double CacheTime { get; set; } = 300;
-        
-        public int TimeoutInMilliseconds => (int)(Timeout * 60);
-        
         public PathConfiguration Paths { get; set; } = new PathConfiguration();
         public CredentialsConfiguration Credentials { get; set; } = new CredentialsConfiguration();
+        public CacheConfiguration Cache { get; set; } = new CacheConfiguration();
+        
         public BDOSettings BlackDesertOnline { get; set; } = new BDOSettings()
         {
             Email = "",
@@ -35,9 +29,6 @@ namespace Ditto.Bot.Data.Configuration
             LoginTokenUrl = @"https://www.blackdesertonline.com/launcher/l/api/CreatePlayToken.json?token={0}",
             LauncherUrl = @"http://www.blackdesertonline.com/launcher/l/Launcher.html",
         };
-
-        //public async Task WriteAsync(string file)
-        //    => await WriteAsync(file, this);
     }
 
     [Serializable]

@@ -200,7 +200,7 @@ namespace Ditto.Data.Configuration
             {
                 var type = instance.GetType();
                 var property = type.GetProperty(element.Name.LocalName);
-                if (property.CanRead && property.CanWrite && property.GetCustomAttribute<IgnoreAttribute>()?.Ignored != true)
+                if (property != null && property.CanRead && property.CanWrite && property.GetCustomAttribute<IgnoreAttribute>()?.Ignored != true)
                 {
                     var value = property.GetValue(instance);
                     if (value == null)
