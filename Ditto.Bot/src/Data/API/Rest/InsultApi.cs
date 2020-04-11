@@ -20,7 +20,7 @@ namespace Ditto.Bot.Data.API.Rest
             var parameters = new List<RestSharp.Parameter>();
             if(name != null)
             {
-                parameters.Add(new RestSharp.Parameter() { Name = "who", Value = name });
+                parameters.Add(new RestSharp.Parameter("who", name, RestSharp.ParameterType.GetOrPost));
             }
             return Call("api/insult.json", parameters);
         }

@@ -17,7 +17,7 @@ namespace Ditto.Bot.Data.API.Rest
         public string Quote(string name = null)
         {
             return Call(name == null ? "v1/quotes/random" : "v1/quotes/personalized", name == null ? null : new[] {
-                new RestSharp.Parameter() {Name = "q", Value = name }
+                new RestSharp.Parameter("q", name, RestSharp.ParameterType.GetOrPost)
             })?.Message ?? "";
         }
     }

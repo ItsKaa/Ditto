@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -59,17 +59,17 @@
     <PackageReference Include="Google.Apis.YouTube.v3" Version="1.29.1.976" />
     -->
     <PackageReference Include="Capgemini.Cauldron.Core.Collections" Version="2.1.0" />
-    <PackageReference Include="Discord.Net" Version="2.2.0-dev-20191109.4" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.16" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="3.1.0-preview2.19525.5" />
+    <PackageReference Include="Discord.Net" Version="2.2.0-dev-20200331.2" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.23" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="3.1.3" />
     <PackageReference Include="NLog" Version="5.0.0-beta10" />
-    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="3.0.0-rc3.final" />
-    <PackageReference Include="RestSharp" Version="106.6.10" />
-    <PackageReference Include="System.Interactive.Async" Version="4.0.0" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="3.1.1" />
+    <PackageReference Include="RestSharp" Version="106.10.1" />
+    <PackageReference Include="System.Interactive.Async" Version="4.1.1" />
     <PackageReference Include="System.Runtime" Version="4.3.1" />
     <!--<PackageReference Include="libvideo" Version="1.0.1" />-->
     <PackageReference Include="UniversalTypeConverter" Version="1.0.5" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.0-preview2.19525.5">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
