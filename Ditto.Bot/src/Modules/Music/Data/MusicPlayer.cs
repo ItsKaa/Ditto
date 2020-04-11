@@ -116,7 +116,10 @@ namespace Ditto.Bot.Modules.Music.Data
             try { await StopBroadcastingAsync().ConfigureAwait(false); } catch { }
             try { _cancellationTokenSource?.Cancel(); } catch { }
             try {
-                await (AudioClient?.StopAsync()).ConfigureAwait(false);
+                if (AudioClient != null)
+                {
+                    await AudioClient.StopAsync().ConfigureAwait(false);
+                }
                 AudioClient?.Dispose();
             } catch { }
             try { await (MusicController?.StopAsync()).ConfigureAwait(false); } catch { }
