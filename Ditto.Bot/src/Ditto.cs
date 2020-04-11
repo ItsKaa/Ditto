@@ -37,6 +37,9 @@ namespace Ditto.Bot
         
         private static bool _firstStart = true;
 
+        /// <summary>Fired at the first successful connection, this will only be called once.</summary>
+        public static Func<Task> Initialised;
+
         /// <summary>Fired when the bot connects for the first time.</summary>
         public static Func<Task> Connected;
 
@@ -315,7 +318,12 @@ namespace Ditto.Bot
                     // Start services
                     await CommandHandler.StartAsync().ConfigureAwait(false);
                     PlayingStatusHandler.Start();
+
+                    Connected -= Initialised;
                 };
+
+                // Call this once after a successful connection.
+                Connected += Initialised;
             }
             
             await Client.DoAsync((client)
