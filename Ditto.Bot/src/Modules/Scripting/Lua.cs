@@ -10,6 +10,7 @@ using Ditto.Extensions.Discord;
 using MoonSharp.Interpreter;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -53,6 +54,43 @@ namespace Ditto.Bot.Modules.Scripting
 
                             var luaScripts = _scripts.GetOrAdd(luaScript.Guild, new ConcurrentList<LuaScript>());
                             luaScripts.Add(luaScript);
+                        }
+                    });
+
+                    // Manual events
+                    Task.Run(async () =>
+                    {
+                        var tasks = new ConcurrentDictionary<int, Tuple<Task, DateTime>>();
+                        var tickDelay = TimeSpan.FromSeconds(10);
+
+                        var dateStart = DateTime.MinValue;
+                        while (Ditto.Running)
+                        {
+                            dateStart = DateTime.Now;
+                            foreach (var scriptPair in _scripts)
+                            {
+                                foreach (var script in scriptPair.Value)
+                                {
+                                    if (tasks.TryGetValue(script.Id, out Tuple<Task, DateTime> tuple))
+                                    {
+                                        if ((tuple.Item1.Status == TaskStatus.RanToCompletion || tuple.Item1.Status == TaskStatus.Canceled || tuple.Item1.Status == TaskStatus.Faulted)
+                                            && (dateStart - tuple.Item2) > tickDelay)
+                                        {
+                                            tasks.TryRemove(script.Id, out tuple);
+                                        }
+                                    }
+
+                                    if (!tasks.TryGetValue(script.Id, out tuple))
+                                    {
+                                        tasks.TryAdd(script.Id, new Tuple<Task, DateTime>(Task.Run(() =>
+                                        {
+                                            ExecuteMethod(script, LuaScriptMethods.Tick);
+                                        }), dateStart));
+                                    }
+                                }
+                            }
+
+                            await Task.Delay(250).ConfigureAwait(false);
                         }
                     });
                 }

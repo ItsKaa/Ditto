@@ -38,6 +38,9 @@ namespace Ditto.Bot.Modules.Scripting.Data
         
         private static string CleanupCode(string luaCode)
         {
+            if (luaCode == null)
+                return null;
+
             var markdownSyntax = new string[]
             {
                 "asciidoc",

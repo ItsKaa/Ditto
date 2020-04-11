@@ -87,6 +87,11 @@ namespace Ditto.Bot.Modules.Scripting.Data
             });
         }
 
+        public void Wait(int seconds = 60)
+        {
+            Thread.Sleep(seconds * 60);
+        }
+
         ~LuaDiscord()
         {
         }
@@ -106,7 +111,7 @@ namespace Ditto.Bot.Modules.Scripting.Data
         [MoonSharpHidden]
         private string SetVariables(string text)
         {
-            return text
+            return text?
 
                 // === USER ===
                 .Replace("%user%", NicknameAndGlobalUsername ?? "<invalid user>", StringComparison.CurrentCultureIgnoreCase)
@@ -154,7 +159,7 @@ namespace Ditto.Bot.Modules.Scripting.Data
             {
                 channel = Channel as IMessageChannel;
             }
-            return channel?.SendMessageAsync(SetVariables(text)).GetAwaiter().GetResult();
+            return channel?.SendMessageAsync(SetVariables(text ?? string.Empty)).GetAwaiter().GetResult();
         }
         
         /// <summary>
@@ -162,7 +167,7 @@ namespace Ditto.Bot.Modules.Scripting.Data
         /// </summary>
         public string Question(int type, string question)
         {
-            var message = Message(type, SetVariables(question));
+            var message = Message(type, SetVariables(question ?? string.Empty));
             var answer = WaitForResponse(message);
             return answer.Content;
         }

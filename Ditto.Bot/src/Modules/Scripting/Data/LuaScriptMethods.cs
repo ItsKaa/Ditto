@@ -10,5 +10,6 @@ namespace Ditto.Bot.Modules.Scripting.Data
         UserJoined      = 1 << 2,
         RoleChanged     = 1 << 3,
         MessageReceived = 1 << 4,
+        Tick            = 1 << 5,
     }
 }
