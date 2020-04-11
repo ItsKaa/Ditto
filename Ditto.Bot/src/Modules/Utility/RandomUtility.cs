@@ -236,6 +236,7 @@ namespace Ditto.Bot.Modules.Utility
             ).ConfigureAwait(false);
         }
 
+        [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
         [Alias("thonk")]
         public async Task Thonkify([Multiword] string text)
         {
@@ -260,28 +261,21 @@ namespace Ditto.Bot.Modules.Utility
                         continue;
                     }
 
-                    var letterImage = new System.Drawing.Bitmap(filePath);
-                    images.Add(letterImage);
+                    images.Add(new System.Drawing.Bitmap(filePath));
                     images.Add(tracking);
                 }
 
-                using (var bmp = ImageHelper.CombineBitmap(images, System.Drawing.Color.Transparent))
-                {
-                    using (var ms = new MemoryStream())
-                    {
-                        bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                using var bmp = ImageHelper.CombineBitmap(images, System.Drawing.Color.Transparent);
+                using var ms = new MemoryStream();
 
-                        // Ensure the stream is at the beginning, very important otherwise discord will send a 0kb file.
-                        ms.Position = 0;
+                bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
 
-                        await Context.Channel.SendFileAsync(ms, $"thonkify.png").ConfigureAwait(false);
-                    }
-                }
+                // Ensure the stream is at the beginning, very important otherwise discord will send a 0kb file.
+                ms.Position = 0;
+
+                await Context.Channel.SendFileAsync(ms, $"thonkify.png").ConfigureAwait(false);
             }
-            catch
-            {
-                throw;
-            }
+            catch { }
             finally
             {
                 foreach (var image in images)
