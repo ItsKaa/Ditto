@@ -3,7 +3,6 @@ using Discord.WebSocket;
 using Ditto.Bot.Data.Discord;
 using Ditto.Data.Commands;
 using MoonSharp.Interpreter;
-using MoonSharp.Interpreter.Interop;
 using System;
 using System.Reflection;
 using System.Threading;
@@ -27,6 +26,9 @@ namespace Ditto.Bot.Modules.Scripting.Data
         public IUserMessage UserMessage { get; set; }
         public IGuildUser GuildUser => User as IGuildUser;
         
+        public DateTime CurrentDate => DateTime.UtcNow;
+        public TimeSpan CurrentTime => DateTime.UtcNow.TimeOfDay;
+
         public string ChannelId
         {
             get => Channel?.Id.ToString() ?? "0";
@@ -34,6 +36,16 @@ namespace Ditto.Bot.Modules.Scripting.Data
             {
                 Channel = Ditto.Client.Do(client => client.GetChannel(Convert.ToUInt64(value))) as IMessageChannel;
             }
+        }
+
+        public TimeSpan Time(int hours, int minutes, int seconds)
+        {
+            return new TimeSpan(hours, minutes, seconds);
+        }
+
+        public DateTime Date(int year, int month, int day, int hour = 0, int minute = 0, int second = 0)
+        {
+            return new DateTime(year, month, day, hour, minute, second, DateTimeKind.Utc);
         }
 
         public string GlobalUsername => (User?.Username ?? "") + "#" + (User?.Discriminator ?? "0000");
@@ -52,6 +64,8 @@ namespace Ditto.Bot.Modules.Scripting.Data
                 typeof(IRole),
                 typeof(IUser),
                 typeof(IGuildUser),
+                typeof(DateTime),
+                typeof(TimeSpan),
                 //typeof(LuaDiscord),
             };
             foreach (var type in types)
