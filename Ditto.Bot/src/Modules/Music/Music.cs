@@ -7,6 +7,8 @@ using Ditto.Data.Discord;
 using Ditto.Extensions.Discord;
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Music
@@ -18,6 +20,39 @@ namespace Ditto.Bot.Modules.Music
 
         static Music()
         {
+            Ditto.Initialised += () =>
+            {
+                // Attempt to update youtube-dl to the latest version on the first start.
+                if (File.Exists(Ditto.Settings.Paths.YoutubeDL))
+                {
+                    using var youtubeDlProcess = new Process()
+                    {
+                        StartInfo = new ProcessStartInfo(Ditto.Settings.Paths.YoutubeDL, "--update")
+                    };
+
+                    youtubeDlProcess.ErrorDataReceived += (o, e) =>
+                    {
+                        if (e?.Data != null)
+                        {
+                            Log.Error($"[youtube-dl]: {e.Data}");
+                        }
+                    };
+
+                    youtubeDlProcess.OutputDataReceived += (o, e) =>
+                    {
+                        if (e?.Data != null)
+                        {
+                            Log.Info($"[youtube-dl]: {e.Data}");
+                        }
+                    };
+
+                    youtubeDlProcess.Start();
+                    youtubeDlProcess.WaitForExit();
+                }
+
+                return Task.CompletedTask;
+            };
+
             Ditto.Connected += () =>
             {
                 return Task.CompletedTask;
