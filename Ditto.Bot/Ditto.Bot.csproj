@@ -41,7 +41,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Migration|AnyCPU'">
-    <DefineConstants>MIGRATION;NETCOREAPP2_0</DefineConstants>
+    <DefineConstants>MIGRATION;NETCOREAPP3_0</DefineConstants>
     <DebugType>none</DebugType>
     <DebugSymbols>False</DebugSymbols>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
@@ -55,6 +55,10 @@
     <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.45.0.1923" />
     <PackageReference Include="Google.Apis.Urlshortener.v1" Version="1.41.1.138" />
     <PackageReference Include="Google.Apis.YouTube.v3" Version="1.45.0.1905" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="3.1.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="3.1.3" />
     <PackageReference Include="MoonSharp" Version="2.0.0" />
     <PackageReference Include="System.Drawing.Common" Version="4.7.0" />
