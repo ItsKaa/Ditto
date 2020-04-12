@@ -645,7 +645,7 @@ namespace Ditto.Bot.Services
                                         objects[objects.Count - l - 1] = await ConvertObjectAsync(context, paramMultiword, inputMultiword).ConfigureAwait(false);
                                         inputsMultiword.RemoveAt(k);
                                         score += Globals.Command.Score.ParseSuccess;
-                                        k++;
+                                        //k++;
                                         l++;
                                     }
                                     catch (Exception ex)
