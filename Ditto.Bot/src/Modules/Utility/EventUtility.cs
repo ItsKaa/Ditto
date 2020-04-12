@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Database.Models;
+using Ditto.Bot.Modules.Admin;
 using Ditto.Bot.Modules.Utility.Data;
 using Ditto.Data;
 using Ditto.Data.Commands;
@@ -150,6 +151,12 @@ namespace Ditto.Bot.Modules.Utility
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
         public async Task Add(EventDay day, string timeMessage, [Optional] string title, [Optional] string header, [Multiword] string message)
         {
+            if(!Permissions.IsAdministratorOrBotOwner(Context))
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
             string timeStringBegin = "", timeStringEnd = "", timeStringOffset = "", offsetSign = "+";
 
             var regex = Globals.RegularExpression.TimeMessage;

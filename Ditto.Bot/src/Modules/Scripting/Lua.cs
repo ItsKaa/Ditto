@@ -3,6 +3,7 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Ditto.Attributes;
+using Ditto.Bot.Modules.Admin;
 using Ditto.Bot.Modules.Scripting.Data;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
@@ -251,7 +252,7 @@ namespace Ditto.Bot.Modules.Scripting
         [Alias("Verify", "Check", "Status", "Compile")]
         public async Task<LuaScript> Validate(string luaCode)
         {
-            if (Context.GuildUser?.GuildPermissions.Administrator == false)
+            if (!Permissions.IsAdministratorOrBotOwner(Context))
             {
                 await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
                 return null;
@@ -267,11 +268,12 @@ namespace Ditto.Bot.Modules.Scripting
         // ```
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
         [Alias("Add", "Subscribe", "Create", "->", "=>", ">", "+", "+=")]
-        public Task Link([Multiword] string luaCode)
+        public async Task Link([Multiword] string luaCode)
         {
-            if (Context.GuildUser?.GuildPermissions.Administrator == false)
+            if (!Permissions.IsAdministratorOrBotOwner(Context))
             {
-                return Task.CompletedTask;
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
             }
 
             var luaScript = Validate(luaCode, true);
@@ -286,13 +288,12 @@ namespace Ditto.Bot.Modules.Scripting
                 //luaScript.Code = null;
                 _scripts.GetOrAdd(Context.Guild, new ConcurrentList<LuaScript>()).Add(luaScript);
             }
-            return Task.CompletedTask;
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
         public async Task Run([Multiword] string luaCode)
         {
-            if (Context.GuildUser?.GuildPermissions.Administrator == true)
+            if (Permissions.IsAdministratorOrBotOwner(Context))
             {
                 var luaScript = Validate(luaCode, false);
                 ExecuteMethod(luaScript, LuaScriptMethods.Main);
