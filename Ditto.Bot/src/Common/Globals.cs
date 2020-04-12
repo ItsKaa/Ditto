@@ -36,6 +36,8 @@ namespace Ditto.Bot
                 + $@"(?:(?:(?<text>[\W\w]+)(?:\s+)?)?)"
 
                 , RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase);
+
+            public static Regex TimeMessage = new Regex(@"(?<time1>[\d:]+)(?:~(?<time2>[\d:]+))?(?<sign>[+-])?(?<offset>[\d:]+)?", RegexOptions.Compiled);
         }
 
         public static class Strings

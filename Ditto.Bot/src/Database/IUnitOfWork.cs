@@ -11,6 +11,7 @@ namespace Ditto.Bot.Database
         ICommandRepository Commands { get; }
         IModuleRepository Modules { get; }
         IReminderRepository Reminders { get; }
+        IEventRepository Events { get; }
         IPlaylistRepository Playlists { get; }
         ILinkRepository Links { get; }
         IBdoStatusRepository BdoStatus { get; }

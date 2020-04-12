@@ -57,6 +57,9 @@ namespace Ditto.Bot.Database
             modelBuilder.Entity<Reminder>()
                 .PluralTableName();
 
+            modelBuilder.Entity<Event>()
+                .PluralTableName();
+
             modelBuilder.Entity<Playlist>()
                 .PluralTableName()
                 .HasMany(p => p.Songs)

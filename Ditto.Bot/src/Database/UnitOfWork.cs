@@ -23,6 +23,9 @@ namespace Ditto.Bot.Database
         private IReminderRepository _reminderRepository;
         public IReminderRepository Reminders => _reminderRepository;
 
+        private IEventRepository _eventRepository;
+        public IEventRepository Events => _eventRepository;
+
         private IPlaylistRepository _playlistRepository;
         public IPlaylistRepository Playlists => _playlistRepository;
         
@@ -41,6 +44,7 @@ namespace Ditto.Bot.Database
             _commandRepository = new CommandRepository(_dbContext);
             _moduleRepository = new ModuleRepository(_dbContext);
             _reminderRepository = new ReminderRepository(_dbContext);
+            _eventRepository = new EventRepository(_dbContext);
             _playlistRepository = new PlaylistRepository(_dbContext);
             _links = new LinkRepository(_dbContext);
             _bdoStatus = new BdoStatusRepository(_dbContext);
