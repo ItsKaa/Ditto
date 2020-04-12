@@ -109,22 +109,23 @@ namespace Ditto.Bot.Modules.Utility
                                             embedBuilder.Footer = new EmbedFooterBuilder().WithText(@event.MessageFooter ?? $"⏰ Expires at {(timeEnd + timeOffset):hh\\:mm}");
                                         }
 
-                                        await textChannel.EmbedAsync(@event.MessageHeader, embedBuilder).ConfigureAwait(false);
-
-                                        // Update database entry
-                                        await Ditto.Database.WriteAsync((uow) =>
+                                        if (null != await textChannel.EmbedAsync(@event.MessageHeader, embedBuilder).ConfigureAwait(false))
                                         {
-                                            eventDb = uow.Events.Get(pair.Key);
-                                            if (eventDb != null)
+                                            // Update database entry
+                                            await Ditto.Database.WriteAsync((uow) =>
                                             {
-                                                eventDb.LastRun = dateNow;
-                                            }
-                                        }).ConfigureAwait(false);
+                                                eventDb = uow.Events.Get(pair.Key);
+                                                if (eventDb != null)
+                                                {
+                                                    eventDb.LastRun = dateNow;
+                                                }
+                                            }).ConfigureAwait(false);
 
-                                        // Update collection
-                                        if (_events.TryGetValue(pair.Key, out Event value))
-                                        {
-                                            value.LastRun = dateNow;
+                                            // Update collection
+                                            if (_events.TryGetValue(pair.Key, out Event value))
+                                            {
+                                                value.LastRun = dateNow;
+                                            }
                                         }
                                     }
                                     catch { }
@@ -132,9 +133,9 @@ namespace Ditto.Bot.Modules.Utility
                             }
                         }
 
-                        await Task.Delay(500).ConfigureAwait(false);
+                        await Task.Delay(500, _cancellationTokenSource.Token).ConfigureAwait(false);
                     }
-                });
+                }, _cancellationTokenSource.Token);
 
                 return Task.CompletedTask;
             };
