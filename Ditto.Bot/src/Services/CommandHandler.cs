@@ -601,7 +601,7 @@ namespace Ditto.Bot.Services
                         if (paramsMultiword.Count == 0)
                         {
                             // append everything to objects
-                            objects[i][0] = string.Join(' ', commandInputs.FromIndex(i, true));
+                            objects[i][0] = string.Join(' ', commandInputs.FromIndex(i, false));
                             score += Globals.Command.Score.ParseSuccess;
                         }
                         else
@@ -614,7 +614,7 @@ namespace Ditto.Bot.Services
                             //else
                             {
                                 // Only one Multiword tag is defined, loop from behind and parse our input values, if its invalid, use optional (or ignore, only for the first one)
-                                var inputsMultiword = commandInputs.AsEnumerable().Reverse().ToList();
+                                var inputsMultiword = commandInputs.FromIndex(i, false).AsEnumerable().Reverse().ToList();
 
                                 // j => paramMultiword
                                 // k => inputMultiword or successfull parses
@@ -680,9 +680,10 @@ namespace Ditto.Bot.Services
                         // no multiword, try to parse and fill
                         try
                         {
-                            var inputMultiword = commandInputs.ElementAt(0);
+                            //var inputMultiword = commandInputs.ElementAt(0);
+                            var inputMultiword = commandInputs.ElementAt(i);
                             objects[i] = await ConvertObjectAsync(context, param, inputMultiword).ConfigureAwait(false);
-                            commandInputs.RemoveAt(0);
+                            //commandInputs.RemoveAt(0);
                             score += Globals.Command.Score.ParseSuccess;
                         }
                         catch (Exception ex)
