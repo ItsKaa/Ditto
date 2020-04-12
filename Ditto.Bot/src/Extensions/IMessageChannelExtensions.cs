@@ -102,41 +102,46 @@ namespace Ditto.Extensions
         {
             int selection = -1;
             int seconds = timeout / 1000;
-            var embedFields = new List<EmbedFieldBuilder>();
             if(reactionEmotes == null || reactionEmotes.Count() <= 0)
             {
                 reactionEmotes = _OptionsEmoji;
             }
 
-            for (int i = 0; i < options.Count(); i++)
+            var embedFields = new List<EmbedFieldBuilder>();
+            if (options != null)
             {
-                embedFields.Add(new EmbedFieldBuilder()
+                for (int i = 0; i < options.Count(); i++)
                 {
-                    //Name = string.Format("__**`{0}`**__", i+1),
-                    Name = reactionEmotes.ElementAt(i).Name,
-                    Value = options.ElementAt(i),
-                    IsInline = true
-                });
+                    embedFields.Add(new EmbedFieldBuilder()
+                    {
+                        //Name = string.Format("__**`{0}`**__", i+1),
+                        Name = reactionEmotes.ElementAt(i).Name,
+                        Value = options.ElementAt(i),
+                        IsInline = true
+                    });
+                }
             }
 
             var embedBuilder = new EmbedBuilder()
             {
-                Description = string.Format("{0}\n{1}\n", headerMessage, Globals.Character.HiddenSpace),
-                Fields = embedFields,
+                Description = headerMessage,
                 Footer = new EmbedFooterBuilder() { Text = string.Format("{0} {1} seconds left", Globals.Character.Clock, seconds) },
                 Color = Bot.Ditto.Cache.Db.EmbedColour((channel as ITextChannel)?.Guild)
             };
+
+            if(embedFields.Count > 0)
+            {
+                embedBuilder.Fields = embedFields;
+                embedBuilder.Description = string.Format("{0}\n{1}\n", headerMessage, Globals.Character.HiddenSpace);
+            }
+
             var message = await channel.EmbedAsync(embedBuilder);
 
-            for (int i = 0; i < options.Count(); i++)
+            foreach(var emote in reactionEmotes)
             {
-                if (i > reactionEmotes.Count() - 1)
-                    break;
                 await Task.Run(() =>
                 {
-                    message.AddReactionAsync(reactionEmotes.ElementAt(i),
-                        DiscordHelper.GetRequestOptions(true).SetRetryMode(RetryMode.AlwaysRetry)
-                    );
+                    message.AddReactionAsync(emote, DiscordHelper.GetRequestOptions(true).SetRetryMode(RetryMode.AlwaysRetry));
                 }).ConfigureAwait(false);
             }
 
@@ -196,18 +201,21 @@ namespace Ditto.Extensions
             //var embedFields = new List<EmbedFieldBuilder>();
             string description = "";
 
-            for (int i = 0; i < options.Length; i++)
+            if (options != null)
             {
-                /*
-                embedFields.Add(new EmbedFieldBuilder()
+                for (int i = 0; i < options.Length; i++)
                 {
-                    //Name = string.Format("__**`{0}`**__", i+1),
-                    Name =  "`" + i.ToString() + "`",
-                    Value = options[i],
-                    IsInline = false
-                });
-                */
-                description += $"`{i}` {options[i]}\n\n";
+                    /*
+                    embedFields.Add(new EmbedFieldBuilder()
+                    {
+                        //Name = string.Format("__**`{0}`**__", i+1),
+                        Name =  "`" + i.ToString() + "`",
+                        Value = options[i],
+                        IsInline = false
+                    });
+                    */
+                    description += $"`{i}` {options[i]}\n\n";
+                }
             }
 
             var embedBuilder = new EmbedBuilder()
@@ -253,7 +261,7 @@ namespace Ditto.Extensions
             }).ConfigureAwait(false);
         }
         public static Task SendListDialogue(this IMessageChannel channel, string headerMessage, IEnumerable<string> options, IDiscordClient discordClient, int timeout = 30000)
-            => SendListDialogue(channel, headerMessage, options.ToArray(), discordClient, timeout);
+            => SendListDialogue(channel, headerMessage, options?.ToArray(), discordClient, timeout);
 
 
         public static async Task SendPagedMessageAsync(this IMessageChannel channel,
