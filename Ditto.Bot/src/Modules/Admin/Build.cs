@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Admin
 {
-    public class Updates : DiscordModule
+    public class Build : DiscordModule
     {
         public struct BuildInfo
         {
@@ -33,7 +33,7 @@ namespace Ditto.Bot.Modules.Admin
             public bool IsEqual => LocalHash?.Equals(RemoteHash, StringComparison.CurrentCultureIgnoreCase) ?? false;
         }
 
-        static Updates()
+        static Build()
         {
             // Check for a link update message
             Ditto.Connected += async() =>
@@ -68,14 +68,14 @@ namespace Ditto.Bot.Modules.Admin
                                 // Post build info in a secondary task
                                 try
                                 {
-                                    var _ = new Updates()
+                                    var _ = new Build()
                                     {
                                         Context = new CommandContextEx(client, message as IUserMessage)
                                         {
                                             Channel = channel,
                                             Guild = guild
                                         }
-                                    }.Build(); //commitHash
+                                    }.Info(); //commitHash
                                 }
                                 catch(Exception ex)
                                 {
@@ -276,7 +276,7 @@ namespace Ditto.Bot.Modules.Admin
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
-        public async Task Build(string fromHash = null)
+        public async Task Info(string fromHash = null)
         {
             if (Permissions.IsAdministratorOrBotOwner(Context))
             {
