@@ -293,6 +293,15 @@ namespace Ditto.Bot.Services
                         return -1;
                     }
 
+                    // Sort global _ method below local.
+                    if (left.Method.MethodInfo.Name == "_"
+                        && right.Method.MethodInfo.Name == "_"
+                        && left.Method.Accessibility.Has(CommandAccessLevel.Global) && !right.Method.Accessibility.Has(CommandAccessLevel.Global)
+                        )
+                    {
+                        return -1;
+                    }
+
                     // Highest priority goes first
                     if (left.Priority > right.Priority)
                     {
@@ -479,6 +488,25 @@ namespace Ditto.Bot.Services
                             Method = method,
                             Priority = method.Priority
                         });
+                    }
+                    else
+                    {
+                        // Assume the class alias for the local "underscore" named methods.
+                        if(method.MethodInfo.Name == "_"
+                           && state == ParsingState.BASE
+                           && method.Accessibility.Has(CommandAccessLevel.Local)
+                           && moduleInfo.Aliases.Any(n => n.Equals(
+                               input.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(), StringComparison.CurrentCultureIgnoreCase
+                          )))
+                        {
+                            found = true;
+                            list.Add(new ParseResult()
+                            {
+                                InputMessage = input,
+                                Method = method,
+                                Priority = method.Priority
+                            });
+                        }
                     }
                 }
 
