@@ -119,11 +119,8 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 .WithUrl(post.Url.ToString());
         }
 
-
-
-
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents)]
-        public Task Reddit(ITextChannel textChannel, [Multiword] string url, DateTime? fromDate = null)
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local)]
+        public Task _(ITextChannel textChannel, [Multiword] string url, DateTime? fromDate = null)
             => Add(textChannel, url, fromDate);
 
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local)]

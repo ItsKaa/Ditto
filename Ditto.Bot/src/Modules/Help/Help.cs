@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Help
 {
-    [Alias("description", "desc", "describe", "explain", "detail", "details", "info", "h")]
+    [Alias("description", "desc", "describe", "explain", "detail", "details", "info", "h", "?")]
     public sealed class Help : DiscordModule
     {
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Local | CommandAccessLevel.Parents)]
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Local)]
         public Task _(string who = "")
         {
             return Task.CompletedTask;

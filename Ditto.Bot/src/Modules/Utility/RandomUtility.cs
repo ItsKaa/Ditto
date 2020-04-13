@@ -102,6 +102,7 @@ namespace Ditto.Bot.Modules.Utility
                 Common.NumbersApi.NotFoundOption.Ceil, false
             ));
         }
+        
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
         public Task DateFact(DateTime date)
             => DateFact((uint)date.Day, (uint)date.Month);
@@ -153,6 +154,7 @@ namespace Ditto.Bot.Modules.Utility
                 await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
             }
         }
+        
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
         public async Task Joke()
         {

@@ -141,10 +141,8 @@ namespace Ditto.Bot.Modules.Utility
             };
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Global)]
-        [Alias("event")]
-        [Priority(-1)]
-        public Task EventCtor()
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Local)]
+        public new Task _()
         {
             return Task.CompletedTask;
         }
