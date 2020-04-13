@@ -24,6 +24,10 @@ namespace Ditto.Bot.Services.Commands
             CommandScorer = new CommandScorer(CommandHandler.CommandConverter);
         }
 
+        /// <summary>
+        /// Parses commands that accept the provided <paramref name="input"/> string as the method name and arguments.
+        /// </summary>
+        /// <returns>A sorted parse result list based on priority and successful parameters.</returns>
         public async Task<IEnumerable<ParseResult>> ParseMethodsAsync(ICommandContextEx context, string input)
         {
             var list = new List<ParseResult>();
@@ -91,8 +95,10 @@ namespace Ditto.Bot.Services.Commands
                     }
                 }
             }
-            return list;
+
+            return GetSortedResults(list);
         }
+
         private IEnumerable<ParseResult> ParseMethodsInternal(ModuleInfo moduleInfo, string input, ParsingState state)
         {
             var inputItem1 = input?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
@@ -211,9 +217,44 @@ namespace Ditto.Bot.Services.Commands
             return list;
         }
 
-        private IEnumerable<ParseResult> ParseMethodsInternal(object subsubmodule, string moduleInput, object bASE)
+        /// <summary>
+        /// Returns a sorted collection of the parsed method results based on the priority and parameter count.
+        /// </summary>
+        private IEnumerable<ParseResult> GetSortedResults(IEnumerable<ParseResult> parseResults)
         {
-            throw new NotImplementedException();
+            // Determine the best possible method
+            var parseResultsList = parseResults.ToList();
+            parseResultsList.Sort((right, left) => // Reversed order for descending
+            {
+                // Sort methods named _ to the bottom
+                if (left.Method.MethodInfo.Name == "_"
+                    && right.Method.MethodInfo.Name != "_")
+                {
+                    return -1;
+                }
+
+                // Sort global _ method below local.
+                if (left.Method.MethodInfo.Name == "_"
+                    && right.Method.MethodInfo.Name == "_"
+                    && left.Method.Accessibility.Has(CommandAccessLevel.Global) && !right.Method.Accessibility.Has(CommandAccessLevel.Global)
+                    )
+                {
+                    return -1;
+                }
+
+                // Highest priority goes first
+                if (left.Priority > right.Priority)
+                {
+                    return left.Priority.CompareTo(right.Priority);
+                }
+                else if (left.Score == right.Score)
+                {
+                    // Sort by most parameters parsed.
+                    return (left.Parameters?.Count() ?? -1).CompareTo((right.Parameters?.Count() ?? -1));
+                }
+                return left.Score.CompareTo(right.Score);
+            });
+            return parseResultsList;
         }
     }
 }

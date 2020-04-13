@@ -272,38 +272,6 @@ namespace Ditto.Bot.Services.Commands
 
                 // Validate our method
                 var parseResults = (await CommandMethodParser.ParseMethodsAsync(context, content).ConfigureAwait(false)).ToList();
-				
-                // Determine the best possible method
-                parseResults.Sort((right, left) => // Reversed order for descending
-                {
-                    // Sort methods named _ to the bottom
-                    if (left.Method.MethodInfo.Name == "_"
-                        && right.Method.MethodInfo.Name != "_")
-                    {
-                        return -1;
-                    }
-
-                    // Sort global _ method below local.
-                    if (left.Method.MethodInfo.Name == "_"
-                        && right.Method.MethodInfo.Name == "_"
-                        && left.Method.Accessibility.Has(CommandAccessLevel.Global) && !right.Method.Accessibility.Has(CommandAccessLevel.Global)
-                        )
-                    {
-                        return -1;
-                    }
-
-                    // Highest priority goes first
-                    if (left.Priority > right.Priority)
-                    {
-                        return left.Priority.CompareTo(right.Priority);
-                    }
-                    else if (left.Score == right.Score)
-                    {
-                        // Sort by most parameters parsed.
-                        return (left.Parameters?.Count() ?? -1).CompareTo((right.Parameters?.Count() ?? -1));
-                    }
-                    return left.Score.CompareTo(right.Score);
-                });
 
                 // Get the one without an error
                 var parseResult = parseResults.FirstOrDefault(a => string.IsNullOrEmpty(a.ErrorMessage));
