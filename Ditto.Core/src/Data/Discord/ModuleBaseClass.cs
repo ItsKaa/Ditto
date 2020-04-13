@@ -30,7 +30,6 @@ namespace Ditto.Data.Discord
         /// e.g.: "help reminder"
         /// </summary>
         /// <returns></returns>
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents)]
         public virtual Task _() => Task.CompletedTask;
     }
 }

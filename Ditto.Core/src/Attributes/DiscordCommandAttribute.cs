@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Ditto.Attributes
 {
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class DiscordCommandAttribute : Attribute
     {
         public CommandSourceLevel SourceLevel { get; private set; }
