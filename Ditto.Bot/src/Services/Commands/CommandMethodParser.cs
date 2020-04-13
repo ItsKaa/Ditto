@@ -28,7 +28,7 @@ namespace Ditto.Bot.Services.Commands
         /// Parses commands that accept the provided <paramref name="input"/> string as the method name and arguments.
         /// </summary>
         /// <returns>A sorted parse result list based on priority and successful parameters.</returns>
-        public async Task<IEnumerable<ParseResult>> ParseMethodsAsync(ICommandContextEx context, string input)
+        public async Task<IEnumerable<ParseResult>> ParseMethodsAsync(ICommandContextEx context, string input, bool validateInput = true)
         {
             var list = new List<ParseResult>();
             foreach (var module in (context.Guild == null ? CommandHandler.Modules[0] : CommandHandler.Modules[context.Guild.Id]))
@@ -70,23 +70,27 @@ namespace Ditto.Bot.Services.Commands
                         }
 
                         // Validate command - part 1: if guild == null, verify that the command accepts non-guild sources
-                        if (context.Guild == null && !(parseResult.Method.Source.Has(CommandSourceLevel.DM) || parseResult.Method.Source.Has(CommandSourceLevel.Group)))
+                        if (validateInput)
                         {
-                            continue;
-                        }
+                            if (context.Guild == null && !(parseResult.Method.Source.Has(CommandSourceLevel.DM) || parseResult.Method.Source.Has(CommandSourceLevel.Group)))
+                            {
+                                continue;
+                            }
 
-                        // Validate command - part 2, check the command settings
-                        try
-                        {
-                            if ((await (parseResult.Method.MethodInfo.GetCustomAttribute(typeof(DiscordCommandAttribute)) as DiscordCommandAttribute).VerifyAsync(context)).HasError)
-                                throw new Exception();
+                            // Validate command - part 2, check the command settings
+                            try
+                            {
+                                if ((await (parseResult.Method.MethodInfo.GetCustomAttribute(typeof(DiscordCommandAttribute)) as DiscordCommandAttribute).VerifyAsync(context)).HasError)
+                                    throw new Exception();
+                            }
+                            catch { continue; }
                         }
-                        catch { continue; }
 
                         list.Add(new ParseResult()
                         {
                             InputMessage = parseResult.InputMessage,
                             Method = parseResult.Method,
+                            Module = parseResult.Module,
                             Parameters = score.Item2,
                             Score = score.Item1 ?? -1,
                             Priority = parseResult.Priority,
@@ -118,7 +122,8 @@ namespace Ditto.Bot.Services.Commands
                         {
                             InputMessage = input,
                             Method = method,
-                            Priority = method.Priority
+                            Module = moduleInfo,
+                            Priority = method.Priority,
                         });
                     }
                     else
@@ -135,6 +140,7 @@ namespace Ditto.Bot.Services.Commands
                             {
                                 InputMessage = input,
                                 Method = method,
+                                Module = moduleInfo,
                                 Priority = method.Priority
                             });
                         }
@@ -158,7 +164,9 @@ namespace Ditto.Bot.Services.Commands
                                 list.Add(new ParseResult()
                                 {
                                     InputMessage = inputModule,
-                                    Method = method
+                                    Method = method,
+                                    Priority = method.Priority,
+                                    Module = moduleInfo,
                                 });
                             }
 
@@ -207,7 +215,9 @@ namespace Ditto.Bot.Services.Commands
                             list.Add(new ParseResult()
                             {
                                 InputMessage = moduleInput,
-                                Method = submethod
+                                Method = submethod,
+                                Module = moduleInfo,
+                                Priority = submethod.Priority,
                             });
                         }
                     }

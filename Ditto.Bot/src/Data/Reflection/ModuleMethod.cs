@@ -1,5 +1,6 @@
 ﻿using Ditto.Attributes;
 using Ditto.Data.Commands;
+using Ditto.Extensions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -20,6 +21,12 @@ namespace Ditto.Bot.Data.Reflection
             //return string.Format("{0}.{1}({2})", MethodInfo.ReflectedType.FullName, MethodInfo.Name, string.Join(",", MethodInfo.GetParameters().Select(o => string.Format("{0} {1}", o.ParameterType, o.Name)).ToArray()));
             return string.Format("{0}.{1}({2})", MethodInfo.ReflectedType.FullName, MethodInfo.Name, string.Join(",", MethodInfo.GetParameters().Select(o => string.Format("{0}", o.ParameterType)).ToArray()));
             //return string.Format("{0}.{1}", MethodInfo.ReflectedType.FullName, MethodInfo.Name);
+        }
+
+        public override string ToString()
+        {
+            var helpAttribute = MethodInfo.GetCustomAttributes<HelpAttribute>().FirstOrDefault();
+            return (helpAttribute?.Name ?? Aliases?.FirstOrDefault()?.ToTitleCase() ?? MethodInfo.Name.ToTitleCase());
         }
     }
 }

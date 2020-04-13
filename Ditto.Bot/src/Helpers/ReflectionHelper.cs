@@ -44,29 +44,38 @@ namespace Ditto.Bot.Helpers
             return list;
         }
 
-        public static IEnumerable<ModuleInfo> GetModules(Type baseType = null)
+        public static IEnumerable<ModuleInfo> GetModules(Type baseType = null, ModuleInfo parentModule = null)
         {
             if (baseType == null)
             {
                 // get top-level modules
                 var searchType = typeof(DiscordModule);
-                return (from t in Assembly.GetExecutingAssembly().GetTypes()
+
+                foreach(var moduleInfo in from t in Assembly.GetExecutingAssembly().GetTypes()
                         where t.BaseType == searchType
                             && t.GetConstructor(Type.EmptyTypes) != null
                         select new ModuleInfo()
                         {
                             Type = t,
-                            SubModules = GetModules(t).ToList(),
+                            //SubModules = GetModules(t).ToList(),
                             Methods = GetMethods(t),
                             Aliases = GetModuleAliases(t).ToList(),
                             Priority = t.GetCustomAttribute<PriorityAttribute>()?.Priority ?? 0
                         }
-                ).ToList();
+                )
+                {
+                    moduleInfo.SubModules = GetModules(moduleInfo.Type, moduleInfo).ToList();
+                    if (parentModule != null)
+                    {
+                        moduleInfo.ParentModules.Add(parentModule);
+                    }
+                    yield return moduleInfo;
+                }
             }
             else
             {
                 // Get submodules
-                return (from t in Assembly.GetExecutingAssembly().GetTypes()
+                foreach (var moduleInfo in from t in Assembly.GetExecutingAssembly().GetTypes()
                         where t.UnderlyingSystemType != baseType
                         && t.BaseType != null
                         && t.GetConstructor(Type.EmptyTypes) != null // we need a public constructor
@@ -76,12 +85,20 @@ namespace Ditto.Bot.Helpers
                         {
                             Type = t,
                             ParentType = baseType,
-                            SubModules = GetModules(t).ToList(),
                             Methods = GetMethods(t),
+                            //SubModules = GetModules(t),
                             Aliases = GetModuleAliases(t).ToList(),
                             Priority = t.GetCustomAttribute<PriorityAttribute>()?.Priority ?? 0
                         }
-                ).ToList();
+                )
+                {
+                    moduleInfo.SubModules = GetModules(moduleInfo.Type, moduleInfo).ToList();
+                    if (parentModule != null)
+                    {
+                        moduleInfo.ParentModules.Add(parentModule);
+                    }
+                    yield return moduleInfo;
+                }
             }
         }
 
