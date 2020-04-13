@@ -101,7 +101,7 @@ namespace Ditto.Bot.Modules.Scripting.Data
         {
             try
             {
-                var result = Ditto.CommandHandler.ConvertObjectAsync(Context.Value, typeof(T), input).GetAwaiter().GetResult();
+                var result = Ditto.CommandHandler.CommandConverter.ConvertObjectAsync(Context.Value, typeof(T), input).GetAwaiter().GetResult();
                 return result as T;
             }
             catch { }

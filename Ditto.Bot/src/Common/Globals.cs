@@ -22,6 +22,8 @@ namespace Ditto.Bot
 
             public static readonly Regex SqlUnderscore = new Regex(@"((?<=.)[A-Z][a-zA-Z]*)|((?<=[a-zA-Z])\d+)", RegexOptions.Compiled);
 
+            public static readonly Regex CommandParameterSeperator = new Regex(@"[\""`]+.+?[\""`]+|[^ ]+", RegexOptions.Compiled);
+
             private const string _remindMessagePart = @"(?:\s+)?(?:and)?(?:\s+)?(?:in\s)?(?:\s+)?(?:at)?(?:\s+)?(?:[+,&.]+)?(?:\s+)?";
             public static Regex RemindMessage = new Regex(
                   $@"^{_remindMessagePart}"
