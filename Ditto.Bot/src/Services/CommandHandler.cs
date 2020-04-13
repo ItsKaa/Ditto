@@ -470,13 +470,14 @@ namespace Ditto.Bot.Services
         }
         private IEnumerable<ParseResult> ParseMethodsInternal(ModuleInfo moduleInfo, string input, ParsingState state)
         {
+            var inputItem1 = input?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
             var list = new List<ParseResult>();
 
             // method or module + method
             foreach (var method in moduleInfo.Methods)
             {
                 bool found = false;
-                var methodNameMatch = method.Aliases.FirstOrDefault(n => input.StartsWith(n, StringComparison.OrdinalIgnoreCase));
+                var methodNameMatch = method.Aliases.FirstOrDefault(n => inputItem1.Equals(n, StringComparison.OrdinalIgnoreCase));
                 if ((method.MethodInfo.Name == "_" || (method.Aliases.Contains("") && methodNameMatch != null)) || !string.IsNullOrWhiteSpace(methodNameMatch))
                 {
                     if (method.Accessibility.Has(state == ParsingState.BASE ? CommandAccessLevel.Global : CommandAccessLevel.Parents))
@@ -495,9 +496,8 @@ namespace Ditto.Bot.Services
                         if(method.MethodInfo.Name == "_"
                            && state == ParsingState.BASE
                            && method.Accessibility.Has(CommandAccessLevel.Local)
-                           && moduleInfo.Aliases.Any(n => n.Equals(
-                               input.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(), StringComparison.CurrentCultureIgnoreCase
-                          )))
+                           && moduleInfo.Aliases.Any(n => n.Equals(inputItem1, StringComparison.CurrentCultureIgnoreCase))
+                          )
                         {
                             found = true;
                             list.Add(new ParseResult()
@@ -514,11 +514,12 @@ namespace Ditto.Bot.Services
                 if (!found)
                 {
                     // check module level method
-                    var moduleNameMatch = moduleInfo.Aliases.FirstOrDefault(n => input.StartsWith(n, StringComparison.OrdinalIgnoreCase));
+                    var moduleNameMatch = moduleInfo.Aliases.FirstOrDefault(n => inputItem1.Equals(n, StringComparison.OrdinalIgnoreCase));
                     if (!string.IsNullOrWhiteSpace(moduleNameMatch))
                     {
                         var inputModule = input.Remove(0, moduleNameMatch.Length).TrimStart(' ');
-                        methodNameMatch = method.Aliases.FirstOrDefault(n => inputModule.StartsWith(n, StringComparison.OrdinalIgnoreCase));
+                        var inputModuleItem1 = inputModule.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+                        methodNameMatch = method.Aliases.FirstOrDefault(n => inputModuleItem1.Equals(n, StringComparison.OrdinalIgnoreCase));
                         if (!string.IsNullOrWhiteSpace(methodNameMatch))
                         {
                             if (method.Accessibility.Has(CommandAccessLevel.Local))
@@ -536,7 +537,7 @@ namespace Ditto.Bot.Services
             }
 
             // Find parent module
-            var moduleMatch = moduleInfo.Aliases.FirstOrDefault(n => input.StartsWith(n, StringComparison.OrdinalIgnoreCase));
+            var moduleMatch = moduleInfo.Aliases.FirstOrDefault(n => inputItem1.Equals(n, StringComparison.OrdinalIgnoreCase));
             string moduleInput = input;
             var parent = false;
             if (!string.IsNullOrWhiteSpace(moduleMatch))
@@ -564,9 +565,10 @@ namespace Ditto.Bot.Services
                 }
 
                 // Submodule method
+                var moduleInputItem1 = moduleInput?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
                 foreach (var submethod in submodule.Methods)
                 {
-                    var submoduleMatch = submethod.Aliases.FirstOrDefault(n => moduleInput.StartsWith(n, StringComparison.OrdinalIgnoreCase));
+                    var submoduleMatch = submethod.Aliases.FirstOrDefault(n => n.Equals(moduleInputItem1, StringComparison.OrdinalIgnoreCase));
                     if (!string.IsNullOrWhiteSpace(submoduleMatch))
                     {
                         if (submethod.Accessibility.Has(parent ? CommandAccessLevel.Parents : CommandAccessLevel.Global))
