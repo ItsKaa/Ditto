@@ -23,7 +23,7 @@ using Ditto.Bot.Data.Reflection;
 using Ditto.Bot.Helpers;
 using ModuleInfo = Ditto.Bot.Data.Reflection.ModuleInfo;
 
-namespace Ditto.Bot.Services
+namespace Ditto.Bot.Services.Commands
 {
     public partial class CommandHandler : IDisposable
     {

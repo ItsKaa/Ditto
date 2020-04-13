@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using Ditto.Bot.Data.API;
 using Ditto.Bot.Data.Configuration;
 using Ditto.Bot.Services;
+using Ditto.Bot.Services.Commands;
 using Ditto.Data;
 using Ditto.Data.Discord;
 using Ditto.Data.Exceptions;
