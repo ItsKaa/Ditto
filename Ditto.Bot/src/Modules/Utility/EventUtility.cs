@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Utility
 {
     [Alias("event")]
+    [Help("Event", "")]
     public class EventUtility : DiscordModule
     {
 
@@ -141,13 +142,26 @@ namespace Ditto.Bot.Modules.Utility
             };
         }
 
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents)]
         public override Task _()
         {
             return Task.CompletedTask;
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
-        public async Task Add(EventDay day, string timeMessage, [Optional] string title, [Optional] string header, [Multiword] string message)
+        [Help(null, "Create an event that will trigger based on the specified day(s) and time.")]
+        public async Task Add(
+            [Help("day", "Days separated by a comma", "Possible values: %values%")]
+            EventDay day,
+            [Help("time", "Formatted time span in UTC", "Examples: '19:30~20:00' or '19:30~20:00+01:00' for UTC+1h")]
+            string timeMessage,
+            [Help("title", "The event title")]
+            [Optional] string title,
+            [Help("header", "The message posted above the embedded event block, can be used for role pings.")]
+            [Optional] string header,
+            [Help("message", "The body message of the event, this accepts multi-lined strings as well as markdown text.")]
+            [Multiword] string message
+            )
         {
             if(!Permissions.IsAdministratorOrBotOwner(Context))
             {
