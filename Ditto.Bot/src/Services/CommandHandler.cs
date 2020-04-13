@@ -439,9 +439,7 @@ namespace Ditto.Bot.Services
                         }
 
                         // Validate command - part 1: if guild == null, verify that the command accepts non-guild sources
-                        if (context.Guild == null
-                            && parseResult.Method.Source.Has(CommandSourceLevel.DM)
-                            && parseResult.Method.Source.Has(CommandSourceLevel.Group))
+                        if (context.Guild == null && !(parseResult.Method.Source.Has(CommandSourceLevel.DM) || parseResult.Method.Source.Has(CommandSourceLevel.Group)))
                         {
                             continue;
                         }
