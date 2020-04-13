@@ -3,6 +3,7 @@ using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Data.Discord;
 using Ditto.Bot.Database.Models;
+using Ditto.Bot.Modules.Admin.Data;
 using Ditto.Data;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
@@ -20,19 +21,6 @@ namespace Ditto.Bot.Modules.Admin
 {
     public class Build : DiscordModule
     {
-        public struct BuildInfo
-        {
-            public BuildInfo(string localHash, string remoteHash)
-            {
-                LocalHash = localHash;
-                RemoteHash = remoteHash;
-            }
-
-            public string LocalHash { get; set; }
-            public string RemoteHash { get; set; }
-            public bool IsEqual => LocalHash?.Equals(RemoteHash, StringComparison.CurrentCultureIgnoreCase) ?? false;
-        }
-
         static Build()
         {
             // Check for a link update message
@@ -95,6 +83,12 @@ namespace Ditto.Bot.Modules.Admin
             };
         }
 
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
+        public Task _(string fromHash = null)
+        {
+            return Info(fromHash);
+        }
+
         private static string RunGit(string args)
         {
             using var process = new Process
@@ -128,7 +122,7 @@ namespace Ditto.Bot.Modules.Admin
             return outputBuilder.ToString();
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
         public async Task<BuildInfo> CheckForUpdates(bool reactions = true)
         {
             if (Permissions.IsAdministratorOrBotOwner(Context))
@@ -169,7 +163,7 @@ namespace Ditto.Bot.Modules.Admin
             return new BuildInfo(null, null);
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
         [Alias("upgrade")]
         public async Task Update()
         {
@@ -231,7 +225,8 @@ namespace Ditto.Bot.Modules.Admin
             }
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
+        [Alias("list")]
         public async Task<IEnumerable<EmbedField>> UpdateList(string fromHash = null, bool post = true)
         {
             var values = new List<EmbedField>();
@@ -275,7 +270,7 @@ namespace Ditto.Bot.Modules.Admin
             return values;
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
         public async Task Info(string fromHash = null)
         {
             if (Permissions.IsAdministratorOrBotOwner(Context))
