@@ -23,13 +23,5 @@
         public DiscordModule()
         {
         }
-
-        /// <summary>
-        /// This is the default module caller, for if you only call your module name,
-        /// e.g.: "help reminder"
-        /// </summary>
-        /// <returns></returns>
-        //[DiscordCommand]
-        //public virtual Task _() => Task.CompletedTask;
     }
 }

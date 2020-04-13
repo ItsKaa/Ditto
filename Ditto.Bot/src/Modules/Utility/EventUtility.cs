@@ -141,8 +141,7 @@ namespace Ditto.Bot.Modules.Utility
             };
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Local)]
-        public new Task _()
+        public override Task _()
         {
             return Task.CompletedTask;
         }
