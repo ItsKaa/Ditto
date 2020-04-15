@@ -115,7 +115,7 @@ namespace Ditto.Bot.Modules.Utility
                                             embedBuilder.Footer = new EmbedFooterBuilder().WithText(@event.MessageFooter ?? $"⏰ Expires at {(timeEnd + timeOffset):hh\\:mm}");
                                         }
 
-                                        if (null != await textChannel.EmbedAsync(@event.MessageHeader, embedBuilder).ConfigureAwait(false))
+                                        if (null != await textChannel.EmbedAsync(@event.MessageHeader ?? string.Empty, embedBuilder).ConfigureAwait(false))
                                         {
                                             // Update database entry
                                             await Ditto.Database.WriteAsync((uow) =>
@@ -147,15 +147,11 @@ namespace Ditto.Bot.Modules.Utility
             };
         }
 
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents)]
-        public override Task _()
-        {
-            return Task.CompletedTask;
-        }
-
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
         [Help(null, "Create an event that will trigger based on the specified day(s) and time.")]
         public async Task Add(
+            [Help("channel", "The targeted text channel")]
+            IMessageChannel channel,
             [Help("day", "Days separated by a comma", "Possible values: %values%")]
             EventDay day,
             [Help("time", "Formatted time span in UTC", "Examples: '19:30~20:00' or '19:30~20:00+01:00' for UTC+1h")]
@@ -231,7 +227,7 @@ namespace Ditto.Bot.Modules.Utility
                 @event = uow.Events.Add(new Event()
                 {
                     Guild = Context.Guild,
-                    Channel = Context.Channel,
+                    Channel = channel ?? Context.Channel,
                     Creator = Context.User,
                     CreatorName = Context.NicknameAndGlobalUsername,
                     Days = (Day)day,
@@ -261,7 +257,17 @@ namespace Ditto.Bot.Modules.Utility
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Global | CommandAccessLevel.Local)]
+        public Task Add(IMessageChannel channel, string timeMessage, [Optional] string title, [Optional] string header, [Multiword] string message)
+            => Add(channel, EventDay.Daily, timeMessage, title, header, message);
+
+
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
+        [Help(null, "Create an event that will trigger based on the specified day(s) and time.")]
+        public Task Add(EventDay day, string timeMessage, [Optional] string title, [Optional] string header, [Multiword] string message)
+            => Add(null, day, timeMessage, title, header, message);
+
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Global | CommandAccessLevel.Local)]
         public Task Add(string timeMessage, [Optional] string title, [Optional] string header, [Multiword] string message)
-            => Add(EventDay.Daily, timeMessage, title, header, message);
+            => Add(null, EventDay.Daily, timeMessage, title, header, message);
     }
 }
