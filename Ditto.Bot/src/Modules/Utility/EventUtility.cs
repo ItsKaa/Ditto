@@ -148,6 +148,7 @@ namespace Ditto.Bot.Modules.Utility
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
+        [Priority(5)]
         [Help(null, "Create an event that will trigger based on the specified day(s) and time.")]
         public async Task Add(
             [Help("channel", "The targeted text channel")]
@@ -257,16 +258,18 @@ namespace Ditto.Bot.Modules.Utility
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Global | CommandAccessLevel.Local)]
+        [Priority(4)]
         public Task Add(IMessageChannel channel, string timeMessage, [Optional] string title, [Optional] string header, [Multiword] string message)
             => Add(channel, EventDay.Daily, timeMessage, title, header, message);
 
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
-        [Help(null, "Create an event that will trigger based on the specified day(s) and time.")]
+        [Priority(3)]
         public Task Add(EventDay day, string timeMessage, [Optional] string title, [Optional] string header, [Multiword] string message)
             => Add(null, day, timeMessage, title, header, message);
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Global | CommandAccessLevel.Local)]
+        [Priority(0)]
         public Task Add(string timeMessage, [Optional] string title, [Optional] string header, [Multiword] string message)
             => Add(null, EventDay.Daily, timeMessage, title, header, message);
     }
