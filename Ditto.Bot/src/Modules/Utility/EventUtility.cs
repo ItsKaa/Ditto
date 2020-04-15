@@ -58,7 +58,7 @@ namespace Ditto.Bot.Modules.Utility
                 {
                     while (Ditto.Running)
                     {
-                        const int timeTolerance = 5;
+                        var timeTolerance = TimeSpan.FromMinutes(5);
                         var dateNow = DateTime.UtcNow;
                         foreach (var pair in _events.ToList())
                         {
@@ -68,9 +68,14 @@ namespace Ditto.Bot.Modules.Utility
                             var timeBegin = @event.TimeBegin - timeOffset;
                             var timeEnd = (@event.TimeEnd ?? @event.TimeBegin) - timeOffset;
 
+                            // Calculate the time difference with the subtracted time to allow displaying the message at a set time before the event begins.
+                            // TODO: Fix for older/now messages and include a check for the ending time in case a restart happened.
+                            var timeCountdown = pair.Value.TimeCountdown ?? TimeSpan.FromSeconds(0);
+                            var timeDiffWithCountdown = ((dateNow.TimeOfDay + timeCountdown) - timeBegin);
+
                             if ((dateNow - (@event.LastRun ?? DateTime.MinValue)).TotalHours >= 1
                                && DateHelper.HasDayOfWeek(@event.Days, dateNow.DayOfWeek)
-                               && Math.Abs((dateNow.TimeOfDay - timeBegin).TotalMinutes) <= timeTolerance
+                               && timeDiffWithCountdown.TotalSeconds > 0 && timeDiffWithCountdown <= (timeTolerance)
                               )
                             {
                                 // Verify that the reminder has not already been removed
