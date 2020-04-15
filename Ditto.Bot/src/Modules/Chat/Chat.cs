@@ -38,8 +38,17 @@ namespace Ditto.Bot.Modules.Chat
                 if (guild != null)
                 {
                     CleverbotSessions.TryAdd(guild.Id, new Lazy<CleverbotSession>(
-                        () => new CleverbotSession(Ditto.Settings.Credentials.CleverbotApiKey, false
-                    )));
+                        () => new CleverbotSession(Ditto.Settings.Credentials.CleverbotApiKey, false), true)
+                    );
+                }
+                return Task.CompletedTask;
+            });
+
+            Ditto.Client.Do((c) => c.LeftGuild += (guild) =>
+            {
+                if (guild != null)
+                {
+                    CleverbotSessions.TryRemove(guild.Id, out Lazy<CleverbotSession> session);
                 }
                 return Task.CompletedTask;
             });
