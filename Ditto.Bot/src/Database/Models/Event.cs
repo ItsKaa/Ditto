@@ -53,17 +53,26 @@ namespace Ditto.Bot.Database.Models
             get => GetGuild(GuildId);
             set => GuildId = GetIdOf<ulong?>(value);
         }
+
         [NotMapped]
         public IChannel Channel
         {
             get => GetChannel(ChannelId);
             set => ChannelId = GetIdOf<ulong?>(value);
         }
+
         [NotMapped]
         public IUser Creator
         {
             get => GetUser(CreatorId);
             set => CreatorId = GetIdOf<ulong?>(value);
+        }
+
+        [NotMapped]
+        public IGuildUser CreatorGuild
+        {
+            get => GetUserGuild(CreatorId);
+            set => Creator = value;
         }
     }
 }

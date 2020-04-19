@@ -52,7 +52,10 @@ namespace Ditto.Bot.Database
 
         public IUser GetUser(ulong? userId)
             => userId.HasValue ? Ditto.Client.Do((c) => c?.GetUser(userId.Value)) : null;
-        
+
+        public IGuildUser GetUserGuild(ulong? userId)
+            => userId.HasValue ? Ditto.Client.Do((c) => c?.GetGuildUserAsync(userId.Value)?.GetAwaiter().GetResult()) : null;
+
         public IRole GetRole(ulong? guildId, ulong? roleId)
             => roleId.HasValue ? GetGuild(guildId)?.GetRole(roleId.Value) : null;
 
