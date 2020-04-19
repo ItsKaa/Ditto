@@ -272,5 +272,110 @@ namespace Ditto.Bot.Modules.Utility
         [Priority(0)]
         public Task Add(string timeMessage, [Optional] string title, [Optional] string header, [Multiword] string message)
             => Add(null, EventDay.Daily, timeMessage, title, header, message);
+
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents)]
+        public async Task List(ITextChannel channel = null, IUser user = null)
+        {
+            if (!Permissions.IsAdministratorOrBotOwner(Context))
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
+            var events = new List<Event>();
+            await Ditto.Database.DoAsync(uow =>
+            {
+                events.AddRange(uow.Events.GetAll(e => e.GuildId == Context.Guild.Id));
+            }).ConfigureAwait(false);
+
+            // Remove everything that is not the targeted user and/or channel when applicable.
+            if (user != null)
+            {
+                events.RemoveAll(e => e.CreatorId != user.Id);
+            }
+
+            if(channel != null)
+            {
+                events.RemoveAll(e => e.ChannelId != channel.Id);
+            }
+
+            // Create the paged embed.
+            var embedBuilder = new EmbedBuilder()
+                .WithAuthor($"Events{(channel == null ? "" : $" in #{channel.Name}")}{(user == null ? "" : $" from user {user.Username}")}")
+                .WithOkColour(Context.Guild)
+            ;
+
+            var pagedResults = events.ChunkBy(10);
+            embedBuilder.WithFields(GetPageResult(0, pagedResults));
+
+            await Context.SendPagedMessageAsync(embedBuilder, (msg, page) =>
+                {
+                    embedBuilder.Fields.Clear();
+                    embedBuilder.WithFields(GetPageResult(page-1, pagedResults));
+                    return embedBuilder;
+                },
+                pagedResults.Count(),
+                true,
+                (int)TimeSpan.FromMinutes(5).TotalMilliseconds,
+                (int)TimeSpan.FromMinutes(1).TotalMilliseconds
+            ).ConfigureAwait(false);
+        }
+
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents)]
+        [Alias("remove", "rem", "del")]
+        public async Task Delete(int id)
+        {
+            if (!Permissions.IsAdministratorOrBotOwner(Context))
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
+            Event @event = null;
+            await Ditto.Database.ReadAsync(uow =>
+            {
+                @event = uow.Events.Get(id);
+            }).ConfigureAwait(false);
+
+            if(@event == null)
+            {
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+            }
+            else
+            {
+                try
+                {
+                    await Ditto.Database.WriteAsync(uow =>
+                    {
+                        uow.Events.Remove(@event);
+                    }, true).ConfigureAwait(false);
+                    await Context.ApplyResultReaction(CommandResult.Success).ConfigureAwait(false);
+                }
+                catch
+                {
+                    await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+                }
+            }
+        }
+
+        private IEnumerable<EmbedFieldBuilder> GetPageResult(int pageIndex, IEnumerable<IEnumerable<Event>> events)
+        {
+            if (events.Count() >= pageIndex)
+            {
+                var eventsPage = events.ElementAt(pageIndex);
+                foreach (var @event in eventsPage)
+                {
+                    yield return new EmbedFieldBuilder()
+                        .WithName($@"`{@event.Id}`. {@event.Title}")
+                        .WithValue(
+                            $"*{@event.TimeBegin:hh\\:mm}{(@event.TimeEnd == null ? "" : $"~{@event.TimeEnd.Value:hh\\:mm}")}"
+                          + $"{(@event.TimeOffset == null ? "" : $"+{@event.TimeOffset.Value:hh\\:mm}")}"
+                          + $" | {@event.CreatorGuild?.Username ?? @event.CreatorGuild?.Username ?? @event.Creator.Username}*"
+                        )
+                        .WithIsInline(false)
+                    ;
+                }
+            }
+        }
     }
 }
