@@ -14,5 +14,8 @@
 
         // Update information, Last git commit hash.
         Update          = 6,
+
+        // Discord channel linking
+        Discord         = 7
     }
 }

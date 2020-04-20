@@ -22,5 +22,11 @@ namespace Ditto.Extensions
             return @this;
         }
 
+        public static EmbedBuilder WithDiscordLinkColour(this EmbedBuilder @this, IGuild guild)
+        {
+            @this.Color = Bot.Ditto.Cache.Db.EmbedDiscordLinkColour(guild);
+            return @this;
+        }
+
     }
 }

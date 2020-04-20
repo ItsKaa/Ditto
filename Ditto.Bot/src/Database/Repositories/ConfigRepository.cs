@@ -13,6 +13,7 @@ namespace Ditto.Bot.Database.Repositories
         private const string _keyEmbedOkColour = "embed_colour_ok";
         private const string _keyEmbedErrorColour = "embed_colour_error";
         private const string _keyEmbedRssColour = "embed_colour_rss";
+        private const string _keyEmbedDiscordLinkColour = "embed_colour_discordlink";
         private const string _keyEmbedMusicPlayingColour = "embed_colour_music-playing";
         private const string _keyEmbedMusicPausedColour = "embed_colour_music-paused";
         private const string _keyPrefix = "prefix";
@@ -25,6 +26,7 @@ namespace Ditto.Bot.Database.Repositories
             {_keyEmbedRssColour, "#F26522" },
             //{_keyEmbedMusicPlayingColour, "#763ba5" },
             {_keyEmbedMusicPlayingColour, "735bc1" },
+            {_keyEmbedDiscordLinkColour, "#5971BF" },
             {_keyEmbedMusicPausedColour, "#666666" },
             {_keyPrefix, ">"},
             {_keyBdoMaintenanceChannel, null},
@@ -86,6 +88,10 @@ namespace Ditto.Bot.Database.Repositories
         public Config GetEmbedRssColour(IGuild guild) => GetConfigItem(guild, _keyEmbedRssColour);
         private Config GetOrAddEmbedRssColour(IGuild guild) => GetOrAddConfigItem(guild, _keyEmbedRssColour);
         public void SetEmbedRssColour(IGuild guild, Color colour) => GetOrAddEmbedRssColour(guild).Value = colour.ToString();
+
+        public Config GetEmbedDiscordLinkColour(IGuild guild) => GetConfigItem(guild, _keyEmbedDiscordLinkColour);
+        private Config GetOrAddEmbedDiscordLinkColour(IGuild guild) => GetOrAddConfigItem(guild, _keyEmbedDiscordLinkColour);
+        public void SetEmbedDiscordLinkColour(IGuild guild, Color colour) => GetOrAddEmbedRssColour(guild).Value = colour.ToString();
 
         public Config GetEmbedMusicPlayingColour(IGuild guild) => GetConfigItem(guild, _keyEmbedMusicPlayingColour);
         private Config GetOrAddEmbedMusicPlayingColour(IGuild guild) => GetOrAddConfigItem(guild, _keyEmbedMusicPlayingColour);
