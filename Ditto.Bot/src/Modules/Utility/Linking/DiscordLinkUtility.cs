@@ -137,7 +137,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                             // Retrieve the latest messages in bulk from the targeted channel.
                             var messages = (await linkChannel.GetMessagesAsync(100, CacheMode.AllowDownload).ToListAsync().ConfigureAwait(false))
                                 .SelectMany(m => m)
-                                .Where(m => m.CreatedAt.UtcDateTime >= link.Date)
+                                .Where(m => m.CreatedAt.UtcDateTime > link.Date)
                                 .Where(m => null == link.Links.FirstOrDefault(l => l.Identity == m.Id.ToString()))
                                 ;
 
