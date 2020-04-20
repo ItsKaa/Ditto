@@ -18,7 +18,7 @@ namespace Ditto.Extensions
         
         public static EmbedBuilder WithRssColour(this EmbedBuilder @this, IGuild guild)
         {
-            @this.Color = Bot.Ditto.Cache.Db.EmbedColour(guild);
+            @this.Color = Bot.Ditto.Cache.Db.EmbedRssColour(guild);
             return @this;
         }
 

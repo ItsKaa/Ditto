@@ -21,12 +21,11 @@ namespace Ditto.Bot.Database.Repositories
         private const string _keyBdoNewsIdentifier = "bdo_news_id";
 
         private static ConcurrentDictionary<string, string> _defaultConfigValues = new ConcurrentDictionary<string, string>(new Dictionary<string, string>() {
-             {_keyEmbedOkColour , Color.Blue.ToString() },
+            {_keyEmbedOkColour , Color.Blue.ToString() },
             {_keyEmbedErrorColour, "#C42F1F" },
             {_keyEmbedRssColour, "#F26522" },
-            //{_keyEmbedMusicPlayingColour, "#763ba5" },
-            {_keyEmbedMusicPlayingColour, "735bc1" },
             {_keyEmbedDiscordLinkColour, "#5971BF" },
+            {_keyEmbedMusicPlayingColour, "#735bc1" }, //#763ba5
             {_keyEmbedMusicPausedColour, "#666666" },
             {_keyPrefix, ">"},
             {_keyBdoMaintenanceChannel, null},
