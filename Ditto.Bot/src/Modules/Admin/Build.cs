@@ -84,6 +84,7 @@ namespace Ditto.Bot.Modules.Admin
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
+        [Priority(0)]
         public Task _(string fromHash = null)
         {
             return Info(fromHash);
@@ -123,6 +124,7 @@ namespace Ditto.Bot.Modules.Admin
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
+        [Priority(1)]
         public async Task<BuildInfo> CheckForUpdates(bool reactions = true)
         {
             if (Permissions.IsAdministratorOrBotOwner(Context))
@@ -164,6 +166,7 @@ namespace Ditto.Bot.Modules.Admin
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
+        [Priority(1)]
         [Alias("upgrade")]
         public async Task Update()
         {
@@ -227,6 +230,7 @@ namespace Ditto.Bot.Modules.Admin
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
         [Alias("list")]
+        [Priority(1)]
         public async Task<IEnumerable<EmbedField>> UpdateList(string fromHash = null, bool post = true)
         {
             var values = new List<EmbedField>();
@@ -271,6 +275,7 @@ namespace Ditto.Bot.Modules.Admin
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
+        [Priority(1)]
         public async Task Info(string fromHash = null)
         {
             if (Permissions.IsAdministratorOrBotOwner(Context))
