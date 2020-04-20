@@ -8,6 +8,7 @@ using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,11 +19,16 @@ namespace Ditto.Bot.Modules.Utility.Linking
     public class DiscordLinkUtility : DiscordModule<LinkUtility>
     {
         private static DiscordClientEx _discordClient = null;
-        public static DateTime LastUpdate { get; private set; }
+        private static ConcurrentDictionary<int, DateTime> LastUpdate { get; set; }
+        private static volatile bool _connected;
+        private static volatile bool _reconnecting;
+        private static volatile bool _initialLogin;
 
         static DiscordLinkUtility()
         {
-            LastUpdate = DateTime.MinValue;
+            LastUpdate = new ConcurrentDictionary<int, DateTime>();
+            _reconnecting = false;
+            _initialLogin = true;
 
             _discordClient = new DiscordClientEx(new DiscordSocketConfig()
             {
@@ -33,9 +39,22 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 DefaultRetryMode = RetryMode.AlwaysRetry,
             });
 
-            bool initialLogin = true;
             var loginAction = new Func<Task>(async () =>
             {
+                // Cancel out when already reconnecting
+                if (_reconnecting)
+                {
+                    return;
+                }
+
+                if(!_initialLogin)
+                {
+                    Log.Info("Reconnecting discord slave user...");
+                }
+
+                // Attempt to continuously reconnect.
+                _reconnecting = true;
+                _connected = false;
                 int retryAttempt = 0;
                 while (true)
                 {
@@ -43,20 +62,21 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     {
                         await _discordClient.LoginAsync(0, Ditto.Settings.Credentials.UserSlaveToken, true);
                         await _discordClient.StartAsync().ConfigureAwait(false);
-                        initialLogin = false;
+                        _initialLogin = false;
+                        _reconnecting = false;
                         break;
                     }
                     catch
                     {
-                        if (initialLogin)
+                        if (_initialLogin)
                         {
-                            initialLogin = false;
+                            _initialLogin = false;
                             Log.Error("Slave user could not connect at first login, will not retry further.");
                             break;
                         }
                         else
                         {
-                            initialLogin = false;
+                            _initialLogin = false;
                             Log.Warn($"Slave user could not connect ({++retryAttempt})");
                             await Task.Delay(500).ConfigureAwait(false);
                         }
@@ -67,13 +87,14 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
             _discordClient.Connected += () =>
             {
+                _connected = true;
                 Log.Info("Slave user connected!");
                 return Task.CompletedTask;
             };
 
             _discordClient.Disconnected += (ex) =>
             {
-                if (!initialLogin)
+                if (!_initialLogin)
                 {
                     Log.Warn($"Slave user has been disconnected.");
                     Task.Run(() => loginAction());
@@ -83,7 +104,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
             _discordClient.LoggedOut += () =>
             {
-                if (!initialLogin)
+                if (!_initialLogin)
                 {
                     Log.Warn($"Slave user got logged out.");
                     Task.Run(() => loginAction());
@@ -99,7 +120,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
             LinkUtility.TryAddHandler(LinkType.Discord, async (link, channel) =>
             {
                 var messageIds = new List<string>();
-                if ((DateTime.UtcNow - LastUpdate).TotalSeconds < 120)
+
+                // Only pull discord channel feeds every 2 minutes for each individual channel.
+                var lastUpdateTime = LastUpdate.GetOrAdd(link.Id, DateTime.MinValue);
+                if (!_connected || (DateTime.UtcNow - lastUpdateTime).TotalSeconds < 120)
                 {
                     return messageIds;
                 }
@@ -116,7 +140,6 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                 .Where(m => m.CreatedAt.UtcDateTime >= link.Date)
                                 .Where(m => null == link.Links.FirstOrDefault(l => l.Identity == m.Id.ToString()))
                                 ;
-
 
                             // Update link date-time.
                             var lastMessageDate = DateTime.MinValue;
@@ -136,58 +159,63 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
 
                             // Attempt to post the messages in sync with the created date.
-                            foreach (var message in messages.OrderBy(m => m.CreatedAt))
+                            try
                             {
-                                int retryCount = 0;
-                                while (retryCount < 10)
+                                foreach (var message in messages.OrderBy(m => m.CreatedAt))
                                 {
-                                    try
+                                    int retryCount = 0;
+                                    while (retryCount < 10)
                                     {
-                                        var dateUtc = message.CreatedAt.UtcDateTime;
-                                        var embedBuilder = new EmbedBuilder()
-                                            .WithAuthor(message.Author)
-                                            .WithTitle(message.Channel.Name)
-                                            .WithDescription(message.Content)
-                                            .WithFooter($"Posted {dateUtc:dddd, MMMM} {dateUtc.Day.Ordinal()} {dateUtc:yyyy} at {dateUtc:HH:mm} UTC")
-                                            .WithDiscordLinkColour(channel.Guild)
-                                            ;
-
-                                        if (message.Attachments.Count > 0)
+                                        try
                                         {
-                                            embedBuilder.WithImageUrl(message.Attachments.FirstOrDefault().Url);
+                                            var dateUtc = message.CreatedAt.UtcDateTime;
+                                            var embedBuilder = new EmbedBuilder()
+                                                .WithAuthor(message.Author)
+                                                .WithTitle(message.Channel.Name)
+                                                .WithDescription(message.Content)
+                                                .WithFooter($"Posted {dateUtc:dddd, MMMM} {dateUtc.Day.Ordinal()} {dateUtc:yyyy} at {dateUtc:HH:mm} UTC")
+                                                .WithDiscordLinkColour(channel.Guild)
+                                                ;
+
+                                            if (message.Attachments.Count > 0)
+                                            {
+                                                embedBuilder.WithImageUrl(message.Attachments.FirstOrDefault().Url);
+                                            }
+
+                                            var postedMessage = await channel.SendMessageAsync(embed: embedBuilder.Build(), options: new RequestOptions() { RetryMode = RetryMode.AlwaysFail }).ConfigureAwait(false);
+                                            if (postedMessage != null)
+                                            {
+                                                messageIds.Add(message.Id.ToString());
+                                                lastMessageDate = message.CreatedAt.UtcDateTime;
+                                            }
+
+                                            // OK, cancel out.
+                                            break;
                                         }
-
-                                        var postedMessage = await channel.SendMessageAsync(embed: embedBuilder.Build(), options: new RequestOptions() { RetryMode = RetryMode.AlwaysFail }).ConfigureAwait(false);
-                                        if (postedMessage != null)
+                                        catch (Exception ex)
                                         {
-                                            messageIds.Add(message.Id.ToString());
-                                            lastMessageDate = message.CreatedAt.UtcDateTime;
-                                        }
+                                            // Update the link date just in case.
+                                            await funcUpdateLinkDate().ConfigureAwait(false);
 
-                                        // OK, cancel out.
-                                        break;
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        // Update the link date just in case.
-                                        await funcUpdateLinkDate().ConfigureAwait(false);
-
-                                        // Attempt to retry sending the message
-                                        if (!await LinkUtility.SendRetryLinkAsync(link.Type, retryCount++, ex is Discord.Net.RateLimitedException ? null : ex))
-                                        {
-                                            return messageIds;
+                                            // Attempt to retry sending the message
+                                            if (!await LinkUtility.SendRetryLinkAsync(link.Type, retryCount++, ex is Discord.Net.RateLimitedException ? null : ex))
+                                            {
+                                                return messageIds;
+                                            }
                                         }
                                     }
                                 }
                             }
-
-                            // Update the link date time.
-                            await funcUpdateLinkDate().ConfigureAwait(false);
+                            finally
+                            {
+                                // Update the link date time.
+                                await funcUpdateLinkDate().ConfigureAwait(false);
+                            }
                         }
                     }
                 }
 
-                LastUpdate = DateTime.UtcNow;
+                LastUpdate.TryUpdate(link.Id, DateTime.UtcNow, lastUpdateTime);
                 return messageIds;
             });
         }
