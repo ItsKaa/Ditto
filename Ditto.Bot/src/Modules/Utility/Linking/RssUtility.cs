@@ -25,7 +25,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 var feed = FeedHelper.ParseRss(url);
                 var items = feed.Items
                     .Where(item => !LinkUtility.LinkItemExists(link, item.Guid, StringComparison.CurrentCultureIgnoreCase))
-                    .Where(item => item.PublishDate > link.Date)
+                    .Where(item => item.PublishDate.ToUniversalTime() > link.Date.ToUniversalTime())
                     .Reverse();
 
                if (items.Count() > 0)

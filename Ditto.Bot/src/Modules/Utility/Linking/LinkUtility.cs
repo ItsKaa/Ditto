@@ -152,7 +152,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         Value = value,
                         Guild = textChannel.Guild,
                         Channel = textChannel,
-                        Date = date ?? DateTime.Now,
+                        Date = date ?? DateTime.UtcNow,
                     });
                 });
 
