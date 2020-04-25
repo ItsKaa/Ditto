@@ -105,7 +105,7 @@ namespace Ditto.Bot.Modules.Music
 
 
 
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, requireBotTag: true, deleteUserMessage: true)]
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, deleteUserMessage: true)]
         public async Task Play([Multiword] string query = "", IVoiceChannel voiceChannel = null)
         {
             var musicPlayer = _musicPlayers.GetOrAdd(Context.Guild.Id, new MusicPlayer(Context));
@@ -154,7 +154,7 @@ namespace Ditto.Bot.Modules.Music
             }
         }
 
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, requireBotTag: true, deleteUserMessage: true)]
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, deleteUserMessage: true)]
         public Task Stop()
         {
             return DoMusicPlayerAsync(musicPlayer =>
@@ -164,14 +164,14 @@ namespace Ditto.Bot.Modules.Music
             });
         }
 
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, requireBotTag: true, deleteUserMessage: true)]
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, deleteUserMessage: true)]
         [Alias("vol"), Priority(0)]
         public Task Volume(double volume)
         {
             return DoMusicPlayerAsync(m => m.Volume = volume);
         }
 
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, requireBotTag: true, deleteUserMessage: true)]
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, deleteUserMessage: true)]
         [Alias("vol"), Priority(1)]
         public Task Volume(string volume)
         {
@@ -198,27 +198,27 @@ namespace Ditto.Bot.Modules.Music
         }
 
 
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, requireBotTag: true, deleteUserMessage: true)]
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, deleteUserMessage: true)]
         public Task Skip(int amount = 1)
         {
             return DoMusicPlayerAsync(m => m.NavigateSongAsync(amount));
         }
 
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local, requireBotTag: true, deleteUserMessage: true)]
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, deleteUserMessage: true)]
         [Alias("rand")]
         public Task Random()
         {
             return DoMusicPlayerAsync(m => m.RandomSong = true);
         }
 
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local, requireBotTag: true, deleteUserMessage: true)]
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, deleteUserMessage: true)]
         [Alias("index", "goto", "go to")]
         public Task Scroll(int number)
         {
             return DoMusicPlayerAsync(m => m.ScrollToIndex(number));
         }
 
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local, requireBotTag: true, deleteUserMessage: true)]
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, deleteUserMessage: true)]
         public Task Shuffle()
         { 
             return DoMusicPlayerAsync(m => m.ShufflePlaylist());
