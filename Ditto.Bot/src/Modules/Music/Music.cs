@@ -152,6 +152,8 @@ namespace Ditto.Bot.Modules.Music
 
                 }
             }
+
+            await Context.Message.DeleteAfterAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
         }
 
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, deleteUserMessage: true)]
