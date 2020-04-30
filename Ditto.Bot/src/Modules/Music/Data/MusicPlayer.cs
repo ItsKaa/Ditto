@@ -67,7 +67,7 @@ namespace Ditto.Bot.Modules.Music.Data
             AudioStreamer = new AudioStreamer(
                 Ditto.Settings.Paths.YoutubeDL,
                 Ditto.Settings.Paths.FFmpeg,
-                "--prefer-ffmpeg --hls-prefer-ffmpeg --buffer-size 100M --audio-quality 48K --format worst", // --format bestaudio --force-ipv4
+                "--prefer-ffmpeg --hls-prefer-ffmpeg --buffer-size 100M --audio-quality 48K --format bestaudio", // --format bestaudio --force-ipv4
                 "-ac 2 -f s16le -ar 48000"
             );
             Volume = 100.0;
