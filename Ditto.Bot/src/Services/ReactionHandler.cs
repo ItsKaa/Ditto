@@ -10,9 +10,9 @@ namespace Ditto.Bot.Services
 {
     public class ReactionData
     {
-        public Action<SocketReaction> OnReactionAdded = delegate { };
-        public Action<SocketReaction> OnReactionRemoved = delegate { };
-        public Action OnReactionsCleared = delegate { };
+        public Func<SocketReaction, Task> OnReactionAdded = delegate { return Task.CompletedTask; };
+        public Func<SocketReaction, Task> OnReactionRemoved = delegate { return Task.CompletedTask; };
+        public Func<Task> OnReactionsCleared = delegate { return Task.CompletedTask; };
     }
     public class ReactionHandler : IDisposable
     {
@@ -47,16 +47,16 @@ namespace Ditto.Bot.Services
             try { Uninstall(); } catch { }
         }
 
-        public bool Add(IUserMessage userMessage, Action<SocketReaction> onReactionAdded, Action<SocketReaction> onReactionRemoved = null, Action onReactionCleared = null)
+        public bool Add(IUserMessage userMessage, Func<SocketReaction, Task> onReactionAdded, Func<SocketReaction, Task> onReactionRemoved = null, Func<Task> onReactionCleared = null)
         {
             if (userMessage == null)
                 return false;
             
             return _messageData.TryAdd(userMessage.Id, new ReactionData()
             {
-                OnReactionAdded = onReactionAdded ?? delegate { },
-                OnReactionRemoved = onReactionRemoved ?? delegate { },
-                OnReactionsCleared = onReactionCleared ?? delegate { }
+                OnReactionAdded = onReactionAdded ?? delegate { return Task.CompletedTask; },
+                OnReactionRemoved = onReactionRemoved ?? delegate { return Task.CompletedTask; },
+                OnReactionsCleared = onReactionCleared ?? delegate { return Task.CompletedTask; },
             });
         }
         public void Remove(IUserMessage userMessage)
@@ -68,13 +68,13 @@ namespace Ditto.Bot.Services
 
         private Task DiscordClient_ReactionAdded(Cacheable<IUserMessage, ulong> message, ISocketMessageChannel channel, SocketReaction reaction)
         {
-            var _ = Task.Run(() =>
+            var _ = Task.Run(async () =>
             {
                 try
                 {
                     if (_messageData.TryGetValue(message.Id, out ReactionData reactionData))
                     {
-                        reactionData.OnReactionAdded.Invoke(reaction);
+                        await reactionData.OnReactionAdded(reaction).ConfigureAwait(false);
                     }
                 }
                 catch { }
@@ -84,13 +84,13 @@ namespace Ditto.Bot.Services
 
         private Task DiscordClient_ReactionRemoved(Cacheable<IUserMessage, ulong> message, ISocketMessageChannel channel, SocketReaction reaction)
         {
-            var _ = Task.Run(() =>
+            var _ = Task.Run(async () =>
             {
                 try
                 {
                     if (_messageData.TryGetValue(message.Id, out ReactionData reactionData))
                     {
-                        reactionData.OnReactionRemoved.Invoke(reaction);
+                        await reactionData.OnReactionRemoved(reaction).ConfigureAwait(false);
                     }
                 }
                 catch { }
@@ -100,13 +100,13 @@ namespace Ditto.Bot.Services
 
         private Task DiscordClient_ReactionsCleared(Cacheable<IUserMessage, ulong> message, ISocketMessageChannel channel)
         {
-            var _ = Task.Run(() =>
+            var _ = Task.Run(async() =>
             {
                 try
                 {
                     if (_messageData.TryGetValue(message.Id, out ReactionData reactionData))
                     {
-                        reactionData.OnReactionsCleared.Invoke();
+                        await reactionData.OnReactionsCleared().ConfigureAwait(false);
                     }
                 }
                 catch { }

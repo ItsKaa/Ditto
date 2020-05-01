@@ -162,6 +162,7 @@ namespace Ditto.Extensions
                         tokenSource.Cancel();
                     }
                 }
+                return Task.CompletedTask;
             });
 
             try
@@ -293,7 +294,7 @@ namespace Ditto.Extensions
             }
 
             // onChanged event, either for adding or removing a reaction
-            var onChanged = new Action<SocketReaction>(async r =>
+            var onChanged = new Func<SocketReaction, Task>(async r =>
             {
                 if (r.UserId != discordClient.CurrentUser.Id)
                 {
