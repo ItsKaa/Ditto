@@ -49,7 +49,7 @@ namespace Ditto.Data.Commands.Readers
             // Find by unicode value
             foreach (var emote in EmotesHelper.Emojis)
             {
-                if(input.Equals(emote.Name))
+                if(input.Equals(emote.Name, StringComparison.CurrentCultureIgnoreCase))
                 {
                     return Task.FromResult(TypeReaderResult.FromSuccess(emote));
                 }

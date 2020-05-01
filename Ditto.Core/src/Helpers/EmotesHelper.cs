@@ -36,7 +36,7 @@ namespace Ditto.Helpers
                     .Replace("🏽", "")
                     .Replace("🏾", "")
                     .Replace("🏿", "");
-            return Emojis.FirstOrDefault(e => e.Name == value);
+            return Emojis.FirstOrDefault(e => string.Equals(e.Name, value, StringComparison.CurrentCultureIgnoreCase));
         }
 
         public static Emoji GetEmoji(Emotes emote)
