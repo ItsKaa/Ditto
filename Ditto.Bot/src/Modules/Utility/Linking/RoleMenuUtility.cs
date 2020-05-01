@@ -260,9 +260,5 @@ namespace Ditto.Bot.Modules.Utility
             });
             await Context.ApplyResultReaction(CommandResult.Success).ConfigureAwait(false);
         }
-
-        //[DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local)]
-        //public Task Set(ulong messageId, IRole role, IEmote emote)
-        //    => Set(messageId, role, emote);
     }
 }
