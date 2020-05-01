@@ -16,6 +16,9 @@
         Update          = 6,
 
         // Discord channel linking
-        Discord         = 7
+        Discord         = 7,
+
+        // Role menu link
+        RoleMenu        = 8,
     }
 }
