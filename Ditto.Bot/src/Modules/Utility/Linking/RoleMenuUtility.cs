@@ -239,6 +239,9 @@ namespace Ditto.Bot.Modules.Utility
                 return;
             }
 
+            // Add the link to our collection.
+            _links.Add(link);
+
             // Verify that the link does not exist yet
             var linkValue = $"{((emote as Emote)?.Id)?.ToString() ?? emote.Name}={role.Id}";
 
