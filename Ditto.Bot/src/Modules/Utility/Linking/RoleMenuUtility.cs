@@ -261,6 +261,14 @@ namespace Ditto.Bot.Modules.Utility
             {
                 uow.Links.UpdateRange(link);
             });
+
+            // Find the message and react with said emote.
+            var message = await GetMessageAsync(link.Guild, messageId, link.Channel).ConfigureAwait(false);
+            if(message != null)
+            {
+                await message.AddReactionAsync(emote).ConfigureAwait(false);
+            }
+
             await Context.ApplyResultReaction(CommandResult.Success).ConfigureAwait(false);
         }
     }
