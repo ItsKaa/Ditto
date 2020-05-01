@@ -212,6 +212,9 @@ namespace Ditto.Bot.Modules.Utility
                 return;
             }
 
+            // Add the link to our collection.
+            _links.Add(link);
+
             // Handle link
             var result = await HandleLinkAsync(link).ConfigureAwait(false);
             await Context.ApplyResultReaction(result == true ? CommandResult.Success : CommandResult.Failed).ConfigureAwait(false);
@@ -238,9 +241,6 @@ namespace Ditto.Bot.Modules.Utility
                 await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                 return;
             }
-
-            // Add the link to our collection.
-            _links.Add(link);
 
             // Verify that the link does not exist yet
             var linkValue = $"{((emote as Emote)?.Id)?.ToString() ?? emote.Name}={role.Id}";
