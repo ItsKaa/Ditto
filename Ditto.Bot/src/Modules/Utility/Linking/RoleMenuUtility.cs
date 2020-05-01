@@ -101,7 +101,7 @@ namespace Ditto.Bot.Modules.Utility
                             // Use the ID or Unicode value depending on the type.
                             LinkItem linkItem = r.Emote is Emote guildEmote
                                 ? link.Links.FirstOrDefault(l => ulong.TryParse(l.Identity.Split('=', System.StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(), out ulong value) && value == guildEmote.Id)
-                                : link.Links.FirstOrDefault(l => l.Identity.Split('=', System.StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() == r.Emote.Name);
+                                : link.Links.FirstOrDefault(l => string.Equals(r.Emote.Name, l.Identity.Split('=', System.StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(), StringComparison.CurrentCultureIgnoreCase));
 
                             if (linkItem != null && ulong.TryParse(linkItem.Identity.Split('=', System.StringSplitOptions.RemoveEmptyEntries).LastOrDefault(), out ulong roleId))
                             {
