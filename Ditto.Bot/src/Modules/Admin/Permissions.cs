@@ -49,5 +49,13 @@ namespace Ditto.Bot.Modules.Admin
             => CanBotManageMessages(context.TextChannel);
         public static async Task<bool> CanBotManageMessages(IGuildChannel channel)
             => CanManageMessages(await channel.Guild.GetCurrentUserAsync().ConfigureAwait(false), channel);
+
+        /// <summary>
+        /// Determines whether the bot user has the manage roles permission.
+        /// </summary>
+        public static async Task<bool> CanBotManageRoles(IGuild guild)
+            => (await guild.GetCurrentUserAsync().ConfigureAwait(false))?.GuildPermissions.ManageRoles == true;
+        public static Task<bool> CanBotManageRoles(ICommandContextEx context)
+            => CanBotManageRoles(context?.Guild);
     }
 }
