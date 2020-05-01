@@ -56,8 +56,8 @@ namespace Ditto.Data.Commands.Readers
             }
 
             // Check guild-emotes
-            var guildEmote = context.Guild.Emotes.FirstOrDefault(e => e.Name.Equals(input, StringComparison.CurrentCultureIgnoreCase));
-            if(guildEmote != null)
+            var guildEmote = context.Guild.Emotes.FirstOrDefault(e => string.Equals($"<:{e.Name}:{e.Id}>", input, StringComparison.CurrentCultureIgnoreCase) || string.Equals($"<a:{e.Name}:{e.Id}>", input, StringComparison.CurrentCultureIgnoreCase));
+            if (guildEmote != null)
             {
                 return Task.FromResult(TypeReaderResult.FromSuccess(guildEmote));
             }
