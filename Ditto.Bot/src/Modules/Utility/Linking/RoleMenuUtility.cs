@@ -8,6 +8,7 @@ using Ditto.Bot.Modules.Admin;
 using Ditto.Bot.Modules.Utility.Linking;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
+using Ditto.Helpers;
 using Microsoft.EntityFrameworkCore.Internal;
 using System;
 using System.Collections.Generic;
@@ -271,5 +272,51 @@ namespace Ditto.Bot.Modules.Utility
 
             await Context.ApplyResultReaction(CommandResult.Success).ConfigureAwait(false);
         }
+
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local)]
+        public async Task<bool> Fix(bool silent = false)
+        {
+            if(!Permissions.IsBotOwner(Context))
+            {
+                if (!silent)
+                    await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return false;
+            }
+
+            int fixedCount = 0;
+            foreach(var link in _links)
+            {
+                if (link.Links.Count > 0 && ulong.TryParse(link.Value, out ulong messageId))
+                {
+                    var message = await GetMessageAsync(link.Guild, messageId, link.Channel).ConfigureAwait(false);
+                    if (message != null)
+                    {
+                        foreach (var messageLink in link.Links)
+                        {
+                            var emoteValue = messageLink.Identity.Split('=', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+                            if (message != null)
+                            {
+                                var emote = ulong.TryParse(emoteValue, out ulong emoteId)
+                                    ? EmotesHelper.GetGuildEmoteById(link.Guild, emoteId)
+                                    : EmotesHelper.GetEmojiFromString(emoteValue);
+                                if (emote != null)
+                                {
+                                    if (!message.Reactions.Any(r => r.Value.IsMe && string.Equals(r.Key.Name, emote.Name)))
+                                    {
+                                        await message.AddReactionAsync(emote).ConfigureAwait(false);
+                                        fixedCount++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!silent)
+                await Context.ApplyResultReaction(fixedCount == 0 ? CommandResult.SuccessAlt1 : CommandResult.Success).ConfigureAwait(false);
+            return true;
+        }
+
     }
 }
