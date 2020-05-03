@@ -48,6 +48,11 @@ namespace Ditto.Helpers
         {
             return Globals.RegularExpression.SqlUnderscore.Replace(emote.ToString(), @"_$1$2").ToLower();
         }
+
+        public static IEmote GetGuildEmoteById(IGuild guild, ulong id)
+        {
+            return guild.Emotes.FirstOrDefault(e => e.Id == id);
+        }
         
         //https://discordapp.com/assets/0.1ae4f42f7d229659c4dd.js
         //public static async Task ReadFromWeb()
