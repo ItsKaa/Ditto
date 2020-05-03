@@ -66,9 +66,13 @@ namespace Ditto.Bot.Modules.Utility
                 {
                     if ((await client.GetPermissionsAsync(channel).ConfigureAwait(false)).ViewChannel)
                     {
-                        message = await channel.GetMessageAsync(messageId).ConfigureAwait(false) as IUserMessage;
-                        if (message != null)
-                            return;
+                        try
+                        {
+                            message = await channel.GetMessageAsync(messageId).ConfigureAwait(false) as IUserMessage;
+                            if (message != null)
+                                return;
+                        }
+                        catch { }
                     }
                 }
             }).ConfigureAwait(false);
@@ -205,6 +209,14 @@ namespace Ditto.Bot.Modules.Utility
                 return;
             }
 
+            // Verify reaction permissions
+            var channelPermissions = (await Context.Guild.GetCurrentUserAsync().ConfigureAwait(false))?.GetPermissions(textChannel);
+            if (channelPermissions?.AddReactions == true)
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
+                return;
+            }
+
             // Add link
             var link = await LinkUtility.TryAddLinkAsync(LinkType.RoleMenu, textChannel, messageId.ToString()).ConfigureAwait(false);
             if (link == null)
@@ -288,23 +300,30 @@ namespace Ditto.Bot.Modules.Utility
             {
                 if (link.Links.Count > 0 && ulong.TryParse(link.Value, out ulong messageId))
                 {
-                    var message = await GetMessageAsync(link.Guild, messageId, link.Channel).ConfigureAwait(false);
-                    if (message != null)
+                    var channelPermissions = (await link.Guild.GetCurrentUserAsync().ConfigureAwait(false))?.GetPermissions(link.Channel);
+                    if (channelPermissions?.AddReactions == true)
                     {
-                        foreach (var messageLink in link.Links)
+                        var message = await GetMessageAsync(link.Guild, messageId, link.Channel).ConfigureAwait(false);
+                        if (message != null)
                         {
-                            var emoteValue = messageLink.Identity.Split('=', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-                            if (message != null)
+                            foreach (var messageLink in link.Links)
                             {
-                                var emote = ulong.TryParse(emoteValue, out ulong emoteId)
-                                    ? EmotesHelper.GetGuildEmoteById(link.Guild, emoteId)
-                                    : EmotesHelper.GetEmojiFromString(emoteValue);
-                                if (emote != null)
+                                var emoteValue = messageLink.Identity.Split('=', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+                                if (message != null)
                                 {
-                                    if (!message.Reactions.Any(r => r.Value.IsMe && string.Equals(r.Key.Name, emote.Name)))
+                                    var emote = ulong.TryParse(emoteValue, out ulong emoteId)
+                                        ? EmotesHelper.GetGuildEmoteById(link.Guild, emoteId)
+                                        : EmotesHelper.GetEmojiFromString(emoteValue);
+                                    if (emote != null)
                                     {
-                                        await message.AddReactionAsync(emote).ConfigureAwait(false);
-                                        fixedCount++;
+                                        if (!message.Reactions.Any(r => r.Value.IsMe && string.Equals(r.Key.Name, emote.Name, StringComparison.CurrentCultureIgnoreCase)))
+                                        {
+                                            // Check if an identical emote exists but in a different capital casing.
+                                            var emoteCaseInsensitive = message.Reactions.FirstOrDefault(r => string.Equals(r.Key.Name, emote.Name, StringComparison.CurrentCultureIgnoreCase)).Key;
+
+                                            await message.AddReactionAsync(emoteCaseInsensitive ?? emote).ConfigureAwait(false);
+                                            fixedCount++;
+                                        }
                                     }
                                 }
                             }
