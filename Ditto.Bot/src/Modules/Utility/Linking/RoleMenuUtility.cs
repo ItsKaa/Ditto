@@ -211,7 +211,7 @@ namespace Ditto.Bot.Modules.Utility
 
             // Verify reaction permissions
             var channelPermissions = (await Context.Guild.GetCurrentUserAsync().ConfigureAwait(false))?.GetPermissions(textChannel);
-            if (channelPermissions?.AddReactions == true)
+            if (channelPermissions?.AddReactions != true)
             {
                 await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
                 return;
