@@ -20,5 +20,8 @@
 
         // Role menu link
         RoleMenu        = 8,
+
+        // Translation
+        Translation     = 9,
     }
 }

@@ -92,6 +92,7 @@
 
   <ItemGroup>
     <Folder Include="src\Data\Feed\" />
+    <Folder Include="src\Data\Translation\" />
   </ItemGroup>
 
 </Project>

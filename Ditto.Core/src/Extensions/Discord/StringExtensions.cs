@@ -39,5 +39,13 @@ namespace Ditto.Extensions
         public static DiscordTagResult ParseDiscordChannelTag(this string @this)
             => new DiscordTagResult(Globals.RegularExpression.DiscordTagUser.Match(@this), DiscordTagType.CHANNEL);
 
+        public static IEnumerable<DiscordTagResult> ParseDiscordEmojis(this string @this)
+        {
+            foreach (Match m in Globals.RegularExpression.DiscordEmoji.Matches(@this))
+            {
+                if (m.Success)
+                    yield return new DiscordTagResult(m, DiscordTagType.USER);
+            }
+        }
     }
 }
