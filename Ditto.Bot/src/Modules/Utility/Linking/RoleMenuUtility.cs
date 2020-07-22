@@ -57,7 +57,10 @@ namespace Ditto.Bot.Modules.Utility
             }
             else
             {
-                textChannels.AddRange((await guild.GetChannelsAsync().ConfigureAwait(false)).OfType<ITextChannel>());
+                if (guild != null)
+                {
+                    textChannels.AddRange((await guild.GetChannelsAsync().ConfigureAwait(false)).OfType<ITextChannel>());
+                }
             }
 
             await Ditto.Client.DoAsync(async client =>

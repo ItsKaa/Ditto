@@ -75,7 +75,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                 }
                                 else
                                 {
-                                    Log.Debug($"Could not access the channel {channel.Guild?.Name}:{channel.Name}");
+                                    Log.Debug($"Could not access the channel {channel?.Guild?.Name}:{channel?.Name}");
                                 }
                             }));
                         }
