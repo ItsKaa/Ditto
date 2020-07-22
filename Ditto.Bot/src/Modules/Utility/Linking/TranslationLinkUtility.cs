@@ -199,15 +199,14 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 {
                     var result = await _translator.TranslateLiteAsync(messageContent, link.SourceLanguage, link.TargetLanguage).ConfigureAwait(false);
                     translatedMessage = result?.MergedTranslation;
-                    if (!string.IsNullOrEmpty(translatedMessage))
-                    {
-                        counter = 0;
-                        foreach (var tag in messageTagStrings)
-                        {
-                            translatedMessage = translatedMessage.Replace($"{{{counter}}}", messageTagStrings.ElementAt(counter));
-                            counter++;
-                        }
-                    }
+                }
+
+                // Replace the tags with it's original value
+                counter = 0;
+                foreach (var tag in messageTagStrings)
+                {
+                    translatedMessage = translatedMessage.Replace($"{{{counter}}}", messageTagStrings.ElementAt(counter));
+                    counter++;
                 }
 
                 // Send embedded message to the target channel.
