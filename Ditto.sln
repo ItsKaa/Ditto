@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2020
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30001.183
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ditto.Bot", "Ditto.Bot\Ditto.Bot.csproj", "{D1078BFA-4CC9-41D2-8E0B-C76A013A54FA}"
 EndProject
@@ -9,6 +9,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RedditSharp", "RedditSharp", "{3B038EFC-3A25-445F-915A-5221F3B7DE27}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RedditSharp", "RedditSharp\RedditSharp.csproj", "{0E18963D-8C71-4CA6-9EFE-B692A6F27CAC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ditto.Translation", "Ditto.Translation\Ditto.Translation.csproj", "{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -77,6 +79,24 @@ Global
 		{0E18963D-8C71-4CA6-9EFE-B692A6F27CAC}.Release|x64.Build.0 = Release|Any CPU
 		{0E18963D-8C71-4CA6-9EFE-B692A6F27CAC}.Release|x86.ActiveCfg = Release|Any CPU
 		{0E18963D-8C71-4CA6-9EFE-B692A6F27CAC}.Release|x86.Build.0 = Release|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Debug|x64.Build.0 = Debug|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Debug|x86.Build.0 = Debug|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Migration|Any CPU.ActiveCfg = Migration|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Migration|Any CPU.Build.0 = Migration|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Migration|x64.ActiveCfg = Migration|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Migration|x64.Build.0 = Migration|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Migration|x86.ActiveCfg = Migration|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Migration|x86.Build.0 = Migration|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Release|x64.ActiveCfg = Release|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Release|x64.Build.0 = Release|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Release|x86.ActiveCfg = Release|Any CPU
+		{ECC6056D-6EEE-428D-A4E5-C8FD1D4A77C6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
