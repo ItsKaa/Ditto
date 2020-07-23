@@ -135,7 +135,12 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
         private static Task Ditto_MessageReceived(Discord.WebSocket.SocketMessage socketMessage)
         {
-            return HandleMessageAsync(socketMessage);
+            Task.Run(async () =>
+            {
+                await HandleMessageAsync(socketMessage).ConfigureAwait(false);
+            });
+
+            return Task.CompletedTask;
         }
 
         private static async Task HandleMessageAsync(IMessage message)
