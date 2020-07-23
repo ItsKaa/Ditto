@@ -202,7 +202,16 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 string translatedMessage = messageContent;
                 if (!string.IsNullOrEmpty(messageWithoutTags.Trim()))
                 {
-                    var result = await _translator.TranslateLiteAsync(messageContent, link.SourceLanguage, link.TargetLanguage).ConfigureAwait(false);
+                    TranslationResult result = null;
+                    try
+                    {
+                        result = await _translator.TranslateLiteAsync(messageContent, link.SourceLanguage, link.TargetLanguage).ConfigureAwait(false);
+                    }
+                    catch(Exception ex)
+                    {
+                        Log.Debug(ex);
+                        return;
+                    }
                     translatedMessage = result?.MergedTranslation;
                 }
 
