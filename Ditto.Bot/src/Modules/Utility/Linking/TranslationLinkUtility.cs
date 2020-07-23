@@ -239,7 +239,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 var embedBuilder = new EmbedBuilder()
                     .WithAuthor(message.Author)
                     .WithDescription(translatedMessage)
-                    .WithFooter($"🔀 {link.SourceLanguage.FullName} -> {link.TargetLanguage.FullName}, ⏰ Posted at {message.CreatedAt.UtcDateTime:hh\\:mm} UTC")
+                    .WithFooter($"🔀 {link.SourceLanguage.FullName} -> {link.TargetLanguage.FullName}, Posted at {message.CreatedAt.UtcDateTime:hh\\:mm} UTC")
                     .WithColor(Ditto.Cache.Db.EmbedMusicPlayingColour(link.Link.Guild));
 
                 // Send the translated message.
