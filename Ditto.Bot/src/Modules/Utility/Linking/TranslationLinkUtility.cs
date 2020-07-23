@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Utility.Linking
@@ -22,6 +23,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
     {
         private class TranslationLink
         {
+            private static readonly SemaphoreSlim _mutex = new SemaphoreSlim(1);
             public Link Link { get; private set; }
             public ITextChannel TargetChannel { get; private set; }
             public ITextChannel SourceChannel { get; private set; }
@@ -60,12 +62,21 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
             public async Task UpdateAsync(ulong lastMessageId)
             {
-                var linkValue = $"{SourceChannel.Id}|{SourceLanguage.ISO639}|{TargetLanguage.ISO639}|{lastMessageId}";
-                Link.Value = linkValue;
-                await Ditto.Database.DoAsync(uow =>
+                await _mutex.WaitAsync().ConfigureAwait(false);
+                try
                 {
-                    uow.Links.Update(Link);
-                }).ConfigureAwait(false);
+                    var linkValue = $"{SourceChannel.Id}|{SourceLanguage.ISO639}|{TargetLanguage.ISO639}|{lastMessageId}";
+                    Link.Value = linkValue;
+                    await Ditto.Database.DoAsync(uow =>
+                    {
+                        uow.Links.Update(Link);
+                    }).ConfigureAwait(false);
+                }
+                catch { }
+                finally
+                {
+                    _mutex.Release();
+                }
             }
         }
 
@@ -119,16 +130,17 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         }
                     }
 
+                    await Ditto.Client.DoAsync(c =>
+                    {
+                        c.MessageReceived -= Ditto_MessageReceived;
+                        c.MessageReceived += Ditto_MessageReceived;
+                    }).ConfigureAwait(false);
+
                 });
+
                 return Task.CompletedTask;
             };
-
-            Ditto.Client.Do(c =>
-            {
-                c.MessageReceived -= Ditto_MessageReceived;
-                c.MessageReceived += Ditto_MessageReceived;
-            });
-
+            
             // Empty link handler since it's a one time only configuration
             LinkUtility.TryAddHandler(LinkType.Translation, (link, channel) => Task.FromResult(Enumerable.Empty<string>()));
         }
