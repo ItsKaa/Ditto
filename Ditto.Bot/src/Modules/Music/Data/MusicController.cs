@@ -296,7 +296,10 @@ namespace Ditto.Bot.Modules.Music.Data
 
                             foreach (var item in ControllerItems)
                             {
-                                await _userMessage.AddReactionAsync(EmotesHelper.GetEmoji(item.Emote), new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }).ConfigureAwait(false);
+                                if (_userMessage != null)
+                                {
+                                    await _userMessage.AddReactionAsync(EmotesHelper.GetEmoji(item.Emote), new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }).ConfigureAwait(false);
+                                }
                             }
                         }
                         else

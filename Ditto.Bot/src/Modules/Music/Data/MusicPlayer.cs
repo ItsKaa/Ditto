@@ -62,16 +62,10 @@ namespace Ditto.Bot.Modules.Music.Data
             RandomSong = false;
             CurrentIndex = 0;
             Current = null;
-            //Playlist = new ConcurrentQueue<PlaylistItem>();
             Playlist = new ConcurrentList<PlaylistItem>();
-            AudioStreamer = new AudioStreamer(
-                Ditto.Settings.Paths.YoutubeDL,
-                Ditto.Settings.Paths.FFmpeg,
-                "--prefer-ffmpeg --hls-prefer-ffmpeg --buffer-size 100M --audio-quality 48K --format bestaudio", // --format bestaudio --force-ipv4
-                "-ac 2 -f s16le -ar 48000"
-            );
             Volume = 100.0;
-            MusicController = new MusicController(this, context.Channel, context.Guild);
+
+            MusicController = new MusicController(this, Context.Channel, Context.Guild);
             MusicController.Add(
                 new MusicControllerItem(Emotes.PlayPause, () => PauseBroadcastAsync()),
                 new MusicControllerItem(Emotes.TrackPrevious, PreviousSongAsync),
@@ -80,14 +74,28 @@ namespace Ditto.Bot.Modules.Music.Data
                 new MusicControllerItem(Emotes.ArrowRight, NextPageAsync),
                 new MusicControllerItem(Emotes.TrackNext, NextSongAsync),
 
-                new MusicControllerItem(Emotes.Repeat,    () => { RepeatPlaylist = !RepeatPlaylist; return Task.CompletedTask; }, display: true),
+                new MusicControllerItem(Emotes.Repeat, () => { RepeatPlaylist = !RepeatPlaylist; return Task.CompletedTask; }, display: true),
                 new MusicControllerItem(Emotes.RepeatOne, () => { RepeatSong = !RepeatSong; return Task.CompletedTask; }, display: true),
                 new MusicControllerItem(Emotes.TwistedRightwardsArrows, () => { RandomSong = !RandomSong; return Task.CompletedTask; }, display: true),
-                new MusicControllerItem(Emotes.HeavyPlusSign,  () => { Volume += 10; return Task.CompletedTask; }),
+                new MusicControllerItem(Emotes.HeavyPlusSign, () => { Volume += 10; return Task.CompletedTask; }),
                 new MusicControllerItem(Emotes.HeavyMinusSign, () => { Volume -= 10; return Task.CompletedTask; })
             );
+
+            Initialise();
         }
-        
+        private void Initialise()
+        {
+            CurrentIndex = 0;
+            Current = null;
+            Playlist = new ConcurrentList<PlaylistItem>();
+            AudioStreamer = new AudioStreamer(
+                Ditto.Settings.Paths.YoutubeDL,
+                Ditto.Settings.Paths.FFmpeg,
+                "--prefer-ffmpeg --hls-prefer-ffmpeg --buffer-size 100M --audio-quality 48K --format bestaudio", // --format bestaudio --force-ipv4
+                "-ac 2 -f s16le -ar 48000"
+            );
+        }
+       
         public void Dispose()
         {
             Dispose(true);
@@ -100,11 +108,7 @@ namespace Ditto.Bot.Modules.Music.Data
                 if (disposing)
                 {
                     Running = false;
-                    _cancellationTokenSource?.Cancel();
                     DisconnectAndDisposeClientAsync().GetAwaiter().GetResult();
-                    AudioClient?.Dispose();
-                    AudioStreamer?.Dispose();
-                    MusicController?.Dispose();
                 }
                 _disposed = true;
             }
@@ -115,20 +119,34 @@ namespace Ditto.Bot.Modules.Music.Data
             Running = false;
             try { await StopBroadcastingAsync().ConfigureAwait(false); } catch { }
             try { _cancellationTokenSource?.Cancel(); } catch { }
+            try { await VoiceChannel.DisconnectAsync().ConfigureAwait(false); } catch { }
             try {
                 if (AudioClient != null)
                 {
                     await AudioClient.StopAsync().ConfigureAwait(false);
                 }
+
                 AudioClient?.Dispose();
+                AudioClient = null;
             } catch { }
-            try { await (MusicController?.StopAsync()).ConfigureAwait(false); } catch { }
+
+            try
+            {
+                await (MusicController?.StopAsync()).ConfigureAwait(false);
+            }
+            catch { }
+
+            try { AudioStreamer?.StopStreaming(); } catch { }
+            try { AudioStreamer?.Dispose(); } catch { }
+            AudioStreamer = null;
 
             // Wait a little bit just in case some of the tasks are still running.
             await Task.Delay(100).ConfigureAwait(false);
             Playlist.Clear();
             Current = null;
             CurrentIndex = 0;
+
+            Initialise();
         }
 
         public async Task ShufflePlaylist()
@@ -241,8 +259,9 @@ namespace Ditto.Bot.Modules.Music.Data
             }
             else
             {
-                // TODO: Announce error
+                Log.Info($"Could not find a {nameof(YoutubeResult)} for query \"{query}\".");
             }
+
             Start();
         }
 
@@ -313,7 +332,7 @@ namespace Ditto.Bot.Modules.Music.Data
             }
             else
             {
-                AudioStreamer.StopStreaming();
+                AudioStreamer?.StopStreaming();
             }
         }
 
