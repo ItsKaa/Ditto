@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 
 namespace Ditto
 {
@@ -26,16 +27,20 @@ namespace Ditto
     public static class Log
     {
         private static ConcurrentDictionary<string, Logger> _loggers = new ConcurrentDictionary<string, Logger>();
-        //public static bool LogToFile { get; private set; } = false;
+        public static bool LogToFile { get; private set; } = false;
+        public static bool LogToConsole { get; private set; } = false;
+        public static bool LogDebugLevel { get; private set; } = false;
         public static bool Ready { get; private set; } = false;
+        private static Mutex _mutex = new Mutex();
 
         static Log()
         {
 
         }
 
-        public static void Setup(bool logToConsole = true, bool logToFile = false)
+        public static void Setup(bool logToConsole = true, bool logToFile = false, bool? logDebugLevel = null)
         {
+            _mutex.WaitOne();
             Ready = false;
             try
             {
@@ -67,6 +72,7 @@ namespace Ditto
                             ForegroundColor = fgColour
                         });
                     }
+
                 }
 
                 // Setup file logging
@@ -95,29 +101,40 @@ namespace Ditto
 
 
                 // Add targets & rules
-                var minTarget =
-                #if DEBUG
-                        LogLevel.Trace
-                #else
-                        LogLevel.Info
-                #endif
-                        ;
+                LogLevel minLogLevel = (logDebugLevel == true ? LogLevel.Trace : LogLevel.Info);
+                if (logDebugLevel == null)
+                {
+                    #if DEBUG
+                        minLogLevel = LogLevel.Trace;
+                    #else
+                        minLogLevel = LogLevel.Info;
+                    #endif
+                }
+                
                 if (logToConsole)
                 {
                     logConfig.AddTarget("Console", consoleTarget);
-                    logConfig.LoggingRules.Add(new LoggingRule("*", minTarget, consoleTarget));
+                    logConfig.LoggingRules.Add(new LoggingRule("*", minLogLevel, consoleTarget));
                 }
                 if (logToFile)
                 {
                     logConfig.LoggingRules.Add(new LoggingRule("*", LogLevel.Error, fileTarget_error));
-                    logConfig.LoggingRules.Add(new LoggingRule("*", minTarget, fileTarget));
+                    logConfig.LoggingRules.Add(new LoggingRule("*", minLogLevel, fileTarget));
                 }
+                
                 LogManager.Configuration = logConfig;
                 Ready = true;
+                LogToConsole = logToConsole;
+                LogToFile = logToFile;
+                LogDebugLevel = (minLogLevel == LogLevel.Trace || minLogLevel == LogLevel.Debug);
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
+            }
+            finally
+            {
+                _mutex.ReleaseMutex();
             }
         }
         
@@ -126,16 +143,34 @@ namespace Ditto
         {
             return " | "; // (callMethod == ".cctor" ? " | " : ":" + callMethod + " | ");
         }
+
         private static Logger GetLogger(string filePath)
         {
-            // Use the default configuration if we haven't manually set this yet
-            if(!Ready)
+            bool releaseMutex = false;
+            if (!Ready)
             {
-                Setup();
+                releaseMutex = true;
+                _mutex.WaitOne();
             }
 
-            var name = Path.GetFileNameWithoutExtension(filePath);
-            return _loggers.GetOrAdd(name, LogManager.GetLogger(name));
+            try
+            {
+                if (!Ready)
+                {
+                    // Use the default configuration if we haven't manually set this yet
+                    Setup();
+                }
+
+                var name = Path.GetFileNameWithoutExtension(filePath);
+                return _loggers.GetOrAdd(name, LogManager.GetLogger(name));
+            }
+            finally
+            {
+                if(releaseMutex)
+                {
+                    _mutex.ReleaseMutex();
+                }
+            }
         }
 
         public static object[] Args(params object[] args)

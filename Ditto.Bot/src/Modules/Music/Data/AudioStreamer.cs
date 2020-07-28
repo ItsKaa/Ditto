@@ -116,12 +116,13 @@ namespace Ditto.Bot.Modules.Music.Data
                 StartInfo = CopyStartInfo(YoutubeDLStartInfo)
             };
 
-#if DEBUG
             YoutubeDLProcess.ErrorDataReceived += (o, e) =>
             {
-                Log.Error(e.Data);
+                if (Log.LogDebugLevel)
+                {
+                    Log.Error(e.Data);
+                }
             };
-#endif
 
             YoutubeDLProcess.StartInfo.Arguments += $" {url}";
             YoutubeDLProcess.Start();
@@ -144,12 +145,13 @@ namespace Ditto.Bot.Modules.Music.Data
                             string[] tsArr = match.Groups["time"].Value.Split(new char[] { ':', '.' });
                             TimeElapsed = new TimeSpan(0, Convert.ToInt32(tsArr[0]), Convert.ToInt32(tsArr[1]), Convert.ToInt32(tsArr[2]), Convert.ToInt32(tsArr[3]) * 10);
                         }
-#if DEBUG
                         else
                         {
-                            Log.Error(e.Data);
+                            if (Log.LogDebugLevel)
+                            {
+                                Log.Error(e.Data);
+                            }
                         }
-#endif
                     };
                 });
             };
