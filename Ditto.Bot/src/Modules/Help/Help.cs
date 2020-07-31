@@ -55,7 +55,7 @@ namespace Ditto.Bot.Modules.Help
                 {
                     // Generate info based on attribute information
                     embedBuilder.Fields.Add(new EmbedFieldBuilder()
-                        .WithName($"`{paramHelpAttribute.Name.ToTitleCase()}`{(parameterInfo.IsOptional ? " (optional)" : "")}")
+                        .WithName($"`{paramHelpAttribute.Name.ToTitleCase()}`{((paramHelpAttribute.IsOptional || parameterInfo.IsOptional) ? " (optional)" : "")}")
                         .WithValue(paramHelpAttribute.ShortDescription ?? paramHelpAttribute.LongDescription)
                         .WithIsInline(false)
                     );

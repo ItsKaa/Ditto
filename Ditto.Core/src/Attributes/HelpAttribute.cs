@@ -10,13 +10,15 @@ namespace Ditto.Attributes
         public string LongDescription { get; set; }
         public string ShortDescription { get; set; }
         public string Extra { get; set; }
+        public bool IsOptional { get; set; }
 
-        public HelpAttribute(string name, string description, string extra = null)
+        public HelpAttribute(string name, string description, string extra = null, bool optional = false)
         {
             Name = name;
             ShortDescription = description;
             LongDescription = description;
             Extra = extra;
+            IsOptional = optional;
         }
     }
 }
