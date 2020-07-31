@@ -155,7 +155,7 @@ namespace Ditto.Bot.Modules.Chat
         }
 
 
-        [Priority(3), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
+        [Priority(4), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
         [Help(null, "Make the bot user send a message.")]
         public async Task Say(
             [Help("channel", "The targeted text channel", optional: true)]
@@ -201,6 +201,10 @@ namespace Ditto.Bot.Modules.Chat
             await channel.SendMessageAsync((user == null ? string.Empty : $"{user?.Mention} ") + message).ConfigureAwait(false);
         }
 
+        [Priority(3), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
+        public Task Say(IUser user, ITextChannel channel, [Multiword] string message)
+            => Say(channel, user, message);
+
         [Priority(2), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
         public Task Say(IUser user, [Multiword] string message)
             => Say(null, user, message);
@@ -211,6 +215,6 @@ namespace Ditto.Bot.Modules.Chat
 
         [Priority(0), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
         public Task Say([Multiword] string message)
-            => Say(null, null, message);
+            => Say((ITextChannel)null, null, message);
     }
 }
