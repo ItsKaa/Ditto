@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Data.API.Rest;
 using Ditto.Bot.Modules.Admin;
@@ -11,7 +12,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Chat
@@ -154,28 +154,63 @@ namespace Ditto.Bot.Modules.Chat
             }
         }
 
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        public async Task Say(ITextChannel channel, [Multiword] string message)
-        {
-            if(channel == null)
-            {
-                return;
-            }
 
-            if(!Permissions.IsAdministratorOrBotOwner(Context))
+        [Priority(3), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
+        [Help(null, "Make the bot user send a message.")]
+        public async Task Say(
+            [Help("channel", "The targeted text channel", optional: true)]
+            ITextChannel channel,
+            [Help("user", "The user to mention", optional: true)]
+            IUser user,
+            [Help("message", "The message to write")]
+            [Multiword] string message)
+        {
+            if (!Permissions.IsAdministratorOrBotOwner(Context))
             {
                 await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
                 return;
             }
 
+            // Check the channel
+            if (channel == null)
+            {
+                channel = Context.TextChannel;
+                if(channel == null)
+                {
+                    await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+                    return;
+                }
+            }
+
+            // Check user permissions
+            var guildUserPermissions = Context.GuildUser?.GetPermissions(channel);
+            if(guildUserPermissions?.ViewChannel != true || guildUserPermissions?.SendMessages != true)
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
+            // Check bot permissions
             var channelPermissions = await Ditto.Client.DoAsync(c => c.GetPermissionsAsync(channel)).ConfigureAwait(false);
-            if(!channelPermissions.ViewChannel || !channelPermissions.SendMessages)
+            if (!channelPermissions.ViewChannel || !channelPermissions.SendMessages)
             {
                 await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
                 return;
             }
 
-            await channel.SendMessageAsync(message).ConfigureAwait(false);
+            await channel.SendMessageAsync((user == null ? string.Empty : $"{user?.Mention} ") + message).ConfigureAwait(false);
         }
+
+        [Priority(2), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
+        public Task Say(IUser user, [Multiword] string message)
+            => Say(null, user, message);
+
+        [Priority(1), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
+        public Task Say(ITextChannel channel, [Multiword] string message)
+            => Say(channel, null, message);
+
+        [Priority(0), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
+        public Task Say([Multiword] string message)
+            => Say(null, null, message);
     }
 }
