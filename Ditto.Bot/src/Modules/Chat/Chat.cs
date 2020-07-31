@@ -153,5 +153,29 @@ namespace Ditto.Bot.Modules.Chat
                 catch { }
             }
         }
+
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
+        public async Task Say(ITextChannel channel, [Multiword] string message)
+        {
+            if(channel == null)
+            {
+                return;
+            }
+
+            if(!Permissions.IsAdministratorOrBotOwner(Context))
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
+            var channelPermissions = await Ditto.Client.DoAsync(c => c.GetPermissionsAsync(channel)).ConfigureAwait(false);
+            if(!channelPermissions.ViewChannel || !channelPermissions.SendMessages)
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
+                return;
+            }
+
+            await channel.SendMessageAsync(message).ConfigureAwait(false);
+        }
     }
 }
