@@ -102,6 +102,7 @@ namespace Ditto.Bot.Modules.Chat
         }
 
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
+        [Alias("purge")]
         public async Task Prune(int count = 100, IUser user = null, [Multiword] string pattern = null)
         {
             if (!Permissions.IsAdministratorOrBotOwner(Context))
