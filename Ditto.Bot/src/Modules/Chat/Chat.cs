@@ -110,6 +110,9 @@ namespace Ditto.Bot.Modules.Chat
                 return;
             }
 
+            await Context.Message.DeleteAsync().ConfigureAwait(false);
+            await Task.Delay(100).ConfigureAwait(false);
+
             if (count > 10)
             {
                 var usedReaction = await Context.SendOptionDialogueAsync(
