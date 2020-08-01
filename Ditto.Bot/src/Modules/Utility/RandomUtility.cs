@@ -300,7 +300,10 @@ namespace Ditto.Bot.Modules.Utility
             [Help("count", "The number to \"cut\", meaning the column and row count", "Examples: 2 = 2x2, 5 = 5x5.")]
             int chunkCount,
             [Help("size", "The maximum width or height of the result.", optional: true)]
-            int maxChunkSize)
+            int maxChunkSize,
+            [Help("strechToFit", "Stretch the image (width/height) to the designated maxChunkSize, defaults to true", optional: true)]
+            bool strechToFit = true
+            )
         {
             SixLabors.ImageSharp.Image originalGifImage = null;
             try
@@ -333,12 +336,19 @@ namespace Ditto.Bot.Modules.Utility
             var chunkDestSize = chunkSourceSize;
             if (maxChunkSize != int.MinValue)
             {
-                double multiplier = Convert.ToDouble(Math.Max(chunkSourceSize.Width, chunkSourceSize.Height)) / Math.Min(chunkSourceSize.Width, chunkSourceSize.Height);
-                var minValue = Convert.ToInt32(maxChunkSize / multiplier);
+                if (!strechToFit)
+                {
+                    double multiplier = Convert.ToDouble(Math.Max(chunkSourceSize.Width, chunkSourceSize.Height)) / Math.Min(chunkSourceSize.Width, chunkSourceSize.Height);
+                    var minValue = Convert.ToInt32(maxChunkSize / multiplier);
 
-                chunkDestSize = chunkSourceSize.Width > chunkSourceSize.Height
-                    ? new Size(maxChunkSize, minValue)
-                    : new Size(minValue, maxChunkSize);
+                    chunkDestSize = chunkSourceSize.Width > chunkSourceSize.Height
+                        ? new Size(maxChunkSize, minValue)
+                        : new Size(minValue, maxChunkSize);
+                }
+                else
+                {
+                    chunkDestSize = new Size(maxChunkSize, maxChunkSize);
+                }
             }
 
             for (int y = 0; y < chunkCount; y++)
@@ -373,7 +383,7 @@ namespace Ditto.Bot.Modules.Utility
         }
 
         [Priority(3), DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
-        public async Task ChunkifyGif(int chunkCount, int maxChunkSize)
+        public async Task ChunkifyGif(int chunkCount, int maxChunkSize, bool strechToFit = true)
         {
             if (Context.Message.Attachments.Count == 0)
             {
@@ -383,16 +393,16 @@ namespace Ditto.Bot.Modules.Utility
             else
             {
                 var url = Context.Message.Attachments.ElementAt(0).ProxyUrl;
-                await ChunkifyGif(url, chunkCount, maxChunkSize).ConfigureAwait(false);
+                await ChunkifyGif(url, chunkCount, maxChunkSize, strechToFit).ConfigureAwait(false);
             }
         }
 
         [Priority(2), DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
-        public Task ChunkifyGif(int chunkCount)
-            => ChunkifyGif(chunkCount, int.MinValue);
+        public Task ChunkifyGif(int chunkCount, bool strechToFit = true)
+            => ChunkifyGif(chunkCount, int.MinValue, strechToFit);
 
         [Priority(0), DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
-        public Task ChunkifyGif(string sourceUrl, int chunkCount)
-            => ChunkifyGif(sourceUrl, chunkCount, int.MinValue);
+        public Task ChunkifyGif(string sourceUrl, int chunkCount, bool strechToFit = true)
+            => ChunkifyGif(sourceUrl, chunkCount, int.MinValue, strechToFit);
     }
 }
