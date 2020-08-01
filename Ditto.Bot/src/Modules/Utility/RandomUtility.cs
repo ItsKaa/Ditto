@@ -355,10 +355,19 @@ namespace Ditto.Bot.Modules.Utility
             {
                 for (int x = 0; x < chunkCount; x++)
                 {
+                    //var gifImage = new Image<Rgba32>(chunkDestSize.Width, chunkDestSize.Height);
+                    var gifImage = originalGifImage.Clone(new Action<IImageProcessingContext>(_ => { }));
+                    gifImage.Mutate(img => img.Resize(chunkDestSize.Width, chunkDestSize.Height));
 
-                    var gifImage = new Image<Rgba32>(chunkDestSize.Width, chunkDestSize.Height);
                     for (int i = 0; i < originalGifImage.Frames.Count; i++)
                     {
+                        // Remove the previous frame
+                        if (gifImage.Frames.Count > 0)
+                        {
+                            gifImage.Frames.RemoveFrame(0);
+                        }
+
+                        // Clone the existing frame
                         var gifFrameImage = originalGifImage.Frames.CloneFrame(i);
                         gifFrameImage.Mutate(img => img.Crop(new Rectangle(x * chunkSourceSize.Width, y * chunkSourceSize.Height, chunkSourceSize.Width, chunkSourceSize.Height)));
                         gifFrameImage.Mutate(img => img.Resize(chunkDestSize));
