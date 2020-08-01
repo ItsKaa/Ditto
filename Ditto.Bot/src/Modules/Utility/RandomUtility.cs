@@ -7,6 +7,10 @@ using Ditto.Common;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
+using Ditto.Helpers;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -288,5 +292,107 @@ namespace Ditto.Bot.Modules.Utility
             }
         }
 
+        [Priority(1), DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
+        [Help(null, "Cut a GIF file in parts.")]
+        public async Task ChunkifyGif(
+            [Help("url", "The url of the file, optional when a file is attached to the message.", optional: true)]
+            string sourceUrl,
+            [Help("count", "The number to \"cut\", meaning the column and row count", "Examples: 2 = 2x2, 5 = 5x5.")]
+            int chunkCount,
+            [Help("size", "The maximum width or height of the result.", optional: true)]
+            int maxChunkSize)
+        {
+            SixLabors.ImageSharp.Image originalGifImage = null;
+            try
+            {
+                // Read the image file from the network.
+                Stream inputStream = await WebHelper.GetStreamAsync(sourceUrl).ConfigureAwait(false);
+
+                // Convert to MemoryStream because this image class doesn't like HttpBaseStreams
+                using (var ms = new MemoryStream())
+                {
+                    inputStream.CopyTo(ms);
+                    ms.Position = 0;
+                    originalGifImage = SixLabors.ImageSharp.Image.Load(ms);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex);
+            }
+
+            if (originalGifImage == null || originalGifImage.Frames.Count == 0)
+            {
+                await Context.ApplyResultReaction(CommandResult.Failed);
+                return;
+            }
+
+
+            var streams = new List<Stream>();
+            var chunkSourceSize = new Size(Convert.ToInt32(originalGifImage.Width / chunkCount), Convert.ToInt32(originalGifImage.Height / chunkCount));
+            var chunkDestSize = chunkSourceSize;
+            if (maxChunkSize != int.MinValue)
+            {
+                double multiplier = Convert.ToDouble(Math.Max(chunkSourceSize.Width, chunkSourceSize.Height)) / Math.Min(chunkSourceSize.Width, chunkSourceSize.Height);
+                var minValue = Convert.ToInt32(maxChunkSize / multiplier);
+
+                chunkDestSize = chunkSourceSize.Width > chunkSourceSize.Height
+                    ? new Size(maxChunkSize, minValue)
+                    : new Size(minValue, maxChunkSize);
+            }
+
+            for (int y = 0; y < chunkCount; y++)
+            {
+                for (int x = 0; x < chunkCount; x++)
+                {
+
+                    var gifImage = new Image<Rgba32>(chunkDestSize.Width, chunkDestSize.Height);
+                    for (int i = 0; i < originalGifImage.Frames.Count; i++)
+                    {
+                        var gifFrameImage = originalGifImage.Frames.CloneFrame(i);
+                        gifFrameImage.Mutate(img => img.Crop(new Rectangle(x * chunkSourceSize.Width, y * chunkSourceSize.Height, chunkSourceSize.Width, chunkSourceSize.Height)));
+                        gifFrameImage.Mutate(img => img.Resize(chunkDestSize));
+                        gifImage.Frames.AddFrame(gifFrameImage.Frames.RootFrame);
+                    }
+
+                    var ms = new MemoryStream();
+                    gifImage.SaveAsGif(ms);
+                    streams.Add(ms);
+                }
+            }
+
+            // Post result images one by one
+            for (int i = 0; i < streams.Count; i++)
+            {
+                var stream = streams.ElementAt(i);
+                stream.Position = 0;
+                await Context.Channel.SendFileAsync(stream, $"chunk_{i + 1}.gif").ConfigureAwait(false);
+            }
+
+            await Context.ApplyResultReaction(CommandResult.Success);
+        }
+
+        [Priority(3), DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
+        public async Task ChunkifyGif(int chunkCount, int maxChunkSize)
+        {
+            if (Context.Message.Attachments.Count == 0)
+            {
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+                return;
+            }
+            else
+            {
+                var url = Context.Message.Attachments.ElementAt(0).ProxyUrl;
+                await ChunkifyGif(url, chunkCount, maxChunkSize).ConfigureAwait(false);
+            }
+        }
+
+        [Priority(2), DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
+        public Task ChunkifyGif(int chunkCount)
+            => ChunkifyGif(chunkCount, int.MinValue);
+
+        [Priority(0), DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
+        public Task ChunkifyGif(string sourceUrl, int chunkCount)
+            => ChunkifyGif(sourceUrl, chunkCount, int.MinValue);
     }
 }
