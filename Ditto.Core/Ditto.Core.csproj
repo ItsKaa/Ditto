@@ -65,6 +65,7 @@
     <PackageReference Include="NLog" Version="5.0.0-beta10" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="3.1.1" />
     <PackageReference Include="RestSharp" Version="106.10.1" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-rc0003" />
     <PackageReference Include="System.Interactive.Async" Version="4.1.1" />
     <PackageReference Include="System.Runtime" Version="4.3.1" />
     <!--<PackageReference Include="libvideo" Version="1.0.1" />-->
