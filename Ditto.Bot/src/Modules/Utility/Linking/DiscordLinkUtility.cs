@@ -238,7 +238,8 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                             var postedMessage = await channel.SendMessageAsync(embed: embedBuilder.Build(), options: new RequestOptions() { RetryMode = RetryMode.AlwaysFail }).ConfigureAwait(false);
                                             if (postedMessage != null)
                                             {
-                                                messageIds.Add(message.Id.ToString());
+                                                // Do not add the message to the messageIds, we do not use the link_items database for this.
+                                                //messageIds.Add(message.Id.ToString());
                                                 lastMessageDate = message.CreatedAt.UtcDateTime;
                                             }
 
