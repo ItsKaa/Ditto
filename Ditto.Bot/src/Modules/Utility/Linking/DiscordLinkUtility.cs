@@ -184,6 +184,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                             // Attempt to post the messages in sync with the created date.
                             try
                             {
+                                var guildUsers = new List<IGuildUser>();
                                 foreach (var message in messages.OrderBy(m => m.CreatedAt))
                                 {
                                     int retryCount = 0;
@@ -191,12 +192,28 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                     {
                                         try
                                         {
+                                            var authorGuildUser = guildUsers.FirstOrDefault(x => x.Id == message.Author.Id);
+                                            if(authorGuildUser == null)
+                                            {
+                                                try
+                                                {
+                                                    authorGuildUser = await linkChannel.Guild.GetUserAsync(message.Author.Id).ConfigureAwait(false);
+                                                    if (authorGuildUser != null)
+                                                    {
+                                                        guildUsers.Add(authorGuildUser);
+                                                    }
+                                                }
+                                                catch { }
+                                            }
+
                                             var dateUtc = message.CreatedAt.UtcDateTime;
-                                            var embedBuilder = new EmbedBuilder()
-                                                .WithAuthor(message.Author)
+                                            var embedBuilder = new EmbedBuilder().WithAuthor(new EmbedAuthorBuilder()
+                                                  .WithIconUrl(message.Author.GetAvatarUrl())
+                                                  .WithName(authorGuildUser?.Nickname ?? message.Author?.Username)
+                                                )
                                                 //.WithTitle(message.Channel.Name)
                                                 .WithDescription(message.Content)
-                                                .WithFooter($"Posted {dateUtc:dddd, MMMM} {dateUtc.Day.Ordinal()} {dateUtc:yyyy} at {dateUtc:HH:mm} UTC")
+                                                .WithFooter($"{dateUtc:dddd, MMMM} {dateUtc.Day.Ordinal()} {dateUtc:yyyy} at {dateUtc:HH:mm} UTC")
                                                 .WithDiscordLinkColour(channel.Guild)
                                                 ;
 
