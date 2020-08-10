@@ -18,7 +18,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
     {
         static RssUtility()
         {
-            LinkUtility.TryAddHandler(LinkType.RSS, async (link, channel) =>
+            LinkUtility.TryAddHandler(LinkType.RSS, async (link, channel, cancellationToken) =>
             {
                 var listUrls = new List<string>();
                 var url = link.Value;
@@ -33,6 +33,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     var retryCount = 0;
                     for (int i = 0; i < items.Count(); i++)
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            return listUrls;
+                        }
+
                         var item = items.ElementAt(i);
                         try
                         {

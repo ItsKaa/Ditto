@@ -117,7 +117,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 await loginAction().ConfigureAwait(false);
             });
 
-            LinkUtility.TryAddHandler(LinkType.Discord, async (link, channel) =>
+            LinkUtility.TryAddHandler(LinkType.Discord, async (link, channel, cancellationToken) =>
             {
                 var messageIds = new List<string>();
 
@@ -139,6 +139,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
                             ulong lastMessageId = ulong.MaxValue;
                             while (true)
                             {
+                                if(cancellationToken.IsCancellationRequested)
+                                {
+                                    return messageIds;
+                                }
+
                                 var messagesChunk = Enumerable.Empty<IMessage>();
                                 if (lastMessageId != ulong.MaxValue)
                                 {
@@ -190,6 +195,14 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                     int retryCount = 0;
                                     while (retryCount < 10)
                                     {
+                                        // Cancel out where needed
+                                        if (cancellationToken.IsCancellationRequested)
+                                        {
+                                            await funcUpdateLinkDate().ConfigureAwait(false);
+                                            return messageIds;
+                                        }
+
+                                        // Attempt to send the message.
                                         try
                                         {
                                             var authorGuildUser = guildUsers.FirstOrDefault(x => x.Id == message.Author.Id);
@@ -236,6 +249,12 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                         {
                                             // Update the link date just in case.
                                             await funcUpdateLinkDate().ConfigureAwait(false);
+
+                                            // Cancel out where needed
+                                            if (cancellationToken.IsCancellationRequested)
+                                            {
+                                                return messageIds;
+                                            }
 
                                             // Attempt to retry sending the message
                                             if (!await LinkUtility.SendRetryLinkAsync(link.Type, retryCount++, ex is Discord.Net.RateLimitedException ? null : ex))

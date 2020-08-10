@@ -19,7 +19,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
     {
         static BdoLinkUtility()
         {
-            LinkUtility.TryAddHandler(LinkType.BDO, async (link, channel) =>
+            LinkUtility.TryAddHandler(LinkType.BDO, async (link, channel, cancellationToken) =>
             {
                 var listUrls = new List<string>();
                 var url = link.Value;
@@ -41,6 +41,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     var retryCount = 0;
                     for (int i = 0; i < items.Count(); i++)
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            return listUrls;
+                        }
+
                         var item = items.ElementAt(i);
                         if (ulong.TryParse(new string(item.Link.Reverse().Before('.').Reverse().ToArray()).Replace("/", "").Replace("\\", ""), out ulong identifier))
                         {

@@ -142,7 +142,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
             };
             
             // Empty link handler since it's a one time only configuration
-            LinkUtility.TryAddHandler(LinkType.Translation, (link, channel) => Task.FromResult(Enumerable.Empty<string>()));
+            LinkUtility.TryAddHandler(LinkType.Translation, (link, channel, cancellationToken) => Task.FromResult(Enumerable.Empty<string>()));
         }
 
         private static Task Ditto_MessageReceived(Discord.WebSocket.SocketMessage socketMessage)

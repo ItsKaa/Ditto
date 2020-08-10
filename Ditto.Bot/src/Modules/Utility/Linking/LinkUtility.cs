@@ -18,10 +18,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
     {
         private static ConcurrentDictionary<int, Link> _links;
         private static CancellationTokenSource _cancellationTokenSource;
-        private static ConcurrentDictionary<LinkType, Func<Link, ITextChannel, Task<IEnumerable<string>>>> _typeParsingHandlers
-            = new ConcurrentDictionary<LinkType, Func<Link, ITextChannel, Task<IEnumerable<string>>>>();
+        private static ConcurrentDictionary<LinkType, Func<Link, ITextChannel, CancellationToken, Task<IEnumerable<string>>>> _typeParsingHandlers
+            = new ConcurrentDictionary<LinkType, Func<Link, ITextChannel, CancellationToken, Task<IEnumerable<string>>>>();
 
-        public static bool TryAddHandler(LinkType linkType, Func<Link, ITextChannel, Task<IEnumerable<string>>> func)
+        public static bool TryAddHandler(LinkType linkType, Func<Link, ITextChannel, CancellationToken, Task<IEnumerable<string>>> func)
         {
             return _typeParsingHandlers.TryAdd(linkType, func);
         }
@@ -107,9 +107,9 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
         private static async Task<IEnumerable<LinkItem>> ReadAndPostLinkAsync(Link link)
         {
-            if (_typeParsingHandlers.TryGetValue(link.Type, out Func<Link, ITextChannel, Task<IEnumerable<string>>> func))
+            if (_typeParsingHandlers.TryGetValue(link.Type, out Func<Link, ITextChannel, CancellationToken, Task<IEnumerable<string>>> func))
             {
-                return (await func(link, link.Channel).ConfigureAwait(false))
+                return (await func(link, link.Channel, _cancellationTokenSource.Token).ConfigureAwait(false))
                     .Select(i => new LinkItem()
                     {
                         Link = link,

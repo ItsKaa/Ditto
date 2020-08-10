@@ -28,7 +28,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
         static RedditUtility()
         {
-            LinkUtility.TryAddHandler(LinkType.Reddit, async (link, channel) =>
+            LinkUtility.TryAddHandler(LinkType.Reddit, async (link, channel, cancellationToken) =>
             {
                 var listUrls = new List<string>();
                 
@@ -47,6 +47,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     Log.Info($"Posting \"{post.Title}\" ({LinkType.Reddit.ToString()}) in \"{channel.Guild.Name}:{channel.Name}\"");
                     try
                     {
+                        if(cancellationToken.IsCancellationRequested)
+                        {
+                            return listUrls;
+                        }
+
                         await channel.EmbedAsync(ParseEmbed(post, sub, channel.Guild),
                             options: new RequestOptions() { RetryMode = RetryMode.AlwaysFail }
                         ).ConfigureAwait(false);

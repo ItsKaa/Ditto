@@ -15,7 +15,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
         static BdoMaintenanceLinkUtility()
         {
             _links = new ConcurrentList<Link>();
-            LinkUtility.TryAddHandler(LinkType.BDO_Maintenance, (link, channel) =>
+            LinkUtility.TryAddHandler(LinkType.BDO_Maintenance, (link, channel, cancellationToken) =>
             {
                 if (!_links.Contains(link))
                 {

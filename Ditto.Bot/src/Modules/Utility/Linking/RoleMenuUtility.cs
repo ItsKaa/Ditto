@@ -44,7 +44,7 @@ namespace Ditto.Bot.Modules.Utility
             };
 
             // Empty link handler since we base updates on reactions from the IGuild message.
-            LinkUtility.TryAddHandler(LinkType.RoleMenu, (link, channel) => Task.FromResult(Enumerable.Empty<string>()));
+            LinkUtility.TryAddHandler(LinkType.RoleMenu, (link, channel, cancellationToken) => Task.FromResult(Enumerable.Empty<string>()));
         }
 
         private static async Task<IUserMessage> GetMessageAsync(IGuild guild, ulong messageId, ITextChannel textChannel = null)
