@@ -258,7 +258,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                             }
 
                                             // Attempt to retry sending the message
-                                            if (!await LinkUtility.SendRetryLinkAsync(link.Type, retryCount++, ex is Discord.Net.RateLimitedException ? null : ex))
+                                            if (!await LinkUtility.SendRetryLinkMessageAsync(link.Type, retryCount++, ex is Discord.Net.RateLimitedException ? null : ex))
                                             {
                                                 return messageIds;
                                             }

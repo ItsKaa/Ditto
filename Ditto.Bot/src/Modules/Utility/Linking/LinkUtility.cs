@@ -52,7 +52,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         var links = _links.Select(i => i.Value).ToList();
                         foreach (var link in links)
                         {
-                            if (!(Ditto.Running && await Ditto.IsClientConnectedAsync()))
+                            if (!(Ditto.Running && await Ditto.IsClientConnectedAsync().ConfigureAwait(false)))
                             {
                                 break;
                             }
@@ -86,11 +86,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
                             await Ditto.Database.WriteAsync(uow =>
                             {
                                 uow.Links.UpdateRange(links);
-                            });
+                            }).ConfigureAwait(false);
                         }
 
 
-                        await Task.Delay(500);
+                        await Task.Delay(500).ConfigureAwait(false);
                     }
                 });
                 return Task.CompletedTask;
@@ -119,11 +119,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
             return Enumerable.Empty<LinkItem>();
         }
 
-        public static async Task<bool> SendRetryLinkAsync(LinkType linkType, int repostCount, Exception ex = null)
+        public static async Task<bool> SendRetryLinkMessageAsync(LinkType linkType, int repostCount, Exception ex = null)
         {
-            if (Ditto.Running && await Ditto.IsClientConnectedAsync())
+            if (Ditto.Running && await Ditto.IsClientConnectedAsync().ConfigureAwait(false))
             {
-                Log.Warn($"Attempting to repost link ({linkType.ToString()})... {repostCount}{(ex == null ? string.Empty : $" | {ex}")}");
+                Log.Debug($"Attempting to repost link ({linkType.ToString()})... {repostCount}{(ex == null ? string.Empty : $" | {ex}")}");
                 await Task.Delay(1000).ConfigureAwait(false);
                 return true;
             }

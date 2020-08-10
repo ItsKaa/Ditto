@@ -50,7 +50,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         }
                         catch (Exception ex)
                         {
-                            if (!await LinkUtility.SendRetryLinkAsync(
+                            if (!await LinkUtility.SendRetryLinkMessageAsync(
                                 link.Type,
                                 retryCount++,
                                 ex is Discord.Net.RateLimitedException ? null : ex
