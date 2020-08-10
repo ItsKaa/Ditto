@@ -143,8 +143,8 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                 if (lastMessageId != ulong.MaxValue)
                                 {
                                     messagesChunk = (await linkChannel.GetMessagesAsync(lastMessageId, Direction.Before, 100, CacheMode.AllowDownload).ToListAsync().ConfigureAwait(false))
-                                .SelectMany(m => m)
-                                .Where(m => m.CreatedAt.UtcDateTime > link.Date)
+                                        .SelectMany(m => m)
+                                        .Where(m => m.CreatedAt.UtcDateTime > link.Date)
                                         .Where(m => null == link.Links.FirstOrDefault(l => l.Identity == m.Id.ToString()));
                                 }
                                 else
@@ -194,7 +194,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                             var dateUtc = message.CreatedAt.UtcDateTime;
                                             var embedBuilder = new EmbedBuilder()
                                                 .WithAuthor(message.Author)
-                                                .WithTitle(message.Channel.Name)
+                                                //.WithTitle(message.Channel.Name)
                                                 .WithDescription(message.Content)
                                                 .WithFooter($"Posted {dateUtc:dddd, MMMM} {dateUtc.Day.Ordinal()} {dateUtc:yyyy} at {dateUtc:HH:mm} UTC")
                                                 .WithDiscordLinkColour(channel.Guild)
