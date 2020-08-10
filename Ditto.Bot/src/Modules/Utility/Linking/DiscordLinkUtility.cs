@@ -135,11 +135,34 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         if (_discordClient.GetChannel(linkChannelId) is ITextChannel linkChannel)
                         {
                             // Retrieve the latest messages in bulk from the targeted channel.
-                            var messages = (await linkChannel.GetMessagesAsync(100, CacheMode.AllowDownload).ToListAsync().ConfigureAwait(false))
+                            var messages = new List<IMessage>();
+                            ulong lastMessageId = ulong.MaxValue;
+                            while (true)
+                            {
+                                var messagesChunk = Enumerable.Empty<IMessage>();
+                                if (lastMessageId != ulong.MaxValue)
+                                {
+                                    messagesChunk = (await linkChannel.GetMessagesAsync(lastMessageId, Direction.Before, 100, CacheMode.AllowDownload).ToListAsync().ConfigureAwait(false))
                                 .SelectMany(m => m)
                                 .Where(m => m.CreatedAt.UtcDateTime > link.Date)
-                                .Where(m => null == link.Links.FirstOrDefault(l => l.Identity == m.Id.ToString()))
-                                ;
+                                        .Where(m => null == link.Links.FirstOrDefault(l => l.Identity == m.Id.ToString()));
+                                }
+                                else
+                                {
+                                    messagesChunk = (await linkChannel.GetMessagesAsync(100, CacheMode.AllowDownload).ToListAsync().ConfigureAwait(false))
+                                        .SelectMany(m => m)
+                                        .Where(m => m.CreatedAt.UtcDateTime > link.Date)
+                                        .Where(m => null == link.Links.FirstOrDefault(l => l.Identity == m.Id.ToString()));
+                                }
+                                messages.AddRange(messagesChunk);
+                                lastMessageId = messagesChunk.LastOrDefault()?.Id ?? ulong.MaxValue;
+
+                                // Cancel when message count is less than the maximum.
+                                if (messagesChunk.Count() < 100)
+                                {
+                                    break;
+                                }
+                            }
 
                             // Update link date-time.
                             var lastMessageDate = DateTime.MinValue;
