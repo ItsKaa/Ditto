@@ -12,6 +12,15 @@ namespace Ditto.Extensions
         {
             return attributes.FirstOrDefault(x => x.GetParentType() == type) != null;
         }
+
+        public static T GetAttribute<T>(this Enum enumVal) where T : System.Attribute
+        {
+            var type = enumVal.GetType();
+            var memInfo = type.GetMember(enumVal.ToString());
+            var attributes = memInfo.FirstOrDefault()?.GetCustomAttributes(typeof(T), false);
+            //return (attributes.Length > 0) ? (T)attributes[0] : null;
+            return (T)attributes.FirstOrDefault();
+        }
     }
 
     // ParameterInfo
