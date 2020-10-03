@@ -76,7 +76,7 @@ namespace Ditto.Bot.Modules.Utility
                 case MessageType.Lewd:
                     if (target == null)
                     {
-                        message = $"Lewd {target.Mention}.";
+                        message = $"Lewd {source.Mention}.";
                     }
                     else
                     {
@@ -160,7 +160,7 @@ namespace Ditto.Bot.Modules.Utility
                     }
                     else
                     {
-                        message = $"{source.Mention} slaps {target.Mention}! Rude.";
+                        message = $"{source.Mention} slaps {target.Mention}!";
                     }
                     break;
                 case MessageType.Smug:
