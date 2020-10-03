@@ -34,12 +34,21 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 
                 var retryCount = 0;
                 var sub = await DoAsync(r => r.GetSubredditAsync(link.Value)).ConfigureAwait(false);
-                var posts = await sub.GetPosts(Subreddit.Sort.New, -1)
-                    .Where(i => !LinkUtility.LinkItemExists(link, i.Id, StringComparison.CurrentCultureIgnoreCase))
-                    .Where(i => i.CreatedUTC > link.Date.ToUniversalTime())
-                    .Where(i => !i.Url.LocalPath.EndsWith(".py")) // avoid virusses
-                    .Reverse()
-                    .ToListAsync();
+                var posts = new List<Post>();
+
+                if (sub != null)
+                {
+                    try
+                    {
+                        posts.AddRange(await sub.GetPosts(Subreddit.Sort.New, -1)
+                            .Where(i => !LinkUtility.LinkItemExists(link, i.Id, StringComparison.CurrentCultureIgnoreCase))
+                            .Where(i => i.CreatedUTC > link.Date.ToUniversalTime())
+                            .Where(i => !i.Url.LocalPath.EndsWith(".py")) // avoid virusses
+                            .Reverse()
+                            .ToListAsync());
+                    }
+                    catch { }
+                }
 
                 for (int i = 0; i < posts.Count; i++)
                 {
