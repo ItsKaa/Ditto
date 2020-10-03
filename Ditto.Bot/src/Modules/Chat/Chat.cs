@@ -88,12 +88,20 @@ namespace Ditto.Bot.Modules.Chat
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All, DeleteUserMessage = true)]
-        public async Task Insult(IUser user)
+        [Priority(1)]
+        public Task Insult(IUser user)
+        {
+            return Insult(user?.Mention);
+        }
+
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All, DeleteUserMessage = true)]
+        [Priority(0)]
+        public async Task Insult([Multiword] string name)
         {
             var insult = new InsultApi().Insult("");
             if (!string.IsNullOrEmpty(insult?.Insult))
             {
-                await Context.Channel.SendMessageAsync(user?.Mention + insult.Insult).ConfigureAwait(false);
+                await Context.Channel.SendMessageAsync(name + insult.Insult).ConfigureAwait(false);
             }
             else
             {
