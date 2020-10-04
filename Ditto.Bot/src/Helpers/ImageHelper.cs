@@ -88,14 +88,30 @@ namespace Ditto.Bot.Helpers
             //}
         }
 
+        /// <summary>
+        /// Replaces all color values of an image, but maintains alpha levels.
+        /// </summary>
+        public static Bitmap ReplacePixelColours(Image source, Color targetColor)
+        {
+            var srcBitmap = source as Bitmap ?? new Bitmap(source);
+            Bitmap newBitmap = new Bitmap(srcBitmap.Width, srcBitmap.Height);
+            for (int x = 0; x < srcBitmap.Width; x++)
+            {
+                for (int y = 0; y < srcBitmap.Height; y++)
+                {
+                    var pixel = srcBitmap.GetPixel(x, y);
+                    var colour = Color.FromArgb(pixel.A, targetColor);
+                    newBitmap.SetPixel(x, y, colour);
+                }
+            }
+            return newBitmap;
+        }
 
         public static void SetupForHighQuality(this Graphics graphics)
         {
             graphics.CompositingQuality = CompositingQuality.HighQuality;
-            graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
-            //graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            //graphics.SmoothingMode = SmoothingMode.HighQuality;
-            graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            graphics.SmoothingMode = SmoothingMode.HighQuality;
             graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
             graphics.TextRenderingHint = TextRenderingHint.AntiAlias;
         }
