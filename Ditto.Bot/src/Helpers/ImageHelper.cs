@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Drawing.Text;
 using System.IO;
 
 namespace Ditto.Bot.Helpers
@@ -85,5 +87,36 @@ namespace Ditto.Bot.Helpers
             //    }
             //}
         }
+
+
+        public static void SetupForHighQuality(this Graphics graphics)
+        {
+            graphics.CompositingQuality = CompositingQuality.HighQuality;
+            graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
+            //graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            //graphics.SmoothingMode = SmoothingMode.HighQuality;
+            graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            graphics.TextRenderingHint = TextRenderingHint.AntiAlias;
+        }
+
+        public static void DrawImageInCircle(Graphics graphics, Image image, PointF position, Color? borderColor = null, float borderSize = 1.0f)
+        {
+            // Clip the drawing area to the polygon and draw the image.
+            GraphicsPath path = new GraphicsPath();
+            path.AddEllipse(position.X, position.Y, image.Width, image.Height);
+
+            GraphicsState state = graphics.Save();
+            graphics.SetClip(path);
+            graphics.DrawImage(image, new RectangleF(position.X, position.Y, image.Width, image.Height), new RectangleF(0, 0, image.Width, image.Height), GraphicsUnit.Pixel);
+            graphics.Restore(state);
+
+            if (borderColor != null)
+            {
+                var pen = new Pen(borderColor ?? Color.Black, borderSize);
+                graphics.DrawEllipse(pen, position.X, position.Y, image.Width, image.Height);
+            }
+        }
+
     }
 }
