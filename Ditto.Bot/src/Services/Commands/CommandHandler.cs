@@ -252,7 +252,8 @@ namespace Ditto.Bot.Services.Commands
                         && x.Id == client.CurrentUser?.Id)
                 );
 
-                if (userTag != null)
+                var startsWithPrefix = content.StartsWith(Ditto.Cache.Db.Prefix(context.Guild));
+                if (userTag != null && !startsWithPrefix)
                 {
                     content = content.Remove(userTag.Index, userTag.Length).TrimStart();
                     if (content.StartsWith(Ditto.Cache.Db.Prefix(context.Guild)))
@@ -260,7 +261,7 @@ namespace Ditto.Bot.Services.Commands
                         content = content.Remove(0, 1);
                     }
                 }
-                else if (content.StartsWith(Ditto.Cache.Db.Prefix(context.Guild)))
+                else if (startsWithPrefix)
                 {
                     content = content.Remove(0, 1);
                 }
