@@ -70,6 +70,15 @@ namespace Ditto.Bot.Modules.Utility
                 return;
             }
 
+            // Check for duplicate users when calculating a three way ship.
+            if(hasThreeUsers
+                && user1 == user2 || user1 == user3 || user2 == user3)
+            {
+                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+                return;
+            }
+
+
             // Randomize shipping.
             var randomizer = new Randomizer((ulong)DateTime.UtcNow.Date.Ticks, user1.Id, user2.Id);
             var percent = GetTodayRandomizer(user1.Id, user2.Id, user3?.Id ?? 0).New(0, 100);
