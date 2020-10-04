@@ -205,7 +205,7 @@ namespace Ditto.Bot.Modules.Utility
                 ImageHelper.DrawImageInCircle(g, avatar3, new PointF((imgWidth - circleSize) / 2, circleSize + circleMarginY + 50), circleColour, circleBorderSize);
 
                 // Heart image
-                g.DrawImage(heartImg, ((imgWidth - heartImg.Width) / 2f) - 0, 60f);
+                g.DrawImage(heartImg, ((imgWidth - heartImg.Width) / 2f), (resultStartOffset + 10f));
             }
 
             using var ms = new MemoryStream();
