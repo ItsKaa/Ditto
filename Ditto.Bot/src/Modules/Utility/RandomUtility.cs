@@ -33,13 +33,13 @@ namespace Ditto.Bot.Modules.Utility
         public async Task Flip()
         {
             // Flip our coin
-            var coin = Randomizer.NewBoolean();
+            var coin = Randomizer.Static.NewBoolean();
             var coinFileName = coin ? "obverse" : "reverse";
             
             // Get a random base directory in data/images/coins
             var basePath = Path.GetDirectoryName($"{Globals.AppDirectory}/data/images/coins/");
             var directories = Directory.GetDirectories(basePath);
-            var rngDirectory = directories[Randomizer.New(0, directories.Length-1)];
+            var rngDirectory = directories[Randomizer.Static.New(0, directories.Length-1)];
 
             // Get a random file with the appropriate name
             var files = Directory.GetFiles(rngDirectory, $"{coinFileName}.*", SearchOption.AllDirectories).ToList();
@@ -48,7 +48,7 @@ namespace Ditto.Bot.Modules.Utility
                 await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                 return;
             }
-            var rngFile = files[Randomizer.New(0, files.Count-1)];
+            var rngFile = files[Randomizer.Static.New(0, files.Count-1)];
 
             var fileMsg = await Context.Channel.SendFileAsync(rngFile).ConfigureAwait(false);
             await fileMsg.DeleteAsync();
@@ -79,7 +79,7 @@ namespace Ditto.Bot.Modules.Utility
         {
             //use http://numbersapi.com
             await NumbersApi(await Common.NumbersApi.Math(
-                number ?? Randomizer.New(0UL, long.MaxValue),
+                number ?? Randomizer.Static.New(0UL, long.MaxValue),
                 Common.NumbersApi.NotFoundOption.Ceil,
                 false
             ));
@@ -89,7 +89,7 @@ namespace Ditto.Bot.Modules.Utility
         public async Task YearFact(int? number = null)
         {
             //use http://numbersapi.com
-            var year = number ?? Randomizer.New(-1225, 2060);
+            var year = number ?? Randomizer.Static.New(-1225, 2060);
             await NumbersApi(await Common.NumbersApi.Year(year,
                 year >= 0 ? Common.NumbersApi.NotFoundOption.Floor : Common.NumbersApi.NotFoundOption.Ceil,
                 false
@@ -101,8 +101,8 @@ namespace Ditto.Bot.Modules.Utility
         {
             //use http://numbersapi.com
             await NumbersApi(await Common.NumbersApi.Date(
-                month ?? Randomizer.New(0U, ushort.MaxValue),
-                day ?? Randomizer.New(0, uint.MaxValue),
+                month ?? Randomizer.Static.New(0U, ushort.MaxValue),
+                day ?? Randomizer.Static.New(0, uint.MaxValue),
                 Common.NumbersApi.NotFoundOption.Ceil, false
             ));
         }

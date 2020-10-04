@@ -31,9 +31,9 @@ namespace Ditto.Bot.Data.API.Rest
         {
             return Avatar(eyes, nose, mouth,
                 new Color(
-                    Randomizer.New((byte)0, (byte)255),
-                    Randomizer.New((byte)0, (byte)255),
-                    Randomizer.New((byte)0, (byte)255)
+                    Randomizer.Static.New((byte)0, (byte)255),
+                    Randomizer.Static.New((byte)0, (byte)255),
+                    Randomizer.Static.New((byte)0, (byte)255)
                 )
             );
         }
@@ -45,9 +45,9 @@ namespace Ditto.Bot.Data.API.Rest
         {
             var list = AvatarList();
             return Avatar(
-                Randomizer.RandomEnumerableElement(list.Face.Eyes),
-                Randomizer.RandomEnumerableElement(list.Face.Nose),
-                Randomizer.RandomEnumerableElement(list.Face.Mouth)
+                Randomizer.Static.RandomEnumerableElement(list.Face.Eyes),
+                Randomizer.Static.RandomEnumerableElement(list.Face.Nose),
+                Randomizer.Static.RandomEnumerableElement(list.Face.Mouth)
             );
         }
     }

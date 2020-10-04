@@ -9,7 +9,7 @@ namespace Ditto.Extensions
             int n = array.Count;
             while (n > 1)
             {
-                int k = Randomizer.New(n--);
+                int k = Randomizer.Static.New(n--);
                 T temp = array[n];
                 array[n] = array[k];
                 array[k] = temp;
@@ -19,11 +19,11 @@ namespace Ditto.Extensions
         
         public static T RandomElement<T>(this IEnumerable<T> enumerable)
         {
-            return Randomizer.RandomEnumerableElement(enumerable);
+            return Randomizer.Static.RandomEnumerableElement(enumerable);
         }
         public static T RandomElement<T>(this T[] array)
         {
-            return Randomizer.RandomArrayElement(array);
+            return Randomizer.Static.RandomArrayElement(array);
         }
     }
 }

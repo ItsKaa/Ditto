@@ -201,7 +201,7 @@ namespace Ditto.Bot.Modules.Music.Data
                             {
                                 if (RandomSong)
                                 {
-                                    newIndex = Randomizer.New(0, Playlist.Count - 1);
+                                    newIndex = new Randomizer().New(0, Playlist.Count - 1);
                                 }
                                 else
                                 {
