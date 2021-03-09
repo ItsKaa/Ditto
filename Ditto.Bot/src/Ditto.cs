@@ -267,6 +267,7 @@ namespace Ditto.Bot
             {
                 Twitch = new TwitchLib.Api.TwitchAPI();
                 Twitch.Settings.ClientId = Settings.Credentials.TwitchApiClientId;
+                Twitch.Settings.Secret = Settings.Credentials.TwitchApiSecret;
                 var twitchResult = await Twitch.V5.Auth.CheckCredentialsAsync().ConfigureAwait(false);
                 if(Twitch.Settings.ClientId == null || !twitchResult.Result)
                 {

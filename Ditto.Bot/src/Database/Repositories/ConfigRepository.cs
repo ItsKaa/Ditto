@@ -5,6 +5,7 @@ using Ditto.Data.Database;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Reflection.Metadata;
 
 namespace Ditto.Bot.Database.Repositories
 {
@@ -16,6 +17,7 @@ namespace Ditto.Bot.Database.Repositories
         private const string _keyEmbedDiscordLinkColour = "embed_colour_discordlink";
         private const string _keyEmbedMusicPlayingColour = "embed_colour_music-playing";
         private const string _keyEmbedMusicPausedColour = "embed_colour_music-paused";
+        private const string _keyEmbedTwitchColour = "embed_colour_twitch";
         private const string _keyPrefix = "prefix";
         private const string _keyBdoMaintenanceChannel = "bdo_maintenance_channel";
         private const string _keyBdoNewsIdentifier = "bdo_news_id";
@@ -27,6 +29,7 @@ namespace Ditto.Bot.Database.Repositories
             {_keyEmbedDiscordLinkColour, "#5971BF" },
             {_keyEmbedMusicPlayingColour, "#735bc1" }, //#763ba5
             {_keyEmbedMusicPausedColour, "#666666" },
+            {_keyEmbedTwitchColour, "#6441A4"},
             {_keyPrefix, ">"},
             {_keyBdoMaintenanceChannel, null},
             {_keyBdoNewsIdentifier, "0" }
@@ -99,6 +102,11 @@ namespace Ditto.Bot.Database.Repositories
         public Config GetEmbedMusicPausedColour(IGuild guild) => GetConfigItem(guild, _keyEmbedMusicPausedColour);
         private Config GetOrAddEmbedMusicPausedColour(IGuild guild) => GetOrAddConfigItem(guild, _keyEmbedMusicPausedColour);
         public void SetMusicPausedColour(IGuild guild, Color colour) => GetOrAddEmbedMusicPausedColour(guild).Value = colour.ToString();
+
+        public Config GetEmbedTwitchLinkColour(IGuild guild) => GetConfigItem(guild, _keyEmbedTwitchColour);
+        private Config GetOrAddEmbedTwitchLinkColour(IGuild guild) => GetOrAddConfigItem(guild, _keyEmbedTwitchColour);
+        public void SetTwitchLinkColour(IGuild guild, Color colour) => GetOrAddEmbedTwitchLinkColour(guild).Value = colour.ToString();
+        
 
         public Config GetBdoMaintenanceChannel(IGuild guild) => GetConfigItem(guild, _keyBdoMaintenanceChannel);
         private Config GetOrAddBdoMaintenanceChannel(IGuild guild) => GetOrAddConfigItem(guild, _keyBdoMaintenanceChannel);

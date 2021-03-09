@@ -28,5 +28,11 @@ namespace Ditto.Extensions
             return @this;
         }
 
+        public static EmbedBuilder WithTwitchColour(this EmbedBuilder @this, IGuild guild)
+        {
+            @this.Color = Bot.Ditto.Cache.Db.EmbedTwitchLinkColour(guild);
+            return @this;
+        }
+
     }
 }

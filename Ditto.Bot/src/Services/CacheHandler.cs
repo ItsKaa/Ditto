@@ -53,6 +53,11 @@ namespace Ditto.Bot.Services
                 , Globals.Cache.DefaultCacheTime
             );
 
+            public Color EmbedTwitchLinkColour(IGuild guild) => GetOrAddCachededItem(GetCacheName(guild),
+                (uow) => uow.Configs.GetEmbedTwitchLinkColour(guild).Value.ToColour()
+                , Globals.Cache.DefaultCacheTime
+            );
+
             public Color EmbedMusicPlayingColour(IGuild guild) => GetOrAddCachededItem(GetCacheName(guild),
                 (uow) => uow.Configs.GetEmbedMusicPlayingColour(guild).Value.ToColour()
                 , Globals.Cache.DefaultCacheTime

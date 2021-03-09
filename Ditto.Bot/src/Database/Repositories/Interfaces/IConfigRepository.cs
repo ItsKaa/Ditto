@@ -10,6 +10,7 @@ namespace Ditto.Bot.Database.Repositories.Interfaces
         Config GetEmbedErrorColour(IGuild guild);
         Config GetEmbedRssColour(IGuild guild);
         Config GetEmbedDiscordLinkColour(IGuild guild);
+        Config GetEmbedTwitchLinkColour(IGuild guild);
         Config GetEmbedMusicPlayingColour(IGuild guild);
         Config GetEmbedMusicPausedColour(IGuild guild);
         Config GetPrefix(IGuild guild);
