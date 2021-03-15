@@ -58,10 +58,13 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
                     try
                     {
-                        Monitor = new LiveStreamMonitorService(Ditto.Twitch, 60);
-                        Monitor.OnStreamOnline += Monitor_OnStreamOnline;
-                        Monitor.OnStreamOffline += Monitor_OnStreamOffline;
-                        Monitor.OnStreamUpdate += Monitor_OnStreamUpdate;
+                        if (Monitor == null)
+                        {
+                            Monitor = new LiveStreamMonitorService(Ditto.Twitch, 60);
+                            Monitor.OnStreamOnline += Monitor_OnStreamOnline;
+                            Monitor.OnStreamOffline += Monitor_OnStreamOffline;
+                            Monitor.OnStreamUpdate += Monitor_OnStreamUpdate;
+                        }
 
                         // Start monitoring the twitch links, this will notify users when a stream switches it's live status.
                         var channels = Links.ToList().Select(e => e.Value.Value.Split("|", StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()).ToList();
@@ -86,8 +89,6 @@ namespace Ditto.Bot.Modules.Utility.Linking
             {
                 _cancellationTokenSource?.Cancel();
                 Links?.Clear();
-                Monitor?.Stop();
-                Monitor = null;
                 return Task.CompletedTask;
             };
         }
