@@ -64,16 +64,16 @@ namespace Ditto.Bot.Modules.Utility.Linking
                             Monitor.OnStreamOnline += Monitor_OnStreamOnline;
                             Monitor.OnStreamOffline += Monitor_OnStreamOffline;
                             Monitor.OnStreamUpdate += Monitor_OnStreamUpdate;
-                        }
 
-                        // Start monitoring the twitch links, this will notify users when a stream switches it's live status.
-                        var channels = Links.ToList().Select(e => e.Value.Value.Split("|", StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()).ToList();
-                        MonitorChannels(channels);
+                            // Start monitoring the twitch links, this will notify users when a stream switches it's live status.
+                            var channels = Links.ToList().Select(e => e.Value.Value.Split("|", StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()).ToList();
+                            MonitorChannels(channels);
 
-                        // Instantly update the monitoring service on load.
-                        if (Links.Count > 0)
-                        {
-                            await Monitor.UpdateLiveStreamersAsync(true).ConfigureAwait(false);
+                            // Instantly update the monitoring service on load.
+                            if (Links.Count > 0)
+                            {
+                                await Monitor.UpdateLiveStreamersAsync(true).ConfigureAwait(false);
+                            }
                         }
                     }
                     catch(Exception ex)
