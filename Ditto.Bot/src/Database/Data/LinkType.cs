@@ -23,5 +23,8 @@
 
         // Translation
         Translation     = 9,
+
+        // Solo Leveling
+        SoloLeveling    = 10,
     }
 }
