@@ -59,7 +59,7 @@
     <PackageReference Include="Google.Apis.YouTube.v3" Version="1.29.1.976" />
     -->
     <PackageReference Include="Capgemini.Cauldron.Core.Collections" Version="2.1.0" />
-    <PackageReference Include="Discord.Net" Version="2.3.0-dev-20201126.1" />
+    <PackageReference Include="Discord.Net" Version="3.0.0-dev-20210615.5" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.28" />
     <PackageReference Include="MersenneTwister" Version="1.0.6" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="3.1.3" />

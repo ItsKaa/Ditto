@@ -66,7 +66,7 @@ namespace Ditto.Bot.Services
         }
 
 
-        private Task DiscordClient_ReactionAdded(Cacheable<IUserMessage, ulong> message, ISocketMessageChannel channel, SocketReaction reaction)
+        private Task DiscordClient_ReactionAdded(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {
             var _ = Task.Run(async () =>
             {
@@ -82,7 +82,7 @@ namespace Ditto.Bot.Services
             return Task.CompletedTask;
         }
 
-        private Task DiscordClient_ReactionRemoved(Cacheable<IUserMessage, ulong> message, ISocketMessageChannel channel, SocketReaction reaction)
+        private Task DiscordClient_ReactionRemoved(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
         {
             var _ = Task.Run(async () =>
             {
@@ -98,7 +98,7 @@ namespace Ditto.Bot.Services
             return Task.CompletedTask;
         }
 
-        private Task DiscordClient_ReactionsCleared(Cacheable<IUserMessage, ulong> message, ISocketMessageChannel channel)
+        private Task DiscordClient_ReactionsCleared(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
         {
             var _ = Task.Run(async() =>
             {

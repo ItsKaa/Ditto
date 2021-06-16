@@ -153,7 +153,7 @@ namespace Ditto.Bot.Modules.Scripting.Data
             IMessageChannel channel = null;
             if (type == USER)
             {
-                channel = User.GetOrCreateDMChannelAsync().GetAwaiter().GetResult();
+                channel = User.CreateDMChannelAsync().GetAwaiter().GetResult();
             }
             else if(type == CHANNEL)
             {

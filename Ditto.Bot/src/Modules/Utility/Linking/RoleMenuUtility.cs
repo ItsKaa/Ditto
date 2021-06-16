@@ -146,7 +146,7 @@ namespace Ditto.Bot.Modules.Utility
                                                 {
                                                     try
                                                     {
-                                                        var dmChannel = await guildUser.GetOrCreateDMChannelAsync().ConfigureAwait(false);
+                                                        var dmChannel = await guildUser.CreateDMChannelAsync().ConfigureAwait(false);
                                                         if (dmChannel != null)
                                                         {
                                                             if (added)

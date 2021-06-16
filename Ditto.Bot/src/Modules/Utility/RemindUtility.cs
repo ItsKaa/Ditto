@@ -94,7 +94,7 @@ namespace Ditto.Bot.Modules.Utility
                                                     (await reminder.Guild.GetUsersAsync())
                                                     .Where(r => r.RoleIds.ToList().Contains(reminder.RoleId.Value))
                                                     .Where(u => !u.IsBot)
-                                                    .Select(async u => await u.GetOrCreateDMChannelAsync())
+                                                    .Select(async u => await u.CreateDMChannelAsync())
                                                     .Select(t => t.Result)
                                                 );
                                             }
@@ -104,12 +104,12 @@ namespace Ditto.Bot.Modules.Utility
                                                 dmChannels.AddRange(
                                                         (await (reminder.Channel as IVoiceChannel).GetUsersAsync().ToListAsync()).SelectMany(e => e)
                                                         .Where(u => !u.IsBot)
-                                                        .Select(async u => await u.GetOrCreateDMChannelAsync()).Select(t => t.Result)
+                                                        .Select(async u => await u.CreateDMChannelAsync()).Select(t => t.Result)
                                                     );
                                             }
                                             else if (reminder.UserId != null)
                                             {
-                                                dmChannels.Add(await reminder.User?.GetOrCreateDMChannelAsync());
+                                                dmChannels.Add(await reminder.User?.CreateDMChannelAsync());
                                             }
 
                                             var embedBuilder = reminder.Message.Contains("\n") ?

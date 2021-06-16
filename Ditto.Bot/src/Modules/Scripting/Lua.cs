@@ -112,10 +112,11 @@ namespace Ditto.Bot.Modules.Scripting
             };
         }
 
-        private static Task GuildMemberUpdated(SocketGuildUser socketGuildUserOld, SocketGuildUser socketGuildUser)
+        private static Task GuildMemberUpdated(Cacheable<SocketGuildUser, ulong> cachedSocketGuildUserOld, SocketGuildUser socketGuildUser)
         {
-            var _ = Task.Run(() =>
+            var _ = Task.Run(async () =>
             {
+                var socketGuildUserOld = await cachedSocketGuildUserOld.GetOrDownloadAsync().ConfigureAwait(false);
                 var addedRoles = socketGuildUser.Roles.Where(r => socketGuildUserOld.Roles.FirstOrDefault(rr => rr.Id == r.Id) == null);
                 var removedRoles = socketGuildUserOld.Roles.Where(r => socketGuildUser.Roles.FirstOrDefault(rr => rr.Id == r.Id) == null);
                 foreach (var role in addedRoles)

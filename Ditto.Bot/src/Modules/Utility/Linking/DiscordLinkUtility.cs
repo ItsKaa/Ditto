@@ -62,7 +62,6 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     {
                         await _discordClient.LoginAsync(0, Ditto.Settings.Credentials.UserSlaveToken, true);
                         await _discordClient.StartAsync().ConfigureAwait(false);
-                        _initialLogin = false;
                         _reconnecting = false;
                         break;
                     }
@@ -99,6 +98,14 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     Log.Warn($"Slave user has been disconnected.");
                     Task.Run(() => loginAction());
                 }
+                else
+                {
+                    _initialLogin = false;
+                    _reconnecting = false;
+                    Log.Error("Slave user could not connect at first login, will not retry further.");
+                    return _discordClient.StopAsync();
+                }
+
                 return Task.CompletedTask;
             };
 
