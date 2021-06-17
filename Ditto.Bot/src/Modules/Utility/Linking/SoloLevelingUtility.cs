@@ -259,29 +259,40 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                 await _semaphoreSlim.DoAsync(async () =>
                                 {
                                     var user = await GetUserFromLinkAsync(link).ConfigureAwait(false);
-                                    var numberOfPermittedKills = GetPermittedNumberOfKillsFromLink(link);
-                                    var numberOfRecordedKills = GetRecordedNumberOfKillsFromLink(link) + 1;
-                                    link.Value = FormatValueToString(user, numberOfPermittedKills, (numberOfRecordedKills), message.CreatedAt.UtcDateTime);
-
-                                    if (numberOfPermittedKills > 0 && numberOfRecordedKills > numberOfPermittedKills)
+                                    if (user != null)
                                     {
-                                        await link.Channel.SendMessageAsync($"{user.Mention} has killed {numberOfRecordedKills} monsters, cleared the custom channel permissions.").ConfigureAwait(false);
-                                        await UnpermitLinkAsync(link).ConfigureAwait(false);
-                                    }
-                                    else
-                                    {
-                                        await Ditto.Database.WriteAsync(uow =>
+                                        try
                                         {
-                                            uow.Links.Update(link);
-                                        }).ConfigureAwait(false);
-                                    }
+                                            var numberOfPermittedKills = GetPermittedNumberOfKillsFromLink(link);
+                                            var numberOfRecordedKills = GetRecordedNumberOfKillsFromLink(link) + 1;
+                                            var createdDate = message?.CreatedAt.UtcDateTime ?? DateTime.UtcNow;
+                                            link.Value = FormatValueToString(user, numberOfPermittedKills, (numberOfRecordedKills), createdDate);
 
-                                    // Logging message in case we need it.
-                                    Log.Debug($"[SoloLeveling][{link.Channel.Name}][{user.Username}#{user.Discriminator}]: Killed {numberOfRecordedKills}/{numberOfPermittedKills}");
-                                    //var _ = Task.Run(() =>
-                                    //{
-                                    //    link.Channel.SendMessageAsync($"[Debug] You killed {numberOfRecordedKills} out of {(numberOfPermittedKills == 0 ? "\\♾️" : $"{numberOfPermittedKills}")} monsters.");
-                                    //});
+                                            if (numberOfPermittedKills > 0 && numberOfRecordedKills > numberOfPermittedKills)
+                                            {
+                                                await link.Channel.SendMessageAsync($"{user.Mention} has killed {numberOfRecordedKills} monsters, cleared the custom channel permissions.").ConfigureAwait(false);
+                                                await UnpermitLinkAsync(link).ConfigureAwait(false);
+                                            }
+                                            else
+                                            {
+                                                await Ditto.Database.WriteAsync(uow =>
+                                                {
+                                                    uow.Links.Update(link);
+                                                }).ConfigureAwait(false);
+                                            }
+
+                                            // Logging message in case we need it.
+                                            Log.Info($"[SoloLeveling][{link.Channel.Name}][{user.Username}#{user.Discriminator}]: Killed {numberOfRecordedKills}/{numberOfPermittedKills}");
+                                            //var _ = Task.Run(() =>
+                                            //{
+                                            //    link.Channel.SendMessageAsync($"[Debug] You killed {numberOfRecordedKills} out of {(numberOfPermittedKills == 0 ? "\\♾️" : $"{numberOfPermittedKills}")} monsters.");
+                                            //});
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            Log.Error($"[SoloLeveling] Exception thrown: {ex}");
+                                        }
+                                    }
                             }).ConfigureAwait(false);
                             }
                         }
