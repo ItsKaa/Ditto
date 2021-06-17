@@ -328,7 +328,7 @@ namespace Ditto.Bot.Modules.Utility
                         Channel = (IChannel)channel ?? voiceChannel,
                         User = user,
                         Role = role,
-                        Creator = (channel != null ? Context.User.Mention : Context.NicknameAndGlobalUsername),
+                        Creator = Context.NicknameAndGlobalUsername,
                         StartTime = dateNow,
                         EndTime = dateNow + (result.Time.Value),
                         Message = result.Text,
