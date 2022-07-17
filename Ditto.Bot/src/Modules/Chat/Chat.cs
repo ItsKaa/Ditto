@@ -55,7 +55,7 @@ namespace Ditto.Bot.Modules.Chat
 
             Ditto.Exit += () =>
             {
-                CleverbotSessions.Clear();
+                CleverbotSessions?.Clear();
                 return Task.CompletedTask;
             };
         }

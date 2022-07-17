@@ -300,7 +300,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
             });
         }
 
-        private static EmbedBuilder GetTwitchEmbedMessage(TwitchLib.Api.Helix.Models.Streams.Stream stream, TwitchLib.Api.V5.Models.Streams.Stream streamV5, Link link)
+        private static EmbedBuilder GetTwitchEmbedMessage(TwitchLib.Api.Helix.Models.Streams.GetStreams.Stream stream, TwitchLib.Api.V5.Models.Streams.Stream streamV5, Link link)
         {
             var channelName = (streamV5?.Channel?.DisplayName ?? streamV5?.Channel?.Name ?? stream?.UserName ?? "Unknown");
             var streamImageUrl = stream.ThumbnailUrl.Replace("{width}", "800").Replace("{height}", "600");
