@@ -121,7 +121,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
             Task.Run(async () =>
             {
-                await loginAction().ConfigureAwait(false);
+                if (!string.IsNullOrEmpty(Ditto.Settings.Credentials.UserSlaveToken))
+                {
+                    await loginAction().ConfigureAwait(false);
+                }
             });
 
             LinkUtility.TryAddHandler(LinkType.Discord, async (link, channel, cancellationToken) =>

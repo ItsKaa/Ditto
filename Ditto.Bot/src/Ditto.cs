@@ -265,14 +265,21 @@ namespace Ditto.Bot
             // Try to initialise 'Twitch'
             try
             {
-                Twitch = new TwitchLib.Api.TwitchAPI();
-                Twitch.Settings.ClientId = Settings.Credentials.TwitchApiClientId;
-                Twitch.Settings.Secret = Settings.Credentials.TwitchApiSecret;
-                var twitchResult = await Twitch.V5.Auth.CheckCredentialsAsync().ConfigureAwait(false);
-                if(Twitch.Settings.ClientId == null || !twitchResult.Result)
+                if (string.IsNullOrEmpty(Settings.Credentials.TwitchApiSecret))
                 {
-                    Twitch = null;
-                    throw new ApiException("Twitch credentials check failed.");
+                    Log.Info("Skipping Twitch init");
+                }
+                else
+                {
+                    Twitch = new TwitchLib.Api.TwitchAPI();
+                    Twitch.Settings.ClientId = Settings.Credentials.TwitchApiClientId;
+                    Twitch.Settings.Secret = Settings.Credentials.TwitchApiSecret;
+                    var twitchResult = await Twitch.V5.Auth.CheckCredentialsAsync().ConfigureAwait(false);
+                    if (Twitch.Settings.ClientId == null || !twitchResult.Result)
+                    {
+                        Twitch = null;
+                        throw new ApiException("Twitch credentials check failed.");
+                    }
                 }
             }
             catch(Exception ex)
