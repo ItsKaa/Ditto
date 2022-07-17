@@ -9,6 +9,7 @@
     <PackageId>RedditSharp</PackageId>
     <PackageProjectUrl>https://github.com/CrustyJew/RedditSharp</PackageProjectUrl>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <TargetFrameworks>netstandard2.0;netcoreapp3.1;</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
