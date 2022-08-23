@@ -298,6 +298,7 @@ namespace Ditto.Bot
                 HandlerTimeout = (int)(Settings.Timeout * 60),
                 DefaultRetryMode = RetryMode.AlwaysRetry,
                 //AlwaysDownloadUsers = true,
+                GatewayIntents = GatewayIntents.All,
             }), 1, 1);
             
             // Various services
