@@ -122,21 +122,21 @@ namespace Ditto.Bot.Modules.Utility
             const float nameMarginY = 5f;
             var resultHeartSize = new Size(heartImg.Width * scale, heartImg.Height * scale);
 
-            var fontHeader = new Font(fontFamily, 22f * scale);
+            var fontHeader = new Font(fontFamily, 26f * scale);
             var headerText = "~Compatibility Meter~";
             var headerSize = TextMeasurer.Measure(headerText, new TextOptions(fontHeader));
             bmpScaled.Mutate(x => x.DrawText(headerText, fontHeader, Color.Salmon, new PointF(((imgWidth * scale) - headerSize.Width) / 2f, 0)));
 
-            var fontPercentage = new Font(fontFamily, 18f * scale);
+            var fontPercentage = new Font(fontFamily, 22f * scale);
             var percentageText = $"~{percent}%~";
             var percentageSize = TextMeasurer.Measure(percentageText, new TextOptions(fontPercentage));
             bmpScaled.Mutate(x => x.DrawText(percentageText, fontPercentage, resultColour, new PointF(((imgWidth * scale) - percentageSize.Width) / 2f, resultStartOffsetScaled + resultHeartSize.Height + resultPercentageMargin)));
 
-            var fontResultMessage = new Font(fontFamily, 18f * scale);
+            var fontResultMessage = new Font(fontFamily, 22f * scale);
             var resultMessageSize = TextMeasurer.Measure(resultMessage, new TextOptions(fontPercentage));
             bmpScaled.Mutate(x => x.DrawText(resultMessage, fontResultMessage, resultColour, new PointF(((imgWidth * scale) - resultMessageSize.Width) / 2f, resultStartOffsetScaled + percentageSize.Height + resultHeartSize.Height + resultMessageMargin)));
 
-            var fontName = new Font(fontFamily, 18f * scale);
+            var fontName = new Font(fontFamily, 22f * scale);
             var nameText1 = (user1 as IGuildUser)?.Nickname ?? user1.Username;
             var nameText2 = (user2 as IGuildUser)?.Nickname ?? user2.Username;
             var nameSize1 = TextMeasurer.Measure(nameText1, new TextOptions(fontName));
