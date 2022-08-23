@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
-using System.Drawing.Text;
 using System.IO;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Drawing;
+using SixLabors.ImageSharp.Drawing.Processing;
 
 namespace Ditto.Bot.Helpers
 {
@@ -17,17 +19,15 @@ namespace Ditto.Bot.Helpers
             // Convert byte[] to Image
             using (var ms = new MemoryStream(imageBytes, 0, imageBytes.Length))
             {
-                Image image = Image.FromStream(ms, true);
-                return image;
+                return Image.Load(ms);
             }
         }
-
-        public static string ImageToBase64(Image image, ImageFormat format)
+        public static string ImageToBase64(Image image, IImageEncoder encoder)
         {
             using (MemoryStream ms = new MemoryStream())
             {
                 // Convert Image to byte[]
-                image.Save(ms, format);
+                image.Save(ms, encoder);
                 byte[] imageBytes = ms.ToArray();
 
                 // Convert byte[] to base 64 string
@@ -36,101 +36,61 @@ namespace Ditto.Bot.Helpers
             }
         }
 
-        public static System.Drawing.Bitmap CombineBitmap(List<Bitmap> images, System.Drawing.Color backgroundColour)
+        public static Image<Rgba32> CombineImages(List<Image> images, Color backgroundColour)
         {
-            System.Drawing.Bitmap finalImage = null;
+            int width = 0;
+            int height = 0;
 
-            try
+            foreach (var image in images)
             {
-                int width = 0;
-                int height = 0;
-
-                foreach (var bitmap in images)
-                {
-                    //update the size of the final bitmap
-                    width += bitmap.Width;
-                    height = bitmap.Height > height ? bitmap.Height : height;
-                }
-
-                //create a bitmap to hold the combined image
-                finalImage = new System.Drawing.Bitmap(width, height);
-
-                //get a graphics object from the image so we can draw on it
-                using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(finalImage))
-                {
-                    //set background color
-                    g.Clear(backgroundColour);
-
-                    //go through each image and draw it on the final image
-                    int offset = 0;
-                    foreach (System.Drawing.Bitmap image in images)
-                    {
-                        g.DrawImage(image,
-                          new System.Drawing.Rectangle(offset, 0, image.Width, image.Height));
-                        offset += image.Width;
-                    }
-                }
-
-                return finalImage;
+                //update the size of the final bitmap
+                width += image.Width;
+                height = image.Height > height ? image.Height : height;
             }
-            catch (Exception)
+
+            var finalImage = new Image<Rgba32>(width, height);
+            var position = new Point(0, 0);
+            foreach (var image in images)
             {
-                finalImage?.Dispose();
-                throw;
+                finalImage.Mutate(m => m.DrawImage(image, position, 1.0f));
+                position.Offset(image.Width, 0);
             }
-            //finally
-            //{
-            //    //clean up memory
-            //    foreach (System.Drawing.Bitmap image in images)
-            //    {
-            //        image.Dispose();
-            //    }
-            //}
+
+            return finalImage;
         }
 
         /// <summary>
         /// Replaces all color values of an image, but maintains alpha levels.
         /// </summary>
-        public static Bitmap ReplacePixelColours(Image source, Color targetColor)
+        public static Image<Rgba32> ReplacePixelColours(Image image, Color targetColor)
         {
-            var srcBitmap = source as Bitmap ?? new Bitmap(source);
-            Bitmap newBitmap = new Bitmap(srcBitmap.Width, srcBitmap.Height);
-            for (int x = 0; x < srcBitmap.Width; x++)
+            var sourceImage = image.CloneAs<Rgba32>();
+            var imageResult = new Image<Rgba32>(image.Width, image.Height);
+            for (int x = 0; x < sourceImage.Width; x++)
             {
-                for (int y = 0; y < srcBitmap.Height; y++)
+                for (int y = 0; y < sourceImage.Height; y++)
                 {
-                    var pixel = srcBitmap.GetPixel(x, y);
-                    var colour = Color.FromArgb(pixel.A, targetColor);
-                    newBitmap.SetPixel(x, y, colour);
+                    var pixel = sourceImage[x, y];
+                    var colour = targetColor.WithAlpha(pixel.A / 255f);
+                    imageResult[x, y] = colour.ToPixel<Rgba32>();
                 }
             }
-            return newBitmap;
+            return imageResult;
         }
 
-        public static void SetupForHighQuality(this Graphics graphics)
-        {
-            graphics.CompositingQuality = CompositingQuality.HighQuality;
-            graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            graphics.SmoothingMode = SmoothingMode.HighQuality;
-            graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            graphics.TextRenderingHint = TextRenderingHint.AntiAlias;
-        }
-
-        public static void DrawImageInCircle(Graphics graphics, Image image, PointF position, Color? borderColor = null, float borderSize = 1.0f)
+        public static void DrawImageInCircle(Image destinationImage, Image sourceImage, PointF position, Color? borderColor = null, float borderSize = 1.0f)
         {
             // Clip the drawing area to the polygon and draw the image.
-            GraphicsPath path = new GraphicsPath();
-            path.AddEllipse(position.X, position.Y, image.Width, image.Height);
+            var clipPosition = position;
+            clipPosition.X += sourceImage.Width / 2f;
+            clipPosition.Y += sourceImage.Height / 2f;
 
-            GraphicsState state = graphics.Save();
-            graphics.SetClip(path);
-            graphics.DrawImage(image, new RectangleF(position.X, position.Y, image.Width, image.Height), new RectangleF(0, 0, image.Width, image.Height), GraphicsUnit.Pixel);
-            graphics.Restore(state);
+            var path = new EllipsePolygon(clipPosition.X, clipPosition.Y, sourceImage.Width, sourceImage.Height);
+            destinationImage.Mutate(x => x.Clip(path, x => x.DrawImage(sourceImage, new Point((int)position.X, (int)position.Y), 1.0f)));
 
             if (borderColor != null)
             {
-                var pen = new Pen(borderColor ?? Color.Black, borderSize);
-                graphics.DrawEllipse(pen, position.X, position.Y, image.Width, image.Height);
+                destinationImage.Mutate(x => x.Draw(borderColor ?? Color.Black, borderSize, path));
             }
         }
 

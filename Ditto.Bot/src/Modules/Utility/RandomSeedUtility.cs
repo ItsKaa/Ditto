@@ -5,17 +5,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Drawing;
-using System.Drawing.Text;
-using System.Drawing.Imaging;
 using Ditto.Helpers;
 using System.IO;
 using Ditto.Attributes;
 using Ditto.Data.Commands;
-using Ditto.Data;
-using SixLabors.ImageSharp.Formats.Bmp;
-using System.Drawing.Drawing2D;
-using Tweetinvi;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Drawing.Processing;
+using SixLabors.ImageSharp.PixelFormats;
+using Color = SixLabors.ImageSharp.Color;
+using Image = SixLabors.ImageSharp.Image;
+using SixLabors.ImageSharp.Processing.Processors.Transforms;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.Fonts;
 
 namespace Ditto.Bot.Modules.Utility
 {
@@ -84,7 +86,7 @@ namespace Ditto.Bot.Modules.Utility
             var percent = GetTodayRandomizer(user1.Id, user2.Id, user3?.Id ?? 0).New(0, 100);
             var highestKey = _shipLevels.Keys.OrderBy(x => x).LastOrDefault(k => percent >= k);
             var resultMessage = _shipLevels[highestKey].Item1;
-            var resultColorBrush = new SolidBrush(ColorTranslator.FromHtml(_shipLevels[highestKey].Item2));
+            var resultColour = Color.Parse(_shipLevels[highestKey].Item2);
             var resultHeartText = _shipHeartLevels[_shipHeartLevels.Keys.OrderBy(x => x).LastOrDefault(k => percent >= k)];
 
             // Constant variables to setup the rendering bit.
@@ -94,131 +96,109 @@ namespace Ditto.Bot.Modules.Utility
             const int circleMarginY = 50;
             const int imgWidth = (circleSize * 2) + (borderMargin * 2) + margin;
             float resultStartOffset = 50f + (hasThreeUsers ? 15f : 0f);
-            var circleColour = System.Drawing.Color.Gray;
+            var circleColour = Color.Gray;
             const int scale = 4;
             // Dynamic
             int imgHeight = (circleSize + circleMarginY + 30) * (hasThreeUsers ? 2 : 1);
             const float circleBorderSize = 1.5f;
 
             // Can't seem to render UTF-32 characters on Linux, so instead using an image.
-            var heartImg = System.Drawing.Image.FromFile($@"data/images/hearts/{resultHeartText}");
-            heartImg = ImageHelper.ReplacePixelColours(heartImg, resultColorBrush.Color);
+            var heartImg = Image.Load($@"data/images/hearts/{resultHeartText}");
+            heartImg = ImageHelper.ReplacePixelColours(heartImg, resultColour);
 
             // Setup fonts
-            // There seems to be a bug in .net core, but this does work on Windows.
-            FontCollection fontCollection = new InstalledFontCollection();
-            if (BaseClass.IsWindows())
+            var fontCollection = new FontCollection();
+            fontCollection.Add("data/fonts/Pinky Cupid.otf");
+
+            var fallbackFontFamily = SystemFonts.Get("Arial");
+            var fontFamily = (FontFamily?)fontCollection.Families.FirstOrDefault(x => string.Equals(x.Name, "Pinky Cupid", StringComparison.CurrentCultureIgnoreCase)) ?? fallbackFontFamily;
+
+            var bmp = new Image<Rgba32>(imgWidth, imgHeight);
+            var bmpScaled = new Image<Rgba32>(imgWidth * scale, imgHeight * scale);
+
+            float resultStartOffsetScaled = resultStartOffset * scale;
+            const float resultPercentageMargin = 20f * scale;
+            const float resultMessageMargin = 12.5f * scale;
+            const float nameMarginY = 5f;
+            var resultHeartSize = new Size(heartImg.Width * scale, heartImg.Height * scale);
+
+            var fontHeader = new Font(fontFamily, 22f * scale);
+            var headerText = "~Compatibility Meter~";
+            var headerSize = TextMeasurer.Measure(headerText, new TextOptions(fontHeader));
+            bmpScaled.Mutate(x => x.DrawText(headerText, fontHeader, Color.Salmon, new PointF(((imgWidth * scale) - headerSize.Width) / 2f, 0)));
+
+            var fontPercentage = new Font(fontFamily, 18f * scale);
+            var percentageText = $"~{percent}%~";
+            var percentageSize = TextMeasurer.Measure(percentageText, new TextOptions(fontPercentage));
+            bmpScaled.Mutate(x => x.DrawText(percentageText, fontPercentage, resultColour, new PointF(((imgWidth * scale) - percentageSize.Width) / 2f, resultStartOffsetScaled + resultHeartSize.Height + resultPercentageMargin)));
+
+            var fontResultMessage = new Font(fontFamily, 18f * scale);
+            var resultMessageSize = TextMeasurer.Measure(resultMessage, new TextOptions(fontPercentage));
+            bmpScaled.Mutate(x => x.DrawText(resultMessage, fontResultMessage, resultColour, new PointF(((imgWidth * scale) - resultMessageSize.Width) / 2f, resultStartOffsetScaled + percentageSize.Height + resultHeartSize.Height + resultMessageMargin)));
+
+            var fontName = new Font(fontFamily, 18f * scale);
+            var nameText1 = (user1 as IGuildUser)?.Nickname ?? user1.Username;
+            var nameText2 = (user2 as IGuildUser)?.Nickname ?? user2.Username;
+            var nameSize1 = TextMeasurer.Measure(nameText1, new TextOptions(fontName));
+            var nameSize2 = TextMeasurer.Measure(nameText2, new TextOptions(fontName));
+            bmpScaled.Mutate(x => x.DrawText(nameText1, fontName, Color.Gray, new PointF(((borderMargin + (circleSize / 2)) * scale) - (nameSize1.Width / 2f), (circleMarginY + circleSize + nameMarginY) * scale)));
+            bmpScaled.Mutate(x => x.DrawText(nameText2, fontName, Color.Gray, new PointF(((imgWidth - borderMargin - (circleSize / 2)) * scale) - (nameSize2.Width / 2f), (circleMarginY + circleSize + nameMarginY) * scale)));
+
+            if (hasThreeUsers)
             {
-                var privateFontCollection = new PrivateFontCollection();
-                privateFontCollection.AddFontFile("data/fonts/Pinky Cupid.otf");
-                fontCollection = privateFontCollection;
+                var nameText3 = (user3 as IGuildUser)?.Nickname ?? user3?.Username;
+                var nameSize3 = TextMeasurer.Measure(nameText3, new TextOptions(fontName));
+                bmpScaled.Mutate(x => x.DrawText(nameText3, fontName, Color.Gray, new PointF(((imgWidth * scale) - nameSize3.Width) / 2, (circleSize + circleSize + circleMarginY + 50 + nameMarginY) * scale)));
             }
 
-            FontFamily fallbackFontFamily = new FontFamily("Arial");
-            FontFamily pinkyCupidFontFamily = fontCollection.Families.FirstOrDefault(x => string.Equals(x.Name, "Pinky Cupid", StringComparison.CurrentCultureIgnoreCase)) ?? fallbackFontFamily;
+            // Copy scaled image on top of this one
+            var bmpScaledResize = bmpScaled.Clone();
+            bmpScaledResize.Mutate(x => x.Resize(bmp.Width, bmp.Height, new BicubicResampler()));
+            bmp.Mutate(x => x.DrawImage(bmpScaledResize, 1.0f));
 
-
-            var bmp = new Bitmap(imgWidth, imgHeight, PixelFormat.Format32bppArgb);
-            var bmpScaled = new Bitmap(imgWidth * scale, imgHeight * scale, PixelFormat.Format32bppArgb);
-            using (var g = Graphics.FromImage(bmpScaled))
+            // Avatar circles
+            Image avatar1 = null, avatar2 = null, avatar3 = null;
+            try
             {
-                g.SetupForHighQuality();
+                var avatarUrl1 = user1.GetAvatarUrl(Discord.ImageFormat.Jpeg, 128);
+                var avatarUrl2 = user2.GetAvatarUrl(Discord.ImageFormat.Jpeg, 128);
+                var avatarUrl3 = user3?.GetAvatarUrl(Discord.ImageFormat.Jpeg, 128);
 
-                float resultStartOffsetScaled = resultStartOffset * scale;
-                const float resultPercentageMargin = 20f * scale;
-                const float resultMessageMargin = 12.5f * scale;
-                const float nameMarginY = 5f;
-                var resultHeartSize = new Size(heartImg.Width * scale, heartImg.Height * scale);
+                var avatarStream1 = await WebHelper.GetStreamAsync(avatarUrl1).ConfigureAwait(false);
+                avatar1 = Image.Load(avatarStream1);
 
-                var fontHeader = new Font(pinkyCupidFontFamily, 22f * scale);
-                var headerText = "~Compatibility Meter~";
-                var headerSize = g.MeasureString(headerText, fontHeader);
-                g.DrawString(headerText, fontHeader, Brushes.Salmon, ((imgWidth * scale) - headerSize.Width) / 2f, 0);
-
-                // Moved to an image due to UTF-32 rendering issues on linux.
-                //var fontResultHeart = new Font("Segoe UI Emoji", 32f);
-                //var resultHeartSize = g.MeasureString(resultHeartText, fontResultHeart);
-                //g.DrawString(resultHeartText, fontResultHeart, resultColorBrush, (imgWidth - resultHeartSize.Width) / 2f, 50f);
-
-                var fontPercentage = new Font(pinkyCupidFontFamily, 18f * scale);
-                var percentageText = $"~{percent}%~";
-                var percentageSize = g.MeasureString(percentageText, fontPercentage);
-                g.DrawString(percentageText, fontPercentage, resultColorBrush, ((imgWidth * scale) - percentageSize.Width) / 2f, resultStartOffsetScaled + resultHeartSize.Height + resultPercentageMargin);
-
-                var fontResultMessage = new Font(pinkyCupidFontFamily, 18f * scale);
-                var resultMessageSize = g.MeasureString(resultMessage, fontPercentage);
-                g.DrawString(resultMessage, fontResultMessage, resultColorBrush, ((imgWidth * scale) - resultMessageSize.Width) / 2f, resultStartOffsetScaled + percentageSize.Height + resultHeartSize.Height + resultMessageMargin);
-
-                var fontName = new Font(pinkyCupidFontFamily, 18f * scale);
-                var nameText1 = (user1 as IGuildUser)?.Nickname ?? user1.Username;
-                var nameText2 = (user2 as IGuildUser)?.Nickname ?? user2.Username;
-                var nameSize1 = g.MeasureString(nameText1, fontName);
-                var nameSize2 = g.MeasureString(nameText2, fontName);
-                g.DrawString(nameText1, fontName, Brushes.Gray, ((borderMargin + (circleSize / 2)) * scale) - (nameSize1.Width / 2f), (circleMarginY + circleSize + nameMarginY) * scale);
-                g.DrawString(nameText2, fontName, Brushes.Gray, ((imgWidth - borderMargin - (circleSize / 2)) * scale) - (nameSize2.Width / 2f), (circleMarginY + circleSize + nameMarginY) * scale);
+                var avatarStream2 = await WebHelper.GetStreamAsync(avatarUrl2).ConfigureAwait(false);
+                avatar2 = Image.Load(avatarStream2);
 
                 if (hasThreeUsers)
                 {
-                    var nameText3 = (user3 as IGuildUser)?.Nickname ?? user3?.Username;
-                    var nameSize3 = g.MeasureString(nameText3, fontName);
-                    g.DrawString(nameText3, fontName, Brushes.Gray, ((imgWidth * scale) - nameSize3.Width) / 2, (circleSize + circleSize + circleMarginY + 50 + nameMarginY) * scale);
+                    var avatarStream3 = await WebHelper.GetStreamAsync(avatarUrl3).ConfigureAwait(false);
+                    avatar3 = Image.Load(avatarStream3);
                 }
             }
+            catch { }
 
-            using (var g = Graphics.FromImage(bmp))
+            if (avatar1 == null)
             {
-                g.SetupForHighQuality();
-
-                // Copy scaled image on top of this one
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.DrawImage(bmpScaled, new Rectangle(0, 0, bmp.Width, bmp.Height), 0, 0, bmpScaled.Width, bmpScaled.Height, GraphicsUnit.Pixel);
-
-                // Avatar circles
-                Bitmap avatar1 = null, avatar2 = null, avatar3 = null;
-                try
-                {
-                    var avatarUrl1 = user1.GetAvatarUrl(Discord.ImageFormat.Jpeg, 128);
-                    var avatarUrl2 = user2.GetAvatarUrl(Discord.ImageFormat.Jpeg, 128);
-                    var avatarUrl3 = user3?.GetAvatarUrl(Discord.ImageFormat.Jpeg, 128);
-
-
-                    var avatarStream1 = await WebHelper.GetStreamAsync(avatarUrl1).ConfigureAwait(false);
-                    avatar1 = new Bitmap(avatarStream1);
-
-                    var avatarStream2 = await WebHelper.GetStreamAsync(avatarUrl2).ConfigureAwait(false);
-                    avatar2 = new Bitmap(avatarStream2);
-
-                    if (hasThreeUsers)
-                    {
-                        var avatarStream3 = await WebHelper.GetStreamAsync(avatarUrl3).ConfigureAwait(false);
-                        avatar3 = new Bitmap(avatarStream3);
-                    }
-                }
-                catch { }
-
-                if (avatar1 == null)
-                {
-                    avatar1 = new Bitmap(128, 128);
-                }
-                if (avatar2 == null)
-                {
-                    avatar2 = new Bitmap(128, 128);
-                }
-                if(avatar3 == null)
-                {
-                    avatar3 = new Bitmap(128, 128);
-                }
-
-                ImageHelper.DrawImageInCircle(g, avatar1, new PointF(borderMargin, circleMarginY), circleColour, circleBorderSize);
-                ImageHelper.DrawImageInCircle(g, avatar2, new PointF(imgWidth - borderMargin - circleSize, circleMarginY), circleColour, circleBorderSize);
-                ImageHelper.DrawImageInCircle(g, avatar3, new PointF((imgWidth - circleSize) / 2, circleSize + circleMarginY + 50), circleColour, circleBorderSize);
-
-                // Heart image
-                g.DrawImage(heartImg, ((imgWidth - heartImg.Width) / 2f), (resultStartOffset + 10f));
+                avatar1 = new Image<Rgba32>(128, 128);
             }
+            if (avatar2 == null)
+            {
+                avatar2 = new Image<Rgba32>(128, 128);
+            }
+
+            ImageHelper.DrawImageInCircle(bmp, avatar1, new PointF(borderMargin, circleMarginY), circleColour, circleBorderSize);
+            ImageHelper.DrawImageInCircle(bmp, avatar2, new PointF(imgWidth - borderMargin - circleSize, circleMarginY), circleColour, circleBorderSize);
+            if (avatar3 != null)
+            {
+                ImageHelper.DrawImageInCircle(bmp, avatar3, new PointF((imgWidth - circleSize) / 2, circleSize + circleMarginY + 50), circleColour, circleBorderSize);
+            }
+
+            // Heart image
+            bmp.Mutate(x => x.DrawImage(heartImg, new Point((int)((imgWidth - heartImg.Width) / 2f), (int)(resultStartOffset + 10f)), 1.0f));
 
             using var ms = new MemoryStream();
-            bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+            bmp.Save(ms, new PngEncoder());
             ms.Position = 0;
             await Context.Channel.SendFileAsync(ms, $"ship.png").ConfigureAwait(false);
         }

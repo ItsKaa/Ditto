@@ -246,9 +246,9 @@ namespace Ditto.Bot.Modules.Utility
         [Alias("thonk")]
         public async Task Thonkify([Multiword] string text)
         {
-            var tracking = new System.Drawing.Bitmap(ImageHelper.Base64ToImage("iVBORw0KGgoAAAANSUhEUgAAAAYAAAOACAYAAAAZzQIQAAAALElEQVR4nO3BAQ0AAADCoPdPbQ8HFAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwZV4AAAfA8WFIAAAAASUVORK5CYII="));
+            var tracking = ImageHelper.Base64ToImage("iVBORw0KGgoAAAANSUhEUgAAAAYAAAOACAYAAAAZzQIQAAAALElEQVR4nO3BAQ0AAADCoPdPbQ8HFAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwZV4AAAfA8WFIAAAAASUVORK5CYII=");
 
-            var images = new List<System.Drawing.Bitmap>();
+            var images = new List<SixLabors.ImageSharp.Image>();
             try
             {
                 foreach (var c in text)
@@ -267,14 +267,14 @@ namespace Ditto.Bot.Modules.Utility
                         continue;
                     }
 
-                    images.Add(new System.Drawing.Bitmap(filePath));
+                    images.Add(await SixLabors.ImageSharp.Image.LoadAsync(filePath).ConfigureAwait(false));
                     images.Add(tracking);
                 }
 
-                using var bmp = ImageHelper.CombineBitmap(images, System.Drawing.Color.Transparent);
+                using var bmp = ImageHelper.CombineImages(images, SixLabors.ImageSharp.Color.Transparent);
                 using var ms = new MemoryStream();
 
-                bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                bmp.Save(ms, SixLabors.ImageSharp.Formats.Png.PngFormat.Instance);
 
                 // Ensure the stream is at the beginning, very important otherwise discord will send a 0kb file.
                 ms.Position = 0;
