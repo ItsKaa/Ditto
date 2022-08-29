@@ -272,6 +272,18 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 return;
             }
 
+            // Only allow using channels of the current guild.
+            if (sourceTextChannel != null && sourceTextChannel.Guild != Context.Guild)
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+            else if (targetTextChannel != null && targetTextChannel.Guild != Context.Guild)
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
             var fromLanguage = GoogleTranslator.GetLanguageByName(sourceLanguage.ToString());
             var toLanguage = GoogleTranslator.GetLanguageByName(targetLanguage.ToString());
 

@@ -344,8 +344,15 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 return;
             }
 
-            if(textChannel == null)
+            if (textChannel == null)
                 textChannel = Context.TextChannel;
+
+            // Only allow using channels of the current guild.
+            if (textChannel != null && textChannel.Guild != Context.Guild)
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
 
             if (!(await Ditto.Client.DoAsync(c => c.GetPermissionsAsync(textChannel)).ConfigureAwait(false)).HasAccess())
             {

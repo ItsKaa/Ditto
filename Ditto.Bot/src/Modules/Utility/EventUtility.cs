@@ -152,7 +152,7 @@ namespace Ditto.Bot.Modules.Utility
         [Help(null, "Create an event that will trigger based on the specified day(s) and time.")]
         public async Task Add(
             [Help("channel", "The targeted text channel")]
-            IMessageChannel channel,
+            ITextChannel channel,
             [Help("day", "Days separated by a comma", "Possible values: %values%")]
             EventDay day,
             [Help("time", "Formatted time span in UTC", "Examples: '19:30~20:00' or '19:30~20:00+01:00' for UTC+1h")]
@@ -166,6 +166,13 @@ namespace Ditto.Bot.Modules.Utility
             )
         {
             if(!Permissions.IsAdministratorOrBotOwner(Context))
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
+            // Only allow using channels of the current guild.
+            if (channel != null && channel.Guild != Context.Guild)
             {
                 await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
                 return;
@@ -259,7 +266,7 @@ namespace Ditto.Bot.Modules.Utility
 
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents)]
         [Priority(4)]
-        public Task Add(IMessageChannel channel, string timeMessage, [Optional] string title, [Optional] string header, [Multiword] string message)
+        public Task Add(ITextChannel channel, string timeMessage, [Optional] string title, [Optional] string header, [Multiword] string message)
             => Add(channel, EventDay.Daily, timeMessage, title, header, message);
 
 
@@ -277,6 +284,13 @@ namespace Ditto.Bot.Modules.Utility
         public async Task List(ITextChannel channel = null, IUser user = null)
         {
             if (!Permissions.IsAdministratorOrBotOwner(Context))
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
+            // Only list events for the current guild
+            if (channel != null && channel.Guild != Context.Guild)
             {
                 await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
                 return;

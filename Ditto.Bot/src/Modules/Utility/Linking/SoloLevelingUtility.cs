@@ -325,6 +325,13 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 return;
             }
 
+            // Only allow using channels of the current guild.
+            if (channel != null && channel.Guild != Context.Guild)
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
             // Find existing permit with the provided values.
             Link foundLink = null;
             foreach(var link in _links)
@@ -376,6 +383,13 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 return;
             }
 
+            // Only allow using channels of the current guild.
+            if (channel != null && channel.Guild != Context.Guild)
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
             var links = _links.Where(x => x.Channel == channel && GetUserIdFromLink(x) == user.Id);
             if (links.Count() > 0)
             {
@@ -405,6 +419,13 @@ namespace Ditto.Bot.Modules.Utility.Linking
         [Priority(3)]
         public async Task Statistics(IUser user, ITextChannel textChannel)
         {
+            // Only allow using channels of the current guild.
+            if (textChannel != null && textChannel.Guild != Context.Guild)
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
             List<Link> links = _links.ToList();
             // Filter on user
             if (user != null)

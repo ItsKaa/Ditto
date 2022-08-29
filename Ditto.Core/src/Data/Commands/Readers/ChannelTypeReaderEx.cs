@@ -21,11 +21,11 @@ namespace Ditto.Data.Commands.Readers
 
                 //By Mention (1.0)
                 if (MentionUtils.TryParseChannel(input, out ulong id))
-                    AddResult(results, await context.Guild.GetChannelAsync(id, CacheMode.CacheOnly).ConfigureAwait(false) as T, 1.00f);
-
+                    AddResult(results, await context.Client.GetChannelAsync(id, CacheMode.CacheOnly).ConfigureAwait(false) as T, 1.00f);
+                
                 //By Id (0.9)
                 if (ulong.TryParse(input, NumberStyles.None, CultureInfo.InvariantCulture, out id))
-                    AddResult(results, await context.Guild.GetChannelAsync(id, CacheMode.CacheOnly).ConfigureAwait(false) as T, 0.90f);
+                    AddResult(results, await context.Client.GetChannelAsync(id, CacheMode.CacheOnly).ConfigureAwait(false) as T, 0.90f);
 
                 //By Name (0.7-0.8)
                 //foreach (var channel in channels.Where(x => string.Equals(input, x.Name, StringComparison.OrdinalIgnoreCase)))

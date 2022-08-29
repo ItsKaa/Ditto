@@ -80,6 +80,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
             {
                 await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
             }
+            else if (textChannel != null && textChannel.Guild != Context.Guild)
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+            }
             else if(!WebHelper.IsValidWebsite(url))
             {
                 await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);

@@ -303,6 +303,13 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 return;
             }
 
+            // Only allow using channels of the current guild.
+            if (textChannel != null && textChannel.Guild != Context.Guild)
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
             var linkChannel = _discordClient.GetChannel(linkChannelId) as ITextChannel;
             if(textChannel == null || linkChannel == null)
             {

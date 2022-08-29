@@ -301,7 +301,7 @@ namespace Ditto.Bot.Modules.Utility
         {
             var user = snowflakeEntity as IUser;
             var role = snowflakeEntity as IRole;
-            var channel = snowflakeEntity as IMessageChannel;
+            var channel = snowflakeEntity as ITextChannel;
             var voiceChannel = snowflakeEntity as IVoiceChannel;
             
             if (snowflakeEntity == null && user == null && role == null && channel == null && voiceChannel == null)
@@ -312,7 +312,7 @@ namespace Ditto.Bot.Modules.Utility
                 ).ConfigureAwait(false);
                 return;
             }
-            
+
             var result = ParseReminder(message);
             if (result.Success)
             {
@@ -378,8 +378,17 @@ namespace Ditto.Bot.Modules.Utility
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Global | CommandAccessLevel.Local)]
         [Priority(3)]
-        public Task Remind(IMessageChannel channel, [Multiword] string message)
-            => Remind((ISnowflakeEntity)channel, message);
+        public async Task Remind(ITextChannel channel, [Multiword] string message)
+        {
+            // Only allow using channels of the current guild.
+            if (channel != null && channel.Guild != Context.Guild)
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
+            await Remind((ISnowflakeEntity)channel, message).ConfigureAwait(false);
+        }
         
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Global | CommandAccessLevel.Local)]
         [Priority(4)]

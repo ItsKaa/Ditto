@@ -101,6 +101,14 @@ namespace Ditto.Bot.Modules.Utility.Linking
             {
                 await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
             }
+
+            // Only allow using channels of the current guild.
+            if (textChannel != null && textChannel.Guild != Context.Guild)
+            {
+                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                return;
+            }
+
             else if (!WebHelper.IsValidWebsite(url))
             {
                 await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
