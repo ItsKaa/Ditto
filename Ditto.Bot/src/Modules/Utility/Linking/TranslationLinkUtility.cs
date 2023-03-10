@@ -269,7 +269,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
                     // Ignore if the text has a 50%+ chance of being the target langauge and only if it goes to the same channel.
                     var targetLanguageDetection = translationResult?.LanguageDetections.FirstOrDefault(x => x.Language == translationResult.TargetLanguage);
-                    if (targetLanguageDetection != null && targetLanguageDetection.Confidence > 0.50 && link.TargetChannel != link.SourceChannel)
+                    if (targetLanguageDetection != null && targetLanguageDetection.Confidence > 0.50 && link.TargetChannel == link.SourceChannel)
                         continue;
 
                 }
