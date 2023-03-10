@@ -22,40 +22,55 @@ namespace Ditto.Translation
 	/// </summary>
 	public class GoogleTranslator: ITranslator
   {
-    private readonly GoogleKeyTokenGenerator _generator;
-	  private readonly HttpClient _httpClient;
-		private TimeSpan _timeOut;
-		private IWebProxy _proxy;
-
-		protected Uri Address;
-		
 		/// <summary>
-		/// Requests timeout
+		/// The client sending the HTTP data
 		/// </summary>
-		public TimeSpan TimeOut
+		private HttpClient HttpClient { get; set; }
+
+		/// <summary>
+		/// The Client Handler for internal settings like it's proxy.
+		/// </summary>
+		private HttpClientHandler HttpClientHandler { get; set; } = new HttpClientHandler();
+
+		private TimeSpan _timeOut;
+        /// <summary>
+        /// Requests timeout
+        /// </summary>
+        public TimeSpan TimeOut
 		{
-			get { return _timeOut; }
-			set
+			get => _timeOut;
+            set
 			{
 				_timeOut = value;
-				_generator.TimeOut = value;
-			}
+				HttpClient.Timeout = _timeOut;
+            }
 		}
-		
+
+		private IWebProxy _proxy;
 		/// <summary>
-		/// Requests proxy
+		/// Proxy for requesting data from google
 		/// </summary>
 		public IWebProxy Proxy
 		{
-			get { return _proxy; }
-			set
+			get => _proxy;
+
+            set
 			{
 				_proxy = value;
-				_generator.Proxy = value;
-			}
+                HttpClientHandler.Proxy = _proxy;
+                HttpClientHandler.UseProxy = true;
+            }
 		}
 
-		public string Domain
+        /// <summary>
+        /// The complete address of the api
+        /// </summary>
+        protected Uri Address { get; set; }
+
+        /// <summary>
+        /// The domain of the Address
+        /// </summary>
+        public string Domain
 		{
 			get { return Address.AbsoluteUri.Between("https://", "/translate_a/single"); }
 			set { Address = new Uri($"https://{value}/translate_a/single"); }
@@ -97,12 +112,6 @@ namespace Ditto.Translation
 
 		static GoogleTranslator()
 		{
-			//var stream = new MemoryStream(Properties.Resources.Languages);
-			//using StreamReader reader = new StreamReader(stream);
-
-			//string languages = reader.ReadToEnd();
-			//LanguagesSupported = JsonConvert.DeserializeObject<Language[]>(languages);
-
 			var languages = new List<Language>();
 			foreach(var lang in Enum.GetValues(typeof(Languages)).OfType<Languages>())
 			{
@@ -117,12 +126,11 @@ namespace Ditto.Translation
 		}
 
 		/// <param name="domain">A Domain name which will be used to execute requests</param>
-		public GoogleTranslator(string domain = "translate.google.com")
+		public GoogleTranslator(string domain = "translate.googleapis.com")
 		{
 			Address = new Uri($"https://{domain}/translate_a/single");
-			_generator = new GoogleKeyTokenGenerator();
-			_httpClient = new HttpClient();
-		}
+            HttpClient = new HttpClient(HttpClientHandler);
+        }
 
 		/// <summary>
 		/// <p>
@@ -211,13 +219,10 @@ namespace Ditto.Translation
 				};
 			}
 
-			string token = await _generator.GenerateAsync(originalText);
-
 			string postData = $"sl={fromLanguage.ISO639}&" +
 												$"tl={toLanguage.ISO639}&" +
 												$"hl=en&" +
 												$"q={Uri.EscapeDataString(originalText)}&" +
-												$"tk={token}&" +
 												"client=gtx&" +
 												"dt=at&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&dt=t&" +
 												"ie=UTF-8&" +
@@ -231,20 +236,18 @@ namespace Ditto.Translation
 
 			try
 			{
-				result = await _httpClient.GetStringAsync($"{Address}?{postData}");
+                result = await HttpClient.GetStringAsync($"{Address}?{postData}").ConfigureAwait(false);
 			}
 			catch (HttpRequestException ex) when (ex.Message.Contains("503"))
 			{
-				throw new GoogleTranslateIPBannedException(GoogleTranslateIPBannedException.Operation.Translation);
-			}
-			catch
-			{
-				if (_generator.IsExternalKeyObsolete)
-					return await TranslateAsync(originalText, fromLanguage, toLanguage);
-
+				Log.Error(ex, "IP Banned by Google!");
 				throw;
 			}
-
+			catch(Exception ex)
+			{
+				Log.Error(ex, "Unknown exception occurred in GetTranslationResultAsync");
+                throw;
+            }
 
 			return ResponseToTranslateResultParse(result, originalText, fromLanguage, toLanguage, additionInfo);
 	  }
@@ -376,7 +379,6 @@ namespace Ditto.Translation
 			Corrections corrections = new Corrections();
 
 			JToken textCorrectionInfo = response[7];
-
 			if (textCorrectionInfo.HasValues)
 			{
 				Regex pattern = new Regex(@"<b><i>(.*?)</i></b>");
@@ -398,13 +400,12 @@ namespace Ditto.Translation
 
 		protected IEnumerable<LanguageDetection> GetLanguageDetections(JArray item)
 		{
-			JArray languages = item[0] as JArray;
-			JArray confidences = item[2] as JArray;
+            if (!(item[0] is JArray languages)
+				|| !(item[2] is JArray confidences)
+				|| languages.Count != confidences.Count)
+                yield break;
 
-			if (languages == null || confidences == null || languages.Count != confidences.Count)
-				yield break;
-
-			for (int i = 0; i < languages.Count; i++)
+            for (int i = 0; i < languages.Count; i++)
 			{
 				yield return new LanguageDetection(GetLanguageByISO((string) languages[i]), (double) confidences[i]);
 			}

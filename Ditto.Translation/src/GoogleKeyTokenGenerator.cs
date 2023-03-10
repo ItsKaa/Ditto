@@ -9,9 +9,13 @@ using System.Threading.Tasks;
 
 namespace Ditto.Translation
 {
-	/// <summary>
-	/// GoogleTranslate token generator
-	/// </summary>
+    /// <summary>
+    /// GoogleTranslate token generator.
+    /// </summary>
+    /// <remarks>
+    /// Obsolete as the TTK is no longer added to the google translate website.
+    /// </remarks>
+    [Obsolete]
 	public class GoogleKeyTokenGenerator
 	{
 		/// <summary>

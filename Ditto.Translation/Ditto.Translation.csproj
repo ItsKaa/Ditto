@@ -42,19 +42,17 @@
   </PropertyGroup>
   
   <ItemGroup>
+    <Compile Remove="Properties\**" />
+    <EmbeddedResource Remove="Properties\**" />
+    <None Remove="Properties\**" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <None Remove="src\Languages.json" />
   </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\Ditto.Core\Ditto.Core.csproj" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <Resource Include="src\Languages.json" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <Folder Include="Properties\" />
   </ItemGroup>
   
 </Project>
