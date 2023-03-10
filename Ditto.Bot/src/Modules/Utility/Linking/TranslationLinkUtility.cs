@@ -7,6 +7,7 @@ using Ditto.Bot.Database.Models;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
+using Ditto.Helpers;
 using Ditto.Translation;
 using Ditto.Translation.Attributes;
 using Ditto.Translation.Data;
@@ -207,6 +208,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 }
 
                 // Parse discord emojis.
+                string imageUrl = null ;
                 while(true)
                 {
 
@@ -216,10 +218,34 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         break;
                     }
 
+                    if (parseResult.Type == DiscordTagType.EMOJI_ANIMATED)
+                    {
+                        imageUrl = $"https://cdn.discordapp.com/emojis/{parseResult.Id}.gif?size=48";
+                    }
+                    else if (parseResult.Type == DiscordTagType.EMOJI)
+                    {
+                        imageUrl = $"https://cdn.discordapp.com/emojis/{parseResult.Id}.webp?size=48";
+                    }
+
                     messageTagStrings.Add(messageContent.Substring(parseResult.Index, parseResult.Length));
                     messageWithoutTags = messageContent.Remove(parseResult.Index, parseResult.Length);
                     messageContent = messageContent.Remove(parseResult.Index, parseResult.Length);
                     messageContent = messageContent.Insert(parseResult.Index, $"{{{counter++}}}");
+                }
+
+                // Handle Tenor URLs
+                var tenorMatch = Globals.RegularExpression.TenorGif.Match(messageContent);
+                if (tenorMatch.Success)
+                {
+                    var tenorUrl = tenorMatch.Value;
+                    messageContent = messageContent.Replace(tenorUrl, "");
+                    messageWithoutTags = messageWithoutTags.Replace(tenorUrl, "");
+
+                    var tenorGifUrl = await WebHelper.GetResponseUrlAsync($"{tenorUrl}.gif").ConfigureAwait(false);
+                    if (!string.IsNullOrEmpty(tenorGifUrl))
+                    {
+                        imageUrl = tenorGifUrl;
+                    }
                 }
 
                 // Translate or use original message when unnecessary.
@@ -246,22 +272,65 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
                 }
 
-                var translatedMessage = translationResult.MergedTranslation;
-
-                // Replace the tags with it's original value
-                counter = 0;
-                foreach (var tag in messageTagStrings)
+                // Retrieve data from the translation result
+                var sourceLanguageISO = link.SourceLanguage.ISO639;
+                var targetLanguageISO = link.TargetLanguage.ISO639;
+                string translatedMessage = null;
+                if (translationResult != null)
                 {
-                    translatedMessage = translatedMessage.Replace($"{{{counter}}}", messageTagStrings.ElementAt(counter));
-                    counter++;
+                    translatedMessage = translationResult?.MergedTranslation ?? string.Empty;
+
+                    // Replace the tags with it's original value
+                    counter = 0;
+                    foreach (var tag in messageTagStrings)
+                    {
+                        translatedMessage = translatedMessage.Replace($"{{{counter}}}", messageTagStrings.ElementAt(counter));
+                        counter++;
+                    }
+
+                    sourceLanguageISO = translationResult.SourceLanguage.ISO639;
+                    targetLanguageISO = translationResult.TargetLanguage.ISO639;
                 }
 
+                // Get the actual full name for the language
+                var sourceLanguage = GoogleTranslator.GetLanguageByISO(sourceLanguageISO);
+                var targetLanguage = GoogleTranslator.GetLanguageByISO(targetLanguageISO);
+
+                var sourceLanguageName = sourceLanguage.FullName;
+                var targetLanguageName = targetLanguage.FullName;
+                if (targetLanguage.Equals(Language.ChineseSimplified))
+                {
+                    sourceLanguageName = GoogleTranslator.GetLanguageNameInChineseSimplified(sourceLanguage);
+                    targetLanguageName = GoogleTranslator.GetLanguageNameInChineseSimplified(targetLanguage);
+                }
+
+                // Build the message description if it contains values.
+                var messageDescription = "";
+                if (!string.IsNullOrEmpty(messageWithoutTags.Trim()))
+                {
+                    messageDescription = $"`{sourceLanguageName}`\n{messageWithoutTags.Trim()}\n\n`{targetLanguageName}`\n";
+                }
+                messageDescription += translatedMessage;
+
                 // Send embedded message to the target channel.
+                var authorGuildUser = message.Author as IGuildUser;
+                if (authorGuildUser == null)
+                {
+                    authorGuildUser = await message.Channel.GetUserAsync(message.Author.Id).ConfigureAwait(false) as IGuildUser;
+                }
+
                 var embedBuilder = new EmbedBuilder()
-                    .WithAuthor(message.Author)
-                    .WithDescription(translatedMessage)
-                    .WithFooter($"🔀 {translationResult.SourceLanguage.FullName} -> {translationResult.TargetLanguage.FullName}, Posted at {message.CreatedAt.UtcDateTime:hh\\:mm} UTC")
+                    .WithAuthor(new EmbedAuthorBuilder()
+                        .WithIconUrl(message.Author.GetAvatarUrl())
+                        .WithName(authorGuildUser?.DisplayName ?? authorGuildUser?.Nickname ?? message.Author?.Username ?? "Unknown User")
+                    )
+                    .WithDescription(messageDescription)
                     .WithColor(Ditto.Cache.Db.EmbedMusicPlayingColour(link.Link.Guild));
+
+                if (!string.IsNullOrEmpty(imageUrl))
+                {
+                    embedBuilder = embedBuilder.WithImageUrl(imageUrl);
+                }
 
                 // Send the translated message.
                 await link.TargetChannel.EmbedAsync(embedBuilder, options: new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }).ConfigureAwait(false);
@@ -275,7 +344,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         await link.TargetChannel.SendMessageAsync(attachmentUrl, options: new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }).ConfigureAwait(false);
                     }
                 }
-
+                
                 // Update link with new string value
                 await link.UpdateAsync(message.Id).ConfigureAwait(false);
             }

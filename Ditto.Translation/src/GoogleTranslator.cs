@@ -88,29 +88,44 @@ namespace Ditto.Translation
 			=> LanguagesSupported.FirstOrDefault(i
 				=> i.FullName.Equals(language, StringComparison.OrdinalIgnoreCase));
 
-	  /// <param name="iso">ISO of the required language</param>
-	  /// <example>GoogleTranslator.GetLanguageByISO("en")</example>
-	  /// <returns>Language object from the LanguagesSupported array</returns>
-	  // ReSharper disable once InconsistentNaming
-		public static Language GetLanguageByISO(string iso)
+        /// <param name="iso">ISO of the required language</param>
+        /// <example>GoogleTranslator.GetLanguageByISO("en")</example>
+        /// <returns>Language object from the LanguagesSupported array</returns>
+        // ReSharper disable once InconsistentNaming
+        public static Language GetLanguageByISO(string iso)
 			=> LanguagesSupported.FirstOrDefault(i
 				=> i.ISO639.Equals(iso, StringComparison.OrdinalIgnoreCase));
 
-		/// <summary>
-		/// Check is available language to translate
-		/// </summary>
-		/// <param name="language">Checked <see cref="Language"/> </param>
-		/// <returns>Is it available language or not</returns>
-		public static bool IsLanguageSupported(Language language)
+        /// <summary>
+        /// Check is available language to translate
+        /// </summary>
+        /// <param name="language">Checked <see cref="Language"/> </param>
+        /// <returns>Is it available language or not</returns>
+        public static bool IsLanguageSupported(Language language)
 		{
 			if (language.Equals(Language.Auto))
 				return true;
 			
 			return LanguagesSupported.Contains(language) ||
 						 LanguagesSupported.FirstOrDefault(language.Equals) != null;
-		}
+        }
 
-		static GoogleTranslator()
+		/// <summary>
+		/// Temporary method to translate certain language strings to chinese.
+		/// </summary>
+        public static string GetLanguageNameInChineseSimplified(Language language)
+        {
+			if (language.Equals(Language.English))
+				return "英语";
+			else if (language.Equals(Language.ChineseSimplified))
+				return "中文（简体";
+            else if (language.Equals(Language.ChineseTraditional))
+                return "中文（繁体）";
+
+			return language.FullName;
+        }
+
+        static GoogleTranslator()
 		{
 			var languages = new List<Language>();
 			foreach(var lang in Enum.GetValues(typeof(Languages)).OfType<Languages>())

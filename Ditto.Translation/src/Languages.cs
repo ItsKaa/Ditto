@@ -115,14 +115,14 @@ namespace Ditto.Translation
 		/// Chinese Simplified Language
 		/// </summary>
 		[DataMember]
-		[Language("zh-cn", "Chinese Simplified")]
+		[Language("zh-cn", "Chinese (Simplified)")]
 		public static Language ChineseSimplified { get; internal set; }
 
 		/// <summary>
 		/// Chinese Traditional Language
 		/// </summary>
 		[DataMember]
-		[Language("zh-tw", "Chinese Traditional")]
+		[Language("zh-tw", "Chinese (Traditional)")]
 		public static Language ChineseTraditional { get; internal set; }
 
 		/// <summary>

@@ -15,6 +15,8 @@ namespace Ditto.Bot
             public static readonly Regex DiscordTagChannel = new Regex(@"<#(?<id>\d+)>", RegexOptions.Compiled);
             public static readonly Regex DiscordTagRole = new Regex(@"<@&(?<id>\d+)>", RegexOptions.Compiled);
 
+            public static readonly Regex TenorGif = new Regex(@"http(?:s)?://(?:www.)?tenor.com/view/(?:.*)", RegexOptions.Compiled);
+
             public static readonly Regex FFmpegErrorData = new Regex(@"size\=[\s]*(?<size>[0-9]+)kB[\s]*time\=(?<time>[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{2})[\s]*bitrate\=(?<bitrate>.*)[\s]*kbits/s[\s]*speed[\s]*=[\s]*(?<speed>.*)x[\s]*", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
             public static readonly Regex YoutubeVideoId = new Regex(@"(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v\=))|youtu\.be\/)(?<id>[a-zA-Z0-9_-]{6,11})", RegexOptions.Compiled);

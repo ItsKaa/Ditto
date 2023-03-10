@@ -46,10 +46,10 @@ namespace Ditto.Translation.Data
         [LanguageISO("ny"), LanguageFullName("Chichewa")]
         Chichewa,
 
-        [LanguageISO("zh-cn"), LanguageFullName("Chinese Simplified")]
+        [LanguageISO("zh-cn"), LanguageFullName("Chinese (Simplified)")]
         ChineseSimplified,
 
-        [LanguageISO("zh-tw"), LanguageFullName("Chinese Traditional")]
+        [LanguageISO("zh-tw"), LanguageFullName("Chinese (Traditional)")]
         ChineseTraditional,
 
         [LanguageISO("co"), LanguageFullName("Corsican")]
