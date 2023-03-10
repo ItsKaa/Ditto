@@ -377,10 +377,20 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         }
                     }
 
-                    messageText = $"⤷ **{replyAuthorName}**: `{replyContent?.TrimTo(125) ?? ""}`";
+                    var replyContentPart = replyContent?.Replace("`", "'")?.TrimTo(125) ?? "";
+                    if (replyContentPart?.Contains("\n") == true)
+                    {
+                        replyContentPart = $"```{replyContentPart}```\n";
+                    }
+                    else
+                    {
+                        replyContentPart = $"`{replyContentPart}`\n";
+                    }
+
+                    messageText = $"⤷ **{replyAuthorName}**: {replyContentPart}";
                     if (replyMessage.Channel is ITextChannel textChannel)
                     {
-                        messageText += $"\nhttps://discord.com/channels/{textChannel.GuildId}/{replyMessage.Channel.Id}/{replyMessage.Id}";
+                        messageText += $"https://discord.com/channels/{textChannel.GuildId}/{replyMessage.Channel.Id}/{replyMessage.Id}";
                     }
                 }
 
