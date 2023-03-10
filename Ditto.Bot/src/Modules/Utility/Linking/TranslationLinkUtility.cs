@@ -11,8 +11,10 @@ using Ditto.Helpers;
 using Ditto.Translation;
 using Ditto.Translation.Attributes;
 using Ditto.Translation.Data;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
@@ -332,19 +334,48 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     embedBuilder = embedBuilder.WithImageUrl(imageUrl);
                 }
 
-                // Send the translated message.
-                await link.TargetChannel.EmbedAsync(embedBuilder, options: new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }).ConfigureAwait(false);
-
-                // Send a secondary message with the attachment if its included.
-                if (message.Attachments.Count > 0)
+                // Download the attachments if they are included so we can forward them in the same message.
+                var fileStreams = new List<Stream>();
+                var files = new List<FileAttachment>();
+                foreach (var attachment in message.Attachments)
                 {
-                    var attachmentUrl = message.Attachments.ElementAt(0)?.Url;
+                    var attachmentUrl = attachment?.Url;
                     if (!string.IsNullOrEmpty(attachmentUrl))
                     {
-                        await link.TargetChannel.SendMessageAsync(attachmentUrl, options: new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }).ConfigureAwait(false);
+                        try
+                        {
+                            var stream = await WebHelper.GetStreamAsync(attachmentUrl).ConfigureAwait(false);
+                            files.Add(new FileAttachment(stream, attachment.Filename));
+                            fileStreams.Add(stream);
+                        }
+                        catch { }
                     }
                 }
-                
+
+                // Send the translated message.
+                if (files.Count > 0)
+                {
+                    await link.TargetChannel.SendFilesAsync(
+                        attachments: files,
+                        text: "",
+                        embed: embedBuilder.Build(),
+                        options: new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }
+                    ).ConfigureAwait(false);
+                }
+                else
+                {
+                    await link.TargetChannel.SendMessageAsync("",
+                        embed: embedBuilder.Build(),
+                        options: new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }
+                    ).ConfigureAwait(false);
+                }
+
+                // Close the handls of the streams
+                foreach(var stream in fileStreams)
+                {
+                    stream.Close();
+                }
+
                 // Update link with new string value
                 await link.UpdateAsync(message.Id).ConfigureAwait(false);
             }
