@@ -17,8 +17,8 @@ namespace Ditto.Data
 
         public static string GetProperPath(string path)
         {
-            var fileName = Path.GetFileName(path);
-            return Path.GetDirectoryName(path) + fileName;
+            char pathChar = IsWindows() ? '\\' : '/';
+            return path.Replace('\\', pathChar).Replace('/', pathChar);
         }
 
         public static string GetProperPathAndCreate(string path)
