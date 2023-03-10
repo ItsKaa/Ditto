@@ -139,5 +139,23 @@ namespace Ditto.Helpers
 
         public static IEnumerable<HttpMetaItem> GetMetaInfo(Uri uri)
             => GetMetaInfoFromHtml(uri.ToString());
+
+        public static async Task<string> GetResponseUrlAsync(this string url)
+        {
+            var httpWebRequest = WebRequest.Create(url) as HttpWebRequest;
+            httpWebRequest.AllowAutoRedirect = true;
+            httpWebRequest.Method = "HEAD";
+
+            try
+            {
+                using var httpWebReponse = await httpWebRequest.GetResponseAsync().ConfigureAwait(false) as HttpWebResponse;
+                return httpWebReponse.ResponseUri.AbsoluteUri;
+            }
+            catch { }
+            return null;
+        }
+
+        public static Task<string> GetResponseUrlAsync(this Uri uri)
+            => GetResponseUrlAsync(uri.ToString());
     }
 }

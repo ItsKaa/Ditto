@@ -318,6 +318,8 @@ namespace Ditto.Bot.Modules.Utility
                     ms.Position = 0;
                     originalGifImage = SixLabors.ImageSharp.Image.Load(ms);
                 }
+
+                inputStream.Close();
             }
             catch (Exception ex)
             {

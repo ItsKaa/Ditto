@@ -166,14 +166,17 @@ namespace Ditto.Bot.Modules.Utility
 
                 var avatarStream1 = await WebHelper.GetStreamAsync(avatarUrl1).ConfigureAwait(false);
                 avatar1 = Image.Load(avatarStream1);
+                avatarStream1.Close();
 
                 var avatarStream2 = await WebHelper.GetStreamAsync(avatarUrl2).ConfigureAwait(false);
                 avatar2 = Image.Load(avatarStream2);
+                avatarStream2.Close();
 
                 if (hasThreeUsers)
                 {
                     var avatarStream3 = await WebHelper.GetStreamAsync(avatarUrl3).ConfigureAwait(false);
                     avatar3 = Image.Load(avatarStream3);
+                    avatarStream3.Close();
                 }
             }
             catch { }
