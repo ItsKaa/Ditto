@@ -1,6 +1,7 @@
 ﻿using Ditto.Data.Discord;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace Ditto.Extensions
 {
@@ -41,10 +42,12 @@ namespace Ditto.Extensions
 
         public static IEnumerable<DiscordTagResult> ParseDiscordEmojis(this string @this)
         {
-            foreach (Match m in Globals.RegularExpression.DiscordEmoji.Matches(@this))
+            foreach (var m in Globals.RegularExpression.DiscordEmoji.Matches(@this).Where(m => m.Success))
             {
-                if (m.Success)
-                    yield return new DiscordTagResult(m, DiscordTagType.USER);
+                if (m.Groups["animated"]?.Value == "a")
+                    yield return new DiscordTagResult(m, DiscordTagType.EMOJI_ANIMATED);
+                else
+                    yield return new DiscordTagResult(m, DiscordTagType.EMOJI);
             }
         }
     }

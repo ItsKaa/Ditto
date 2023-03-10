@@ -4,6 +4,9 @@
     {
         USER,
         CHANNEL,
-        ROLE
+        ROLE,
+        EMOJI,
+        EMOJI_ANIMATED,
+
     }
 }

@@ -14,7 +14,7 @@ namespace Ditto
             public static readonly Regex DiscordTagUser = new Regex(@"<@!?(?<id>\d+)>", RegexOptions.Compiled);
             public static readonly Regex DiscordTagChannel = new Regex(@"<#(?<id>\d+)>", RegexOptions.Compiled);
             public static readonly Regex DiscordTagRole = new Regex(@"<@&(?<id>\d+)>", RegexOptions.Compiled);
-            public static readonly Regex DiscordEmoji = new Regex(@"<(?:a)?:(?<name>[\w\W]+):(?<id>\d+)>", RegexOptions.Compiled);
+            public static readonly Regex DiscordEmoji = new Regex(@"<(?<animated>a)?:(?<name>[\w\W]+):(?<id>\d+)>", RegexOptions.Compiled);
 
             public static readonly Regex YoutubeVideoId = new Regex(@"(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v\=))|youtu\.be\/)(?<id>[a-zA-Z0-9_-]{6,11})", RegexOptions.Compiled);
             public static readonly Regex YoutubePlaylistId = new Regex(@"(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?(?:\S*?&?list\=))|youtu\.be\/\S*?&?list\=)(?<id>[a-zA-Z0-9_-]{12,})", RegexOptions.Compiled);
