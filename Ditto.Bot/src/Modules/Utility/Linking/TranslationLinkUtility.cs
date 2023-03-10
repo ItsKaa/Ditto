@@ -352,19 +352,51 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     }
                 }
 
+                // Handle reply text
+                var messageText = "";
+                if (message.Reference?.MessageId.IsSpecified == true)
+                {
+                    var replyMessage = await message.Channel.GetMessageAsync(message.Reference.MessageId.Value).ConfigureAwait(false);
+                    var replyAuthorName = (replyMessage.Author as IGuildUser)?.DisplayName ?? replyMessage.Author.Username;
+                    var replyContent = replyMessage.Content;
+
+                    if (replyMessage.Embeds.Any())
+                    {
+                        replyContent = replyMessage.Embeds.FirstOrDefault().Description;
+                    }
+
+                    if (string.IsNullOrEmpty(replyContent) && replyMessage.Attachments.Any())
+                    {
+                        if (targetLanguage.Equals(Language.ChineseSimplified))
+                        {
+                            replyContent = "<文件附件>";
+                        }
+                        else
+                        {
+                            replyContent = "<attachment>";
+                        }
+                    }
+
+                    messageText = $"⤷ **{replyAuthorName}**: `{replyContent?.TrimTo(125) ?? ""}`";
+                    if (replyMessage.Channel is ITextChannel textChannel)
+                    {
+                        messageText += $"\nhttps://discord.com/channels/{textChannel.GuildId}/{replyMessage.Channel.Id}/{replyMessage.Id}";
+                    }
+                }
+
                 // Send the translated message.
                 if (files.Count > 0)
                 {
                     await link.TargetChannel.SendFilesAsync(
                         attachments: files,
-                        text: "",
+                        text: messageText,
                         embed: embedBuilder.Build(),
                         options: new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }
                     ).ConfigureAwait(false);
                 }
                 else
                 {
-                    await link.TargetChannel.SendMessageAsync("",
+                    await link.TargetChannel.SendMessageAsync(messageText,
                         embed: embedBuilder.Build(),
                         options: new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }
                     ).ConfigureAwait(false);
