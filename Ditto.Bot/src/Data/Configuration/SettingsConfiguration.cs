@@ -20,7 +20,18 @@ namespace Ditto.Bot.Data.Configuration
         public PathConfiguration Paths { get; set; } = new PathConfiguration();
         public CredentialsConfiguration Credentials { get; set; } = new CredentialsConfiguration();
         public CacheConfiguration Cache { get; set; } = new CacheConfiguration();
-        
+
+
+        [Comment("\n  Sets the proxy settings, used for outgoing data, such as google translate.\n")]
+        public ProxySettings ProxySettings { get; set; } = new ProxySettings()
+        {
+            Enabled = false,
+            Host = "localhost",
+            Port = 8080,
+            Username = string.Empty,
+            Password = string.Empty,
+        };
+
         public BDOSettings BlackDesertOnline { get; set; } = new BDOSettings()
         {
             Email = "",
@@ -39,5 +50,15 @@ namespace Ditto.Bot.Data.Configuration
         public string LoginUrl { get; set; }
         public string LoginTokenUrl { get; set; }
         public string LauncherUrl { get; set; }
+    }
+
+    [Serializable]
+    public struct ProxySettings
+    {
+        public bool Enabled { get; set; }
+        public string Host { get; set; }
+        public int Port { get; set; }
+        public string Username { get; set; }
+        public string Password { get; set; }
     }
 }

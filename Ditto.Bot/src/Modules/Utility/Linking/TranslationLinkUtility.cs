@@ -8,10 +8,12 @@ using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
 using Ditto.Translation;
+using Ditto.Translation.Attributes;
 using Ditto.Translation.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -89,6 +91,16 @@ namespace Ditto.Bot.Modules.Utility.Linking
             {
                 Task.Run(async () =>
                 {
+                    // Setup the proxy if it is enabled.
+                    if (Ditto.Settings.ProxySettings.Enabled)
+                    {
+                        _translator.Proxy = new WebProxy(Ditto.Settings.ProxySettings.Host, Ditto.Settings.ProxySettings.Port);
+                        if (!string.IsNullOrEmpty(Ditto.Settings.ProxySettings.Username))
+                        {
+                            _translator.Proxy.Credentials = new NetworkCredential(Ditto.Settings.ProxySettings.Username, Ditto.Settings.ProxySettings.Password);
+                        }
+                     }
+
                     _links.Clear();
                     await Ditto.Database.ReadAsync(uow =>
                     {
@@ -211,21 +223,30 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 }
 
                 // Translate or use original message when unnecessary.
-                string translatedMessage = messageContent;
+                TranslationResult translationResult = null;
                 if (!string.IsNullOrEmpty(messageWithoutTags.Trim()))
                 {
-                    TranslationResult result = null;
                     try
                     {
-                        result = await _translator.TranslateLiteAsync(messageContent, link.SourceLanguage, link.TargetLanguage).ConfigureAwait(false);
+                        translationResult = await _translator.TranslateLiteAsync(messageContent, link.SourceLanguage, link.TargetLanguage).ConfigureAwait(false);
                     }
-                    catch(Exception ex)
+                    catch
                     {
-                        Log.Debug(ex);
-                        return;
+                        continue;
                     }
-                    translatedMessage = result?.MergedTranslation;
+
+                    // Ignore if it's null for whatever reason.
+                    if (translationResult == null)
+                        continue;
+
+                    // Ignore if the text has a 50%+ chance of being the target langauge and only if it goes to the same channel.
+                    var targetLanguageDetection = translationResult?.LanguageDetections.FirstOrDefault(x => x.Language == translationResult.TargetLanguage);
+                    if (targetLanguageDetection != null && targetLanguageDetection.Confidence > 0.50 && link.TargetChannel != link.SourceChannel)
+                        continue;
+
                 }
+
+                var translatedMessage = translationResult.MergedTranslation;
 
                 // Replace the tags with it's original value
                 counter = 0;
@@ -239,7 +260,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 var embedBuilder = new EmbedBuilder()
                     .WithAuthor(message.Author)
                     .WithDescription(translatedMessage)
-                    .WithFooter($"🔀 {link.SourceLanguage.FullName} -> {link.TargetLanguage.FullName}, Posted at {message.CreatedAt.UtcDateTime:hh\\:mm} UTC")
+                    .WithFooter($"🔀 {translationResult.SourceLanguage.FullName} -> {translationResult.TargetLanguage.FullName}, Posted at {message.CreatedAt.UtcDateTime:hh\\:mm} UTC")
                     .WithColor(Ditto.Cache.Db.EmbedMusicPlayingColour(link.Link.Guild));
 
                 // Send the translated message.
@@ -284,9 +305,8 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 return;
             }
 
-            var fromLanguage = GoogleTranslator.GetLanguageByName(sourceLanguage.ToString());
-            var toLanguage = GoogleTranslator.GetLanguageByName(targetLanguage.ToString());
-
+            var fromLanguage = GoogleTranslator.GetLanguageByName(sourceLanguage.GetAttribute<LanguageFullNameAttribute>().FullName);
+            var toLanguage = GoogleTranslator.GetLanguageByName(targetLanguage.GetAttribute<LanguageFullNameAttribute>().FullName);
             if(fromLanguage == null || toLanguage == null)
             {
                 await Context.ApplyResultReaction(CommandResult.InvalidParameters).ConfigureAwait(false);

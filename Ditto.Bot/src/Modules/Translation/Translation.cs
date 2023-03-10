@@ -2,7 +2,9 @@
 using Ditto.Attributes;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
+using Ditto.Extensions;
 using Ditto.Translation;
+using Ditto.Translation.Attributes;
 using Ditto.Translation.Data;
 using System.Threading.Tasks;
 
@@ -39,20 +41,30 @@ namespace Ditto.Bot.Modules.Translation
 
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Global | CommandAccessLevel.LocalAndParents, deleteUserMessage: true)]
-        [Alias("tl"), Priority(1)]
+        [Alias("tl"), Priority(2)]
         public async Task Translate(Languages sourceLanguage, Languages targetLanguage, [Multiword] string input)
         {
-            var fromLanguage = GoogleTranslator.GetLanguageByName(sourceLanguage.ToString());
-            var toLanguage = GoogleTranslator.GetLanguageByName(targetLanguage.ToString());
+            var fromLanguage = GoogleTranslator.GetLanguageByName(sourceLanguage.GetAttribute<LanguageFullNameAttribute>().FullName);
+            var toLanguage = GoogleTranslator.GetLanguageByName(targetLanguage.GetAttribute<LanguageFullNameAttribute>().FullName);
 
             await ProcessTranslation(fromLanguage, toLanguage, input).ConfigureAwait(false);
         }
 
-        [Alias("tl"), Priority(2)]
+        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Global | CommandAccessLevel.LocalAndParents, deleteUserMessage: true)]
+        [Alias("tl"), Priority(1)]
         public async Task Translate(string sourceLanguageISO, string targetLanguageISO, [Multiword] string input)
         {
             var fromLanguage = GoogleTranslator.GetLanguageByISO(sourceLanguageISO);
-            var toLanguage = GoogleTranslator.GetLanguageByName(targetLanguageISO);
+            if (fromLanguage == null)
+            {
+                fromLanguage = GoogleTranslator.GetLanguageByName(sourceLanguageISO);
+            }
+
+            var toLanguage = GoogleTranslator.GetLanguageByISO(targetLanguageISO);
+            if (toLanguage == null)
+            {
+                toLanguage = GoogleTranslator.GetLanguageByName(targetLanguageISO);
+            }
 
             await ProcessTranslation(fromLanguage, toLanguage, input).ConfigureAwait(false);
         }
