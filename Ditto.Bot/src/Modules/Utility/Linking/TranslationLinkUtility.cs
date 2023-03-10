@@ -1,6 +1,7 @@
 ﻿using Cauldron.Core.Collections;
 using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
 using Ditto.Attributes;
 using Ditto.Bot.Database.Data;
 using Ditto.Bot.Database.Models;
@@ -11,13 +12,11 @@ using Ditto.Helpers;
 using Ditto.Translation;
 using Ditto.Translation.Attributes;
 using Ditto.Translation.Data;
-using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -248,6 +247,13 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     {
                         imageUrl = tenorGifUrl;
                     }
+                }
+
+                // Handle sticker
+                if (message.Stickers.Any()
+                    && message.Stickers.FirstOrDefault() is SocketSticker sticker)
+                {
+                    imageUrl = sticker.GetStickerUrl();
                 }
 
                 // Translate or use original message when unnecessary.
