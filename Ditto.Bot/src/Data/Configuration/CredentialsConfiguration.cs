@@ -12,9 +12,6 @@ namespace Ditto.Bot.Data.Configuration
         [Comment("\n  Bot/User token\n")]
         public string BotToken { get; set; }
 
-        [Comment("\n  User slave token for linking discord channels.\n")]
-        public string UserSlaveToken { get; set; }
-
         public string GoogleApiKey { get; set; }
         public string GiphyApiKey { get; set; }
         public string CleverbotApiKey { get; set; }

@@ -7,9 +7,11 @@ using Ditto.Bot.Modules.Admin;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
+using Ditto.Helpers;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -18,114 +20,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
     [Alias("discord")]
     public class DiscordLinkUtility : DiscordModule<LinkUtility>
     {
-        private static DiscordClientEx _discordClient = null;
         private static ConcurrentDictionary<int, DateTime> LastUpdate { get; set; }
-        private static volatile bool _connected;
-        private static volatile bool _reconnecting;
-        private static volatile bool _initialLogin;
 
         static DiscordLinkUtility()
         {
             LastUpdate = new ConcurrentDictionary<int, DateTime>();
-            _reconnecting = false;
-            _initialLogin = true;
-
-            _discordClient = new DiscordClientEx(new DiscordSocketConfig()
-            {
-                MessageCacheSize = Ditto.Settings.Cache.AmountOfCachedMessages,
-                LogLevel = LogSeverity.Warning,
-                ConnectionTimeout = (int)(Ditto.Settings.Timeout * 60),
-                HandlerTimeout = (int)(Ditto.Settings.Timeout * 60),
-                DefaultRetryMode = RetryMode.AlwaysRetry,
-            });
-
-            var loginAction = new Func<Task>(async () =>
-            {
-                // Cancel out when already reconnecting
-                if (_reconnecting)
-                {
-                    return;
-                }
-
-                if(!_initialLogin)
-                {
-                    Log.Info("Reconnecting discord slave user...");
-                }
-
-                // Attempt to continuously reconnect.
-                _reconnecting = true;
-                _connected = false;
-                int retryAttempt = 0;
-                while (true)
-                {
-                    try
-                    {
-                        await _discordClient.LoginAsync(0, Ditto.Settings.Credentials.UserSlaveToken, true);
-                        await _discordClient.StartAsync().ConfigureAwait(false);
-                        _reconnecting = false;
-                        break;
-                    }
-                    catch
-                    {
-                        if (_initialLogin)
-                        {
-                            _initialLogin = false;
-                            Log.Error("Slave user could not connect at first login, will not retry further.");
-                            break;
-                        }
-                        else
-                        {
-                            _initialLogin = false;
-                            Log.Warn($"Slave user could not connect ({++retryAttempt})");
-                            await Task.Delay(500).ConfigureAwait(false);
-                        }
-                    }
-                }
-            });
-
-
-            _discordClient.Connected += () =>
-            {
-                _connected = true;
-                Log.Info("Slave user connected!");
-                return Task.CompletedTask;
-            };
-
-            _discordClient.Disconnected += (ex) =>
-            {
-                if (!_initialLogin)
-                {
-                    Log.Warn($"Slave user has been disconnected.");
-                    Task.Run(() => loginAction());
-                }
-                else
-                {
-                    _initialLogin = false;
-                    _reconnecting = false;
-                    Log.Error("Slave user could not connect at first login, will not retry further.");
-                    return _discordClient.StopAsync();
-                }
-
-                return Task.CompletedTask;
-            };
-
-            _discordClient.LoggedOut += () =>
-            {
-                if (!_initialLogin)
-                {
-                    Log.Warn($"Slave user got logged out.");
-                    Task.Run(() => loginAction());
-                }
-                return Task.CompletedTask;
-            };
-
-            Task.Run(async () =>
-            {
-                if (!string.IsNullOrEmpty(Ditto.Settings.Credentials.UserSlaveToken))
-                {
-                    await loginAction().ConfigureAwait(false);
-                }
-            });
 
             LinkUtility.TryAddHandler(LinkType.Discord, async (link, channel, cancellationToken) =>
             {
@@ -133,7 +32,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
                 // Only pull discord channel feeds every 2 minutes for each individual channel.
                 var lastUpdateTime = LastUpdate.GetOrAdd(link.Id, DateTime.MinValue);
-                if (!_connected || (DateTime.UtcNow - lastUpdateTime).TotalSeconds < 120)
+                if ((DateTime.UtcNow - lastUpdateTime).TotalSeconds < 120)
                 {
                     return messageIds;
                 }
@@ -142,7 +41,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 {
                     if (ulong.TryParse(link.Value, out ulong linkChannelId))
                     {
-                        if (_discordClient.GetChannel(linkChannelId) is ITextChannel linkChannel)
+                        if ((await Ditto.Client.DoAsync(async client => await client.GetChannelAsync(linkChannelId)).ConfigureAwait(false)) is ITextChannel linkChannel)
                         {
                             // Retrieve the latest messages in bulk from the targeted channel.
                             var messages = new List<IMessage>();
@@ -180,7 +79,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                             }
 
                             // Update link date-time.
-                            var lastMessageDate = DateTime.MinValue;
+                           var lastMessageDate = DateTime.MinValue;
                             var funcUpdateLinkDate = new Func<Task>(async () =>
                             {
                                 if (lastMessageDate > link.Date)
@@ -229,23 +128,94 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                                 catch { }
                                             }
 
+                                            var messageContent = message.Content;
+
+                                            // Parse discord emojis.
+                                            string imageUrl = null;
+                                            if (messageContent.ParseDiscordEmojis().FirstOrDefault() is DiscordTagResult parseResult)
+                                            {
+                                                if (parseResult.Type == DiscordTagType.EMOJI_ANIMATED)
+                                                {
+                                                    imageUrl = $"https://cdn.discordapp.com/emojis/{parseResult.Id}.gif?size=48";
+                                                }
+                                                else if (parseResult.Type == DiscordTagType.EMOJI)
+                                                {
+                                                    imageUrl = $"https://cdn.discordapp.com/emojis/{parseResult.Id}.webp?size=48";
+                                                }
+                                            }
+
+                                            // Handle Tenor URLs
+                                            var tenorMatch = Globals.RegularExpression.TenorGif.Match(messageContent);
+                                            if (tenorMatch.Success)
+                                            {
+                                                var tenorUrl = tenorMatch.Value;
+                                                messageContent = messageContent.Replace(tenorUrl, "");
+                                                var tenorGifUrl = await WebHelper.GetResponseUrlAsync($"{tenorUrl}.gif").ConfigureAwait(false);
+                                                if (!string.IsNullOrEmpty(tenorGifUrl))
+                                                {
+                                                    imageUrl = tenorGifUrl;
+                                                }
+                                            }
+
+                                            // Handle sticker
+                                            if (message.Stickers.Any()
+                                                && message.Stickers.FirstOrDefault() is SocketSticker sticker)
+                                            {
+                                                imageUrl = sticker.GetStickerUrl();
+                                            }
+
                                             var dateUtc = message.CreatedAt.UtcDateTime;
                                             var embedBuilder = new EmbedBuilder().WithAuthor(new EmbedAuthorBuilder()
                                                   .WithIconUrl(message.Author.GetAvatarUrl())
                                                   .WithName(authorGuildUser?.Nickname ?? message.Author?.Username)
                                                 )
                                                 //.WithTitle(message.Channel.Name)
-                                                .WithDescription(message.Content)
+                                                .WithDescription(messageContent)
                                                 .WithFooter($"{dateUtc:dddd, MMMM} {dateUtc.Day.Ordinal()} {dateUtc:yyyy} at {dateUtc:HH:mm} UTC")
                                                 .WithDiscordLinkColour(channel.Guild)
                                                 ;
 
-                                            if (message.Attachments.Count > 0)
+                                            if (!string.IsNullOrEmpty(imageUrl))
                                             {
-                                                embedBuilder.WithImageUrl(message.Attachments.FirstOrDefault().Url);
+                                                embedBuilder = embedBuilder.WithImageUrl(imageUrl);
                                             }
 
-                                            var postedMessage = await channel.SendMessageAsync(embed: embedBuilder.Build(), options: new RequestOptions() { RetryMode = RetryMode.AlwaysFail }).ConfigureAwait(false);
+                                            // Download the attachments if they are included so we can forward them in the same message.
+                                            var fileStreams = new List<Stream>();
+                                            var files = new List<FileAttachment>();
+                                            foreach (var attachment in message.Attachments)
+                                            {
+                                                var attachmentUrl = attachment?.Url;
+                                                if (!string.IsNullOrEmpty(attachmentUrl))
+                                                {
+                                                    try
+                                                    {
+                                                        var stream = await WebHelper.GetStreamAsync(attachmentUrl).ConfigureAwait(false);
+                                                        files.Add(new FileAttachment(stream, attachment.Filename));
+                                                        fileStreams.Add(stream);
+                                                    }
+                                                    catch { }
+                                                }
+                                            }
+
+                                            // Send the translated message.
+                                            IUserMessage postedMessage = null;
+                                            if (files.Count > 0)
+                                            {
+                                                postedMessage = await channel.SendFilesAsync(
+                                                    attachments: files,
+                                                    embed: embedBuilder.Build(),
+                                                    options: new RequestOptions() { RetryMode = RetryMode.AlwaysFail }
+                                                ).ConfigureAwait(false);
+                                            }
+                                            else
+                                            {
+                                                postedMessage = await channel.SendMessageAsync(
+                                                    embed: embedBuilder.Build(),
+                                                    options: new RequestOptions() { RetryMode = RetryMode.AlwaysFail }
+                                                ).ConfigureAwait(false);
+                                            }
+
                                             if (postedMessage != null)
                                             {
                                                 // Do not add the message to the messageIds, we do not use the link_items database for this.
@@ -293,8 +263,8 @@ namespace Ditto.Bot.Modules.Utility.Linking
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local)]
         [Alias("add", "link", "hook", "register")]
         public async Task Add(
-            [Help("channel", "The guild channel of this server.")] ITextChannel textChannel,
-            [Help("linkChannelId", "The ID of the channel from the other server that you wish to link to the selected 'channel'.", "example: 334120131626621412")] ulong linkChannelId,
+            [Help("sourceChannel", "The channel that you wish to monitor.")] ITextChannel sourceChannel,
+            [Help("destChannel", "The channel of the server where you want the messages to appear.")] ITextChannel destChannel,
             [Help("date", "The optional date-time for the first post to synchronise.", "example: \"2020-01-01 10:00 AM\"")] DateTime? fromDate = null)
         {
             if(!Permissions.IsBotOwner(Context))
@@ -304,22 +274,22 @@ namespace Ditto.Bot.Modules.Utility.Linking
             }
 
             // Only allow using channels of the current guild.
-            if (textChannel != null && textChannel.Guild != Context.Guild)
+            if (destChannel != null && destChannel.Guild != Context.Guild)
             {
                 await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
                 return;
             }
 
-            var linkChannel = _discordClient.GetChannel(linkChannelId) as ITextChannel;
-            if(textChannel == null || linkChannel == null)
+            if (sourceChannel != null)
+            {
+                var link = await LinkUtility.TryAddLinkAsync(LinkType.Discord, destChannel, sourceChannel.Id.ToString(), fromDate).ConfigureAwait(false);
+                Log.Debug($"Added link {link.Id}: {sourceChannel.Id} -> {destChannel.Id}");
+                await Context.ApplyResultReaction(link == null ? CommandResult.Failed : CommandResult.Success).ConfigureAwait(false);
+            }
+            else
             {
                 await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
-                return;
             }
-
-            var link = await LinkUtility.TryAddLinkAsync(LinkType.Discord, textChannel, linkChannel.Id.ToString(), fromDate).ConfigureAwait(false);
-            Log.Debug($"Added link {link.Id}: {linkChannelId} -> {textChannel.Id}");
-            await Context.ApplyResultReaction(link == null ? CommandResult.Failed : CommandResult.Success).ConfigureAwait(false);
         }
     }
 }
