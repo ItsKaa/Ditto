@@ -140,15 +140,43 @@ namespace Ditto.Bot.Modules.Chat
             else if (count <= 0)
                 count = 1;
 
+            // First attempt to delete it by bulk (only 14 days)
+            try
+            {
+                var list14Days = (await Context.Channel.GetMessagesAsync(count).ToListAsync())
+                    .SelectMany(i => i)
+                    .Where(x => !x.IsPinned)
+                    .Where(x => Math.Abs((DateTime.Now - x.CreatedAt.UtcDateTime).TotalDays) < 14);
+
+                if (!string.IsNullOrEmpty(pattern))
+                {
+                    list14Days = list14Days.Where(i => i.Content.Contains(pattern));
+                }
+
+                if (user != null)
+                {
+                    list14Days = list14Days.Where(i => i.Author?.Id == user.Id);
+                }
+
+                // Attempt to bulk delete
+                await Context.TextChannel.DeleteMessagesAsync(list14Days).ConfigureAwait(false);
+
+                // Wait a little bit because it takes some time and it's not in the async await.
+                await Task.Delay(2000).ConfigureAwait(false);
+            }
+            catch { }
+
+            // Manually delete older messages
             var list = (await Context.Channel.GetMessagesAsync(count).ToListAsync())
-                .SelectMany(i => i);
+                .SelectMany(i => i)
+                .Where(x => !x.IsPinned);
 
             if (!string.IsNullOrEmpty(pattern))
             {
                 list = list.Where(i => i.Content.Contains(pattern));
             }
 
-            if(user != null)
+            if (user != null)
             {
                 list = list.Where(i => i.Author?.Id == user.Id);
             }
@@ -157,10 +185,7 @@ namespace Ditto.Bot.Modules.Chat
             {
                 try
                 {
-                    if (!msg.IsPinned)
-                    {
-                        await msg.DeleteAsync().ConfigureAwait(false);
-                    }
+                    await msg.DeleteAsync().ConfigureAwait(false);
                 }
                 catch { }
             }
