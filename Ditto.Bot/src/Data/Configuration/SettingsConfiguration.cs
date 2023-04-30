@@ -31,25 +31,6 @@ namespace Ditto.Bot.Data.Configuration
             Username = string.Empty,
             Password = string.Empty,
         };
-
-        public BDOSettings BlackDesertOnline { get; set; } = new BDOSettings()
-        {
-            Email = "",
-            Password = "",
-            LoginUrl = @"https://www.blackdesertonline.com/launcher/l/api/Login.json?email={0}&password={1}",
-            LoginTokenUrl = @"https://www.blackdesertonline.com/launcher/l/api/CreatePlayToken.json?token={0}",
-            LauncherUrl = @"http://www.blackdesertonline.com/launcher/l/Launcher.html",
-        };
-    }
-
-    [Serializable]
-    public struct BDOSettings
-    {
-        public string Email { get; set; }
-        public string Password { get; set; }
-        public string LoginUrl { get; set; }
-        public string LoginTokenUrl { get; set; }
-        public string LauncherUrl { get; set; }
     }
 
     [Serializable]
