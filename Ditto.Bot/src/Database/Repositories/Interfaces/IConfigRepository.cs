@@ -17,6 +17,7 @@ namespace Ditto.Bot.Database.Repositories.Interfaces
         Config GetPrefix(IGuild guild);
         Config GetBdoMaintenanceChannel(IGuild guild);
         Config GetBdoNewsIdentifier(IGuild guild);
+        Config GetPixivMentionRole(IGuild guild);
 
         void SetGlobalCacheChannel(ITextChannel textChannel);
         void SetEmbedColour(IGuild guild, Color colour);
@@ -29,5 +30,6 @@ namespace Ditto.Bot.Database.Repositories.Interfaces
         void SetBdoMaintenanceChannel(IGuild guild, ulong channelId);
         void SetBdoMaintenanceChannel(IGuild guild, ITextChannel textChannel);
         void SetBdoNewsIdentifier(IGuild guild, ulong identifier);
+        void SetPixivMentionRole(IGuild guild, IRole role);
     }
 }

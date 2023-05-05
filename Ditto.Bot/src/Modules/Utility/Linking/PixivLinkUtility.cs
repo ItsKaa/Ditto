@@ -215,6 +215,22 @@ namespace Ditto.Bot.Modules.Utility.Linking
             }
         }
 
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local)]
+        [Alias("add", "link", "hook", "register")]
+        public Task Add([Multiword] string url, ITextChannel textChannel, DateTime? fromDate = null)
+            => Add(textChannel, url, fromDate);
+
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local)]
+        [Alias("ping")]
+        public async Task Mention(IRole role = null)
+        {
+            await Ditto.Database.DoAsync(uow =>
+            {
+                uow.Configs.SetPixivMentionRole(Context.Guild, role);
+            }).ConfigureAwait(false);
+            await Context.ApplyResultReaction(CommandResult.Success).ConfigureAwait(false);
+        }
+
         protected static async Task<bool> PostPixivIllustration(Database.Models.Link link, string illustrationId, string title, string authorName, DateTime dateTime, byte[] imageBytes)
         {
             if(Admin.Admin.CacheChannel == null || !await Permissions.CanBotSendMessages(Admin.Admin.CacheChannel).ConfigureAwait(false))
@@ -243,6 +259,16 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 return false;
             }
 
+            var messageText = "";
+            try
+            {
+                if (ulong.TryParse((await Ditto.Database.ReadAsync(uow => uow.Configs.GetPixivMentionRole(link.Guild)).ConfigureAwait(false))?.Value, out ulong mentionRoleId))
+                {
+                    messageText = link.Guild.GetRole(mentionRoleId)?.Mention ?? "";
+                }
+            }
+            catch { }
+
             var date = dateTime.ToUniversalTime();
             var embed = new EmbedBuilder()
                 .WithAuthor(new EmbedAuthorBuilder()
@@ -258,6 +284,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 .WithUrl($"https://www.pixiv.net/en/artworks/{illustrationId}");
 
             await link.Channel.EmbedAsync(embed,
+                message: messageText,
                 options: new RequestOptions() { RetryMode = RetryMode.AlwaysRetry}
             ).ConfigureAwait(false);
             return true;
