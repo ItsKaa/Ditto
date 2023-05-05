@@ -11,6 +11,7 @@ namespace Ditto.Bot.Database.Repositories
 {
     public class ConfigRepository : Repository<Config>, IConfigRepository
     {
+        private const string _keyGlobalCacheChannel = "global_cache_channel";
         private const string _keyEmbedOkColour = "embed_colour_ok";
         private const string _keyEmbedErrorColour = "embed_colour_error";
         private const string _keyEmbedRssColour = "embed_colour_rss";
@@ -23,6 +24,7 @@ namespace Ditto.Bot.Database.Repositories
         private const string _keyBdoNewsIdentifier = "bdo_news_id";
 
         private static ConcurrentDictionary<string, string> _defaultConfigValues = new ConcurrentDictionary<string, string>(new Dictionary<string, string>() {
+            {_keyGlobalCacheChannel, null },
             {_keyEmbedOkColour , Color.Blue.ToString() },
             {_keyEmbedErrorColour, "#C42F1F" },
             {_keyEmbedRssColour, "#F26522" },
@@ -74,6 +76,11 @@ namespace Ditto.Bot.Database.Repositories
             Context.SaveChanges();
             return item;
         }
+
+        public Config GetGlobalCacheChannel() => GetConfigItem(null, _keyGlobalCacheChannel);
+        private Config GetOrAddGlobalCacheChannel() => GetOrAddConfigItem(null, _keyGlobalCacheChannel);
+        public void SetGlobalCacheChannel(ulong channelId) => GetOrAddGlobalCacheChannel().Value = channelId.ToString();
+        public void SetGlobalCacheChannel(ITextChannel textChannel) => SetGlobalCacheChannel(textChannel.Id);
 
         public Config GetEmbedColour(IGuild guild) => GetConfigItem(guild, _keyEmbedOkColour);
         private Config GetOrAddEmbedColour(IGuild guild) => GetOrAddConfigItem(guild, _keyEmbedOkColour);

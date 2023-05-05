@@ -6,6 +6,7 @@ namespace Ditto.Bot.Database.Repositories.Interfaces
 {
     public interface IConfigRepository : IRepository<Config>
     {
+        Config GetGlobalCacheChannel();
         Config GetEmbedColour(IGuild guild);
         Config GetEmbedErrorColour(IGuild guild);
         Config GetEmbedRssColour(IGuild guild);
@@ -17,6 +18,7 @@ namespace Ditto.Bot.Database.Repositories.Interfaces
         Config GetBdoMaintenanceChannel(IGuild guild);
         Config GetBdoNewsIdentifier(IGuild guild);
 
+        void SetGlobalCacheChannel(ITextChannel textChannel);
         void SetEmbedColour(IGuild guild, Color colour);
         void SetEmbedErrorColour(IGuild guild, Color colour);
         void SetEmbedRssColour(IGuild guild, Color colour);
