@@ -38,9 +38,18 @@ namespace Ditto.Bot.Modules.Admin
         /// Determines wether the supplied user has the manage messages permission.
         /// </summary>
         public static bool CanManageMessages(IGuildUser guildUser, IGuildChannel channel)
-            => guildUser?.GuildPermissions.ManageMessages == true && channel?.GetPermissionOverwrite(guildUser)?.ManageMessages != PermValue.Deny;
+            => guildUser?.GuildPermissions.ManageMessages == true && guildUser.GetPermissions(channel).ManageMessages;
         public static bool CanManageMessages(ICommandContextEx context)
             => CanManageMessages(context.GuildUser, context.TextChannel);
+
+        /// <summary>
+        /// Determines wether the supplied user has the send messages permission.
+        /// </summary>
+        public static bool CanSendMessages(IGuildUser guildUser, IGuildChannel channel)
+            => guildUser?.GuildPermissions.SendMessages == true && guildUser.GetPermissions(channel).SendMessages;
+
+        public static bool CanSendMessages(ICommandContextEx context)
+            => CanSendMessages(context.GuildUser, context.TextChannel);
 
         /// <summary>
         /// Determines wether the bot user has the manage messages permission.
@@ -57,6 +66,14 @@ namespace Ditto.Bot.Modules.Admin
             => (await guild.GetCurrentUserAsync().ConfigureAwait(false))?.GuildPermissions.ManageRoles == true;
         public static Task<bool> CanBotManageRoles(ICommandContextEx context)
             => CanBotManageRoles(context?.Guild);
+
+        /// <summary>
+        /// Determines wether the bot user has the send messages permission.
+        /// </summary>
+        public static Task<bool> CanBotSendMessages(ICommandContextEx context)
+            => CanBotSendMessages(context.TextChannel);
+        public static async Task<bool> CanBotSendMessages(IGuildChannel channel)
+            => CanSendMessages(await channel.Guild.GetCurrentUserAsync().ConfigureAwait(false), channel);
 
         /// <summary>
         /// Determines whether the bot user has the manage a channel.
