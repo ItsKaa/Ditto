@@ -17,5 +17,6 @@ namespace Ditto.Bot.Data.Configuration
         public string CleverbotApiKey { get; set; }
         public string TwitchApiClientId { get; set; }
         public string TwitchApiSecret { get; set; }
+        public string PixivSessionId { get; set; }
     }
 }

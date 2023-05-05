@@ -2,8 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -153,6 +155,25 @@ namespace Ditto.Helpers
             }
             catch { }
             return null;
+        }
+
+        /// <summary>
+        /// Reads the content from the response message and returns the uncompressed string value.
+        /// </summary>
+        public static async Task<string> ReadContentAsString(this HttpResponseMessage response)
+        {
+            // Check whether response is compressed
+            if (response.Content.Headers.ContentEncoding.Any(x => x == "gzip"))
+            {
+                // Decompress manually
+                using var s = await response.Content.ReadAsStreamAsync();
+                using var decompressed = new GZipStream(s, CompressionMode.Decompress);
+                using var rdr = new StreamReader(decompressed);
+                return await rdr.ReadToEndAsync();
+            }
+
+            // Use standard implementation if not compressed
+            return await response.Content.ReadAsStringAsync();
         }
 
         public static Task<string> GetResponseUrlAsync(this Uri uri)

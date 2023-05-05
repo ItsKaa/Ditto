@@ -26,5 +26,8 @@
 
         // Solo Leveling
         SoloLeveling    = 10,
+
+        // Pixiv
+        Pixiv           = 11,
     }
 }
