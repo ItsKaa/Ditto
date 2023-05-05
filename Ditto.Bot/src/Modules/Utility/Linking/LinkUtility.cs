@@ -83,10 +83,25 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         await Task.WhenAll(tasks).ConfigureAwait(false);
                         if (databaseModified)
                         {
-                            await Ditto.Database.WriteAsync(uow =>
+                            try
                             {
-                                uow.Links.UpdateRange(links);
-                            }).ConfigureAwait(false);
+                                await Ditto.Database.DoAsync(uow =>
+                                {
+                                    uow.Links.UpdateRange(links);
+                                }).ConfigureAwait(false);
+                            }
+                            catch
+                            {
+                                Log.Warn("Failed to update links, attempting to manually update each individual link.");
+                                foreach(var link in links)
+                                {
+                                    await Ditto.Database.WriteAsync(uow =>
+                                    {
+                                        uow.Links.Update(link);
+                                    }).ConfigureAwait(false);
+                                }
+                            }
+
                         }
 
 
