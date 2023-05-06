@@ -58,12 +58,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 return Task.CompletedTask;
             };
 
-            Ditto.Connected += async () =>
+            Ditto.Connected += () =>
             {
-                await Ditto.Database.ReadAsync(uow =>
-                {
-                    uow.Links.GetAllWithLinks(l => l.Type == LinkType.Pixiv);
-                }).ConfigureAwait(false);
+                LinkIllustrationIds.Clear();
+                LinkOutdatedLinkIds.Clear();
+                return Task.CompletedTask;
             };
 
             LinkUtility.TryAddHandler(LinkType.Pixiv, async (link, channel, cancellationToken) =>
