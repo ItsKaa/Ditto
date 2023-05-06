@@ -30,18 +30,18 @@ namespace Ditto.Bot.Modules.Utility.Linking
         static LinkUtility()
         {
             //On client connected
-            Ditto.Connected += () =>
+            Ditto.Connected += async () =>
             {
                 _links?.Clear();
                 _cancellationTokenSource?.Cancel();
                 _cancellationTokenSource = new CancellationTokenSource();
-                Ditto.Database.ReadAsync((uow) =>
+                await Ditto.Database.ReadAsync((uow) =>
                 {
                     _links = new ConcurrentDictionary<int, Link>(
                         uow.Links.GetAllWithLinks()
                         .Select(i => new KeyValuePair<int, Link>(i.Id, i))
                     );
-                });
+                }).ConfigureAwait(false);
 
                 var _ = Task.Run(async () =>
                 {
@@ -88,18 +88,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                 await Ditto.Database.DoAsync(uow =>
                                 {
                                     uow.Links.UpdateRange(links);
-                                }).ConfigureAwait(false);
+                                }, throwOnError: true).ConfigureAwait(false);
                             }
-                            catch
+                            catch (Exception ex)
                             {
-                                Log.Warn("Failed to update links, attempting to manually update each individual link.");
-                                foreach(var link in links)
-                                {
-                                    await Ditto.Database.WriteAsync(uow =>
-                                    {
-                                        uow.Links.Update(link);
-                                    }).ConfigureAwait(false);
-                                }
+                                Log.Error("Failed to update links, attempting to manually update each individual link.", ex);
                             }
 
                         }
@@ -108,7 +101,6 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         await Task.Delay(500).ConfigureAwait(false);
                     }
                 });
-                return Task.CompletedTask;
             };
 
             // On client disconnected
