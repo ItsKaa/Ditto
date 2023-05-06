@@ -7,6 +7,7 @@ using Ditto.Extensions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,28 +60,43 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
                             tasks.Add(Task.Run(async () =>
                             {
-                                // Verify that we have access to the channel
-                                var channel = link.Channel;
-                                if (channel != null
-                                    && channel.GuildId == link.GuildId
-                                    && (await Ditto.Client.DoAsync((c) => c.GetPermissionsAsync(channel))).HasAccess()
-                                   )
+                                try
                                 {
-                                    var linkItems = await ReadAndPostLinkAsync(link).ConfigureAwait(false);
-                                    if (linkItems.Count() > 0)
+                                    // Verify that we have access to the channel
+                                    var channel = link.Channel;
+                                    if (channel != null
+                                        && channel.GuildId == link.GuildId
+                                        && (await Ditto.Client.DoAsync((c) => c.GetPermissionsAsync(channel))).HasAccess()
+                                       )
                                     {
-                                        link.Links.AddRange(linkItems);
-                                        databaseModified = true;
+                                        var linkItems = await ReadAndPostLinkAsync(link).ConfigureAwait(false);
+                                        if (linkItems.Count() > 0)
+                                        {
+                                            link.Links.AddRange(linkItems);
+                                            databaseModified = true;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Log.Debug($"Could not access the channel {channel?.Guild?.Name}:{channel?.Name}");
                                     }
                                 }
-                                else
+                                catch(Exception ex)
                                 {
-                                    Log.Debug($"Could not access the channel {channel?.Guild?.Name}:{channel?.Name}");
+                                    Log.Error("Error at link handler", ex);
                                 }
                             }));
                         }
 
-                        await Task.WhenAll(tasks).ConfigureAwait(false);
+                        try
+                        {
+                            await Task.WhenAll(tasks).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error("Error at waiting for link handlers", ex);
+                        }
+
                         if (databaseModified)
                         {
                             try

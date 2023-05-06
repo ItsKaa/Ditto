@@ -25,7 +25,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
     public class PixivLinkUtility : DiscordModule<LinkUtility>
     {
         private static bool Initialized { get; set; } = false;
-        private static TimeSpan FetchTimeout { get; set; } = TimeSpan.FromMinutes(15);
+        private static TimeSpan FetchTimeout { get; set; } = TimeSpan.FromMinutes(30);
         private static CookieContainer CookieContainer { get; set; } = new CookieContainer();
         private static IWebProxy Proxy { get; set; } = null;
         private static Dictionary<Link, (DateTime, List<string>)> LinkIllustrationIds { get; set; } = new Dictionary<Link, (DateTime, List<string>)>();
@@ -56,6 +56,14 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 }
                 Initialized = true;
                 return Task.CompletedTask;
+            };
+
+            Ditto.Connected += async () =>
+            {
+                await Ditto.Database.ReadAsync(uow =>
+                {
+                    uow.Links.GetAllWithLinks(l => l.Type == LinkType.Pixiv);
+                }).ConfigureAwait(false);
             };
 
             LinkUtility.TryAddHandler(LinkType.Pixiv, async (link, channel, cancellationToken) =>
