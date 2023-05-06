@@ -58,6 +58,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                 break;
                             }
 
+                            var mutex = new SemaphoreSlim(1, 1);
                             tasks.Add(Task.Run(async () =>
                             {
                                 try
@@ -74,6 +75,23 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                         {
                                             link.Links.AddRange(linkItems);
                                             databaseModified = true;
+                                            try
+                                            {
+                                                await mutex.WaitAsync().ConfigureAwait(false);
+                                                await Ditto.Database.WriteAsync(uow =>
+                                                {
+                                                    uow.Links.UpdateRange(link);
+                                                }, throwOnError: true);
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                Log.Error("Failed to update link");
+                                                Log.Error(ex);
+                                            }
+                                            finally
+                                            {
+                                                mutex.Release();
+                                            }
                                         }
                                     }
                                     else
@@ -103,7 +121,9 @@ namespace Ditto.Bot.Modules.Utility.Linking
                             {
                                 await Ditto.Database.DoAsync(uow =>
                                 {
-                                    uow.Links.UpdateRange(links);
+                                    _links = new ConcurrentDictionary<int, Link>(
+                                        uow.Links.GetAllWithLinks().Select(i => new KeyValuePair<int, Link>(i.Id, i))
+                                    );
                                 }, throwOnError: true).ConfigureAwait(false);
                             }
                             catch (Exception ex)
