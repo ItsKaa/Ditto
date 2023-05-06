@@ -48,7 +48,6 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 {
                     while (Ditto.Running)
                     {
-                        var databaseModified = false;
                         var tasks = new List<Task>();
                         var links = _links.Select(i => i.Value).ToList();
                         foreach (var link in links)
@@ -74,14 +73,15 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                         if (linkItems.Count() > 0)
                                         {
                                             link.Links.AddRange(linkItems);
-                                            databaseModified = true;
                                             try
                                             {
                                                 await mutex.WaitAsync().ConfigureAwait(false);
                                                 await Ditto.Database.WriteAsync(uow =>
                                                 {
-                                                    uow.Links.UpdateRange(link);
+                                                    uow.Links.Update(link);
                                                 }, throwOnError: true);
+
+                                                await Task.Delay(10).ConfigureAwait(false);
                                             }
                                             catch (Exception ex)
                                             {
@@ -114,25 +114,6 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         {
                             Log.Error("Error at waiting for link handlers", ex);
                         }
-
-                        if (databaseModified)
-                        {
-                            try
-                            {
-                                await Ditto.Database.DoAsync(uow =>
-                                {
-                                    _links = new ConcurrentDictionary<int, Link>(
-                                        uow.Links.GetAllWithLinks().Select(i => new KeyValuePair<int, Link>(i.Id, i))
-                                    );
-                                }, throwOnError: true).ConfigureAwait(false);
-                            }
-                            catch (Exception ex)
-                            {
-                                Log.Error("Failed to update links, attempting to manually update each individual link.", ex);
-                            }
-
-                        }
-
 
                         await Task.Delay(500).ConfigureAwait(false);
                     }
