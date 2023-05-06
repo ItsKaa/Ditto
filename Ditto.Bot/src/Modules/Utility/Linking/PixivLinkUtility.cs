@@ -13,21 +13,24 @@ using System.Linq;
 using System.Net.Http;
 using System.Net;
 using System.Threading.Tasks;
-using System.Runtime.CompilerServices;
 using System.IO;
-using Discord.WebSocket;
 using Ditto.Bot.Modules.Admin;
-using Tweetinvi.Parameters;
+using Ditto.Bot.Database.Models;
+using Tweetinvi.Core.Extensions;
+using System.Threading;
 
 namespace Ditto.Bot.Modules.Utility.Linking
 {
     [Alias("pixiv")]
     public class PixivLinkUtility : DiscordModule<LinkUtility>
     {
-        private static DateTime LastFetchTime { get; set; } = DateTime.MinValue;
+        private static bool Initialized { get; set; } = false;
         private static TimeSpan FetchTimeout { get; set; } = TimeSpan.FromMinutes(15);
         private static CookieContainer CookieContainer { get; set; } = new CookieContainer();
         private static IWebProxy Proxy { get; set; } = null;
+        private static Dictionary<Link, (DateTime, List<string>)> LinkIllustrationIds { get; set; } = new Dictionary<Link, (DateTime, List<string>)>();
+        private static Dictionary<Link, List<string>> LinkOutdatedLinkIds { get; set; } = new Dictionary<Link, List<string>>();
+        private static Dictionary<string, string> LinkHtmlCodePerIllustrationId { get; set; } = new Dictionary<string, string>();
 
         static PixivLinkUtility()
         {
@@ -51,136 +54,105 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         Proxy.Credentials = new NetworkCredential(Ditto.Settings.ProxySettings.Username, Ditto.Settings.ProxySettings.Password);
                     }
                 }
-
+                Initialized = true;
                 return Task.CompletedTask;
             };
 
             LinkUtility.TryAddHandler(LinkType.Pixiv, async (link, channel, cancellationToken) =>
             {
-                if ((DateTime.UtcNow - LastFetchTime) < FetchTimeout)
+                if (!Initialized)
+                    return Enumerable.Empty<string>();
+
+                var lastFetchTime = DateTime.MinValue;
+                if (!LinkIllustrationIds.ContainsKey(link)
+                    || !LinkIllustrationIds.TryGetValue(link, out (DateTime, List<string>) linkIllustrationIds)
+                    || (DateTime.UtcNow - linkIllustrationIds.Item1) > FetchTimeout)
                 {
+                    await UpdateOrAddLinkIllustrationIds(link).ConfigureAwait(false);
                     return Enumerable.Empty<string>();
                 }
                 else if (Admin.Admin.CacheChannel == null)
                 {
-                    LastFetchTime = DateTime.UtcNow;
+                    linkIllustrationIds.Item1 = DateTime.UtcNow;
                     Log.Warn("Cache channel is not set, ignoring Pixiv module.");
                     return Enumerable.Empty<string>();
                 }
                 else if (!await Permissions.CanBotSendMessages(Admin.Admin.CacheChannel).ConfigureAwait(false))
                 {
-                    LastFetchTime = DateTime.UtcNow;
+                    linkIllustrationIds.Item1 = DateTime.UtcNow;
                     Log.Warn("No SendMessages permission in cache channel, ignoring Pixiv module.");
                     return Enumerable.Empty<string>();
                 }
 
-                // Already update fetch time
-                LastFetchTime = DateTime.UtcNow;
-
-                var processedIds = new List<string>();
                 var userId = link.Value;
-                var allIds = await GetPixivUserIllustrationIdList(userId).ConfigureAwait(false);
-                var alreadyLinkedIds = link.Links.Select(x => x.Identity);
-                var ids = allIds.Except(alreadyLinkedIds).ToList();
-
-                // Loop through the items since we want to post oldest to newest but also do not want to fetch the source of 100+ items either.
-                var htmlCodePerId = new Dictionary<string, string>();
-                foreach (var illustrationId in ids)
-                {
-                    try
-                    {
-                        if (cancellationToken.IsCancellationRequested)
-                            return processedIds;
-
-                        Log.Info($"Fetching pixiv illustration id {illustrationId}...");
-                        var htmlCode = await GetPixivIllustrationPageHtmlCode(userId, illustrationId).ConfigureAwait(false);
-                        await Task.Delay(Randomizer.Static.New(5000, 10000));
-                        if (string.IsNullOrEmpty(htmlCode))
-                            continue;
-
-                        var searchBlock = htmlCode.From($"\"illust\":{{\"{illustrationId}\"");
-                        var createdDateString = searchBlock.Between(@"""uploadDate"":""", @""",""restrict");
-                        var createdDate = DateTime.UtcNow;
-                        if (!DateTime.TryParse(createdDateString, out createdDate))
-                        {
-                            Log.Error("Failed to parse the date, assuming that the Pixiv illustration is posted now!");
-                        }
-
-                        // If the created date is older than the link date it most likely means that the link is new.
-                        if (createdDate < link.Date)
-                            break;
-
-                        htmlCodePerId.TryAdd(illustrationId, htmlCode);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex);
-                        return processedIds;
-                    }
-                }
-
-                // If items are not in the dictionary it means that they are too old.
-                var oldIds = ids.Except(htmlCodePerId.Keys);
-                processedIds.AddRange(oldIds);
-                ids.RemoveAll(x => oldIds.Contains(x));
-
+                var ids = linkIllustrationIds.Item2.Except(link.Links.Select(x => x.Identity)).ToList();
                 if (ids.Count == 0)
-                    return processedIds;
-
-                // Wait a little since we just retrieved the ID list.
-                await Task.Delay(Randomizer.Static.New(5000, 10000));
-
-                // Loop through the items in reverse since the oldest items are at the bottom.
-                foreach(var pair in htmlCodePerId.Reverse())
                 {
-                    if (cancellationToken.IsCancellationRequested)
+                    // We have nothing left to process, clear the temporary collection that holds the outdated ids too, these should all be in the link_items.
+                    if (LinkOutdatedLinkIds.ContainsKey(link))
                     {
-                        return processedIds;
+                        LinkOutdatedLinkIds.Remove(link);
                     }
 
-                    var illustrationId = pair.Key;
-                    var htmlCode = pair.Value;
-                    try
-                    {
-                        Log.Info($"Fetching pixiv illustration id {illustrationId}...");
-                        if (string.IsNullOrEmpty(htmlCode))
-                            continue;
-
-                        var searchBlock = htmlCode.From($"\"illust\":{{\"{illustrationId}\"");
-                        var title = searchBlock.Between(@"""illustTitle"":""", @""",""illustComment");
-                        var authorName = searchBlock.Between(@"userName"":""", @"""}");
-
-                        var createdDateString = searchBlock.Between(@"""uploadDate"":""", @""",""restrict");
-                        var createdDate = DateTime.UtcNow;
-                        if (!DateTime.TryParse(createdDateString, out createdDate))
-                        {
-                            Log.Error("Failed to parse the date, assuming that the Pixiv illustration is posted now!");
-                        }
-
-                        var imagePath = searchBlock.Between(@"""regular"":""https://i.pximg.net", @""",""original");
-                        var imageBytes = await GetPixivIllustrationImageBytes(imagePath).ConfigureAwait(false);
-                        await Task.Delay(Randomizer.Static.New(5000, 10000));
-
-                        Log.Info($"Posting \"{title}\" ({LinkType.Pixiv}) in \"{link.Guild.Name}:{link.Channel.Name}\"");
-                        if (await PostPixivIllustration(link,
-                            illustrationId,
-                            title,
-                            authorName,
-                            createdDate,
-                            imageBytes
-                        ).ConfigureAwait(false))
-                        {
-                            processedIds.Add(illustrationId);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex);
-                        return processedIds;
-                    }
+                    return Enumerable.Empty<string>();
                 }
 
-                return processedIds;
+                // Fetch the html code for each item that we care about.
+                if ((await ProcessHtmlCode(link, ids, cancellationToken).ConfigureAwait(false)).Any())
+                    return Enumerable.Empty<string>();
+
+                var illustrationId = ids.LastOrDefault();
+                if (!LinkHtmlCodePerIllustrationId.TryGetValue(illustrationId, out string htmlCode))
+                    return new[] { illustrationId };
+
+                // Attempt to retrieve the details from the HTML code
+                try
+                {
+                    if (string.IsNullOrEmpty(htmlCode))
+                        return new[] { illustrationId };
+
+                    var searchBlock = htmlCode.From($"\"illust\":{{\"{illustrationId}\"");
+                    var title = searchBlock.Between(@"""illustTitle"":""", @""",""illustComment");
+                    var authorName = searchBlock.Between(@"userName"":""", @"""}");
+
+                    var createdDateString = searchBlock.Between(@"""uploadDate"":""", @""",""restrict");
+                    var createdDate = DateTime.UtcNow;
+                    if (!DateTime.TryParse(createdDateString, out createdDate))
+                    {
+                        Log.Error("Failed to parse the date, assuming that the Pixiv illustration is posted now!");
+                    }
+
+                    var imagePath = searchBlock.Between(@"""regular"":""https://i.pximg.net", @""",""original");
+                    var imageBytes = await GetPixivIllustrationImageBytes(imagePath).ConfigureAwait(false);
+
+                    Log.Info($"Posting \"{title}\" ({LinkType.Pixiv}) in \"{link.Guild.Name}:{link.Channel.Name}\"");
+                    if (await PostPixivIllustration(link,
+                        illustrationId,
+                        title,
+                        authorName,
+                        createdDate,
+                        imageBytes
+                    ).ConfigureAwait(false))
+                    {
+                        // Delete the html code since we no longer need this cached
+                        if (LinkHtmlCodePerIllustrationId.ContainsKey(illustrationId))
+                        {
+                            LinkHtmlCodePerIllustrationId.Remove(illustrationId);
+                        }
+
+                        // Update the link date to match the time of this post
+                        link.Date = createdDate;
+
+                        // Add the linked item
+                        return new[] { illustrationId };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex);
+                }
+
+                return Enumerable.Empty<string>();
             });
         }
 
@@ -469,6 +441,70 @@ namespace Ditto.Bot.Modules.Utility.Linking
             }
 
             return illustrationIds;
+        }
+
+        private static async Task UpdateOrAddLinkIllustrationIds(Link link)
+        {
+            var userId = link.Value;
+            var illustrationIds = await GetPixivUserIllustrationIdList(userId).ConfigureAwait(false);
+            LinkIllustrationIds.AddOrUpdate(link, (DateTime.UtcNow, illustrationIds.ToList()));
+        }
+
+        private static async Task<IEnumerable<string>> ProcessHtmlCode(Link link, IEnumerable<string> ids, CancellationToken cancellationToken)
+        {
+            var userId = link.Value;
+            var processedIds = new List<string>();
+
+            if (!LinkOutdatedLinkIds.TryGetValue(link, out List<string> outdatedIllustrationIds))
+                outdatedIllustrationIds = new List<string>();
+
+            foreach (var illustrationId in ids)
+            {
+                if (LinkHtmlCodePerIllustrationId.TryGetValue(illustrationId, out string _))
+                    continue;
+
+                if (outdatedIllustrationIds.Contains(illustrationId))
+                    continue;
+
+                try
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        return processedIds;
+
+                    Log.Info($"Fetching pixiv illustration id {illustrationId}...");
+                    var htmlCode = await GetPixivIllustrationPageHtmlCode(userId, illustrationId).ConfigureAwait(false);
+                    await Task.Delay(Randomizer.Static.New(5000, 10000));
+                    if (string.IsNullOrEmpty(htmlCode))
+                        continue;
+
+                    var searchBlock = htmlCode.From($"\"illust\":{{\"{illustrationId}\"");
+                    var createdDateString = searchBlock.Between(@"""uploadDate"":""", @""",""restrict");
+                    var createdDate = DateTime.UtcNow;
+                    if (!DateTime.TryParse(createdDateString, out createdDate))
+                    {
+                        Log.Error("Failed to parse the date, assuming that the Pixiv illustration is posted now!");
+                    }
+
+                    // If the created date is older than the link date it most likely means that the link is new.
+                    if (createdDate <= link.Date)
+                    {
+                        LinkOutdatedLinkIds.AddOrUpdate(link, ids.From(illustrationId).ToList());
+                        break;
+                    }
+
+                    if (LinkHtmlCodePerIllustrationId.TryAdd(illustrationId, htmlCode))
+                    {
+                        processedIds.Add(illustrationId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex);
+                    return processedIds;
+                }
+            }
+
+            return processedIds;
         }
     }
 }
