@@ -33,6 +33,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
         private static IWebProxy Proxy { get; set; } = new WebProxy();
 
         private const double SimilarityTolerance = 25;
+        private const double DefaultMinSimilarity = 50;
 
         static SauceNaoLinkUtility()
         {
@@ -134,7 +135,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
             }
             else
             {
-                var link = await LinkUtility.TryAddLinkAsync(LinkType.SauceNAO, channel, null, null);
+                var link = await LinkUtility.TryAddLinkAsync(LinkType.SauceNAO, channel, $"{DefaultMinSimilarity}", null);
                 if (link == null)
                 {
                     await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
@@ -237,7 +238,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 var saucePixiv = sauceWithUrls.FirstOrDefault(x => x.Sauce.SourceURL.Contains("pixiv.net"));
                 if (saucePixiv != null && saucePixiv.Similarity > (highestSimilarity - SimilarityTolerance))
                 {
-                    var pixivUrl = saucePixiv.PixivId != null ? $"https://www.pixiv.net/artworks/{saucePixiv.PixivId}" : saucePixiv.Sauce.SourceURL;
+                    var pixivUrl = saucePixiv.PixivId != null ? $"https://www.pixiv.net/en/artworks/{saucePixiv.PixivId}" : saucePixiv.Sauce.SourceURL;
                     if (saucePixiv.Title == null)
                         return pixivUrl;
                     else
