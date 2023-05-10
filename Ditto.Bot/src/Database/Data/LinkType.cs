@@ -29,5 +29,8 @@
 
         // Pixiv
         Pixiv           = 11,
+
+        // SauceNAO
+        SauceNAO        = 12,
     }
 }

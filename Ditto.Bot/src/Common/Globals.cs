@@ -15,6 +15,7 @@ namespace Ditto.Bot
             public static readonly Regex DiscordTagChannel = new Regex(@"<#(?<id>\d+)>", RegexOptions.Compiled);
             public static readonly Regex DiscordTagRole = new Regex(@"<@&(?<id>\d+)>", RegexOptions.Compiled);
 
+            public static readonly Regex Urls = new Regex(@"\b(?:https?://|www\.)\S+\b", RegexOptions.Compiled);
             public static readonly Regex TenorGif = new Regex(@"http(?:s)?://(?:www.)?tenor.com/view/(?:.*)", RegexOptions.Compiled);
 
             public static readonly Regex PixivUserIdFromUrl = new Regex(@"pixiv.net/[^/]*/users/(?<id>[\d]*)", RegexOptions.Compiled);
