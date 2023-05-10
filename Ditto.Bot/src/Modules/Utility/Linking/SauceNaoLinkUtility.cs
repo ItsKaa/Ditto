@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using Cauldron.Core.Collections;
+using Discord;
 using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Database.Data;
@@ -7,7 +8,9 @@ using Ditto.Bot.Modules.Admin;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
+using Ditto.Extensions.Discord;
 using Ditto.Helpers;
+using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using SauceNET;
 using SauceNET.Model;
 using System;
@@ -23,7 +26,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
     [Alias("sauce")]
     public class SauceNaoLinkUtility : DiscordModule<LinkUtility>
     {
-        private static ConcurrentDictionary<Link, DateTime> Links { get; set; } = new ConcurrentDictionary<Link, DateTime>();
+        private static ConcurrentList<Link> Links { get; set; } = new ConcurrentList<Link>();
         private static ConcurrentQueue<IUserMessage> MessageQueue { get; set; } = new ConcurrentQueue<IUserMessage>();
         private static bool Running { get; set; } = false;
         private static bool Initialized { get; set; } = false;
@@ -75,10 +78,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     Initialized = false;
 
                     Links.Clear();
-                    foreach (var link in await Ditto.Database.ReadAsync(uow => uow.Links.GetAllWithLinks(l => l.Type == LinkType.SauceNAO)).ConfigureAwait(false))
-                    {
-                        Links.TryAdd(link, DateTime.MinValue);
-                    }
+                    Links.AddRange(await Ditto.Database.ReadAsync(uow => uow.Links.GetAllWithLinks(l => l.Type == LinkType.SauceNAO)).ConfigureAwait(false));
 
                     await Ditto.Client.DoAsync(c =>
                     {
@@ -107,9 +107,8 @@ namespace Ditto.Bot.Modules.Utility.Linking
             if (!Running || !(socketMessage is IUserMessage message) || message.Channel == null || message.Author.IsBot)
                 return Task.CompletedTask;
 
-            foreach (var pair in Links.ToList().Where(x => x.Key.Channel == message.Channel))
+            foreach (var link in Links.ToList().Where(x => x.Channel == message.Channel))
             {
-                var link = pair.Key;
                 if (link == null || link.Channel == null)
                     continue;
 
@@ -143,9 +142,37 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 }
                 else
                 {
-                    Links.TryAdd(link, DateTime.MinValue);
+                    Links.Add(link);
                     await Context.ApplyResultReaction(CommandResult.Success).ConfigureAwait(false);
                 }
+            }
+        }
+
+        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local)]
+        [Alias("add", "link", "hook", "register")]
+        public async Task Similarity(int similarity)
+        {
+            var link = Links.FirstOrDefault(x => x.Channel == Context.TextChannel);
+            if (!Permissions.IsAdministratorOrBotOwner(Context))
+            {
+                await Context.ApplyResultReaction(CommandResult.InvalidParameters).ConfigureAwait(false);
+            }
+            else if (link == null)
+            {
+                await Context.ApplyResultReaction(CommandResult.InvalidParameters).ConfigureAwait(false);
+            }
+            else
+            {
+                Links.Remove(link);
+                Links.Add(await Ditto.Database.DoAsync(x =>
+                {
+                    var dbLink = x.Links.Get(link.Id);
+                    dbLink.Value = $"{similarity}";
+                    x.Links.Update(dbLink);
+                    return dbLink;
+                }).ConfigureAwait(false));
+
+                await Context.ApplyResultReaction(CommandResult.Success).ConfigureAwait(false);
             }
         }
 
@@ -199,6 +226,13 @@ namespace Ditto.Bot.Modules.Utility.Linking
             else if (sauceWithUrls.Any())
             {
                 var highestSimilarity = sauceWithUrls.Max(X => X.Similarity);
+                var link = Links.FirstOrDefault(x => x.Channel == message.Channel);
+                if (double.TryParse(link?.Value, out double minimumSimilarity)
+                    && highestSimilarity < minimumSimilarity)
+                {
+                    // Similarity too low.
+                    return "";
+                }
 
                 // 1. Pixiv
                 var saucePixiv = sauceWithUrls.FirstOrDefault(x => x.Sauce.SourceURL.Contains("pixiv.net"));
@@ -255,7 +289,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 }
             }
 
-            if (!string.IsNullOrEmpty(description))
+            if (string.IsNullOrEmpty(description))
+            {
+                await message.AddReactionsAsync(Emotes.GreyQuestion).ConfigureAwait(false);
+            }
+            else
             {
                 var embed = new EmbedBuilder()
                     .WithAuthor("🎨 Sauce")
