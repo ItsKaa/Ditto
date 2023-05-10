@@ -10,7 +10,6 @@ using Ditto.Data.Discord;
 using Ditto.Extensions;
 using Ditto.Extensions.Discord;
 using Ditto.Helpers;
-using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using SauceNET;
 using SauceNET.Model;
 using System;
