@@ -262,7 +262,15 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     .WithOkColour((message.Channel as IGuildChannel)?.Guild)
                     .WithDescription(description);
 
-                await message.ReplyAsync(embed: embed.Build(), allowedMentions: AllowedMentions.None).ConfigureAwait(false);
+                try
+                {
+                    await message.ReplyAsync(
+                        embed: embed.Build(),
+                        allowedMentions: AllowedMentions.None,
+                        options: new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }
+                    ).ConfigureAwait(false);
+                }
+                catch { }
             }
         }
     }
