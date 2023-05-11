@@ -240,9 +240,9 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 {
                     var pixivUrl = saucePixiv.PixivId != null ? $"https://www.pixiv.net/en/artworks/{saucePixiv.PixivId}" : saucePixiv.Sauce.SourceURL;
                     if (saucePixiv.Title == null)
-                        return pixivUrl;
+                        return $"{pixivUrl} {GetSimilarText(saucePixiv.Sauce)}";
                     else
-                        return $"{pixivUrl} ({saucePixiv.Title})";
+                        return $"{pixivUrl} ({saucePixiv.Title}) {GetSimilarText(saucePixiv.Sauce)}";
                 }
 
                 // 2. Twitter
@@ -251,17 +251,23 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 {
                     var twitterUrl = sauceTwitter.Sauce.SourceURL;
                     if (sauceTwitter.Title == null)
-                        return twitterUrl;
+                        return $"{twitterUrl} {GetSimilarText(sauceTwitter.Sauce)}";
                     else
-                        return $"{twitterUrl} ({sauceTwitter.Title})";
+                        return $"{twitterUrl} ({sauceTwitter.Title}) {GetSimilarText(sauceTwitter.Sauce)}";
                 }
 
                 // 3. Others
-                return sauceWithUrls.FirstOrDefault().Sauce.SourceURL;
+                var firstSauceWithUrl = sauceWithUrls.FirstOrDefault().Sauce;
+                return $"{firstSauceWithUrl.SourceURL} {GetSimilarText(firstSauceWithUrl)}";
             }
 
             var firstSauce = sauceWithSimilarity.FirstOrDefault()?.Sauce;
-            return firstSauce != null ? $"{firstSauce.Name}: <no url>" : "";
+            return (firstSauce != null ? $"{firstSauce.Name}: <no url>" : "") + $" {GetSimilarText(firstSauce)}";
+        }
+
+        private static string GetSimilarText(Result sauce)
+        {
+            return $"`[{sauce.Similarity}% similar]`";
         }
 
         private static async Task GetSauceAndPostResponse(IUserMessage message)
