@@ -25,15 +25,27 @@ namespace Ditto.Bot.Modules.Utility.Linking
     [Alias("sauce")]
     public class SauceNaoLinkUtility : DiscordModule<LinkUtility>
     {
+        private class SauceResult
+        {
+            public Result Sauce { get; set; }
+            public string Title { get; set; }
+            public double Similarity { get; set; }
+            public string PixivId { get; set; }
+        }
+        private class SauceNaoDailyRateLimitException : Exception { }
+        private class SauceNaoRateLimitException : Exception { }
+
+
         private static ConcurrentList<Link> Links { get; set; } = new ConcurrentList<Link>();
         private static ConcurrentQueue<IUserMessage> MessageQueue { get; set; } = new ConcurrentQueue<IUserMessage>();
         private static bool Running { get; set; } = false;
         private static bool Initialized { get; set; } = false;
-        private static TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(20);
+        private static TimeSpan TimeoutRateLimit { get; set; } = TimeSpan.FromSeconds(60);
         private static IWebProxy Proxy { get; set; } = new WebProxy();
 
         private const double SimilarityTolerance = 5;
         private const double DefaultMinSimilarity = 50;
+        private const double RetryAttempts = 3;
 
         static SauceNaoLinkUtility()
         {
@@ -64,7 +76,8 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         {
                             await GetSauceAndPostResponse(message).ConfigureAwait(false);
                         }
-                        await Task.Delay(Timeout).ConfigureAwait(false);
+
+                        await Task.Delay(1000).ConfigureAwait(false);
                     }
                 });
 
@@ -202,20 +215,42 @@ namespace Ditto.Bot.Modules.Utility.Linking
             var httpResult = await client.PostAsync("search.php", content).ConfigureAwait(false);
             var stringResult = await httpResult.ReadContentAsString().ConfigureAwait(false);
             var sauce = await SauceNETUtil.ParseSauceAsync(stringResult).ConfigureAwait(false);
+
+            var errorMessage = sauce.Message?.ToLower() ?? "";
+            if (sauce.Results.Count == 0)
+            {
+                if (errorMessage.Contains("daily search limit") || errorMessage.Contains("daily limit"))
+                {
+                    //<strong>Daily Search Limit Exceeded.</strong><br /><br />USERNAME, basic accounts share an IP based usage pool. Your IP (IPADDRESS) has exceeded the basic account type's daily limit of 100 searches.<br />Account upgrades provide a per-user usage pool, and can be used to increase this limit.<br /><br />Please check the <a href='user.php?page=account-upgrades'>upgrades page</a> to find available upgrades.
+                    throw new SauceNaoDailyRateLimitException();
+                }
+                else if (errorMessage.Contains("search rate too high") || errorMessage.Contains("rate limit"))
+                {
+                    //<strong>Search Rate Too High.</strong><br /><br />USERNAME, basic accounts share an IP based usage pool. Your IP (IPADDRESS) has exceeded the basic account type's rate limit of 4 searches every 30 seconds.<br />Account upgrades provide a per-user usage pool, and can be used to increase this limit.<br /><br />Please check the <a href='user.php?page=account-upgrades'>upgrades page</a> to find available upgrades.
+                    throw new SauceNaoRateLimitException();
+                }
+            }
             return sauce;
         }
 
-        private static string GetPreferredSauceNameWithUrl(IMessage message, IEnumerable<Result> sauce)
+        private static string GetPreferredSauceNameWithUrl(IMessage message, IEnumerable<Result> sauce, bool multiline = false)
         {
-            var sauceWithSimilarity = sauce.Select(x => {
+            var sauceWithSimilarity = sauce.Select(x =>
+            {
                 double.TryParse(x.Similarity, out double similarity);
                 var title = x.Properties.FirstOrDefault(x => x.Name == "Title")?.Value;
                 var pixivId = x.Properties.FirstOrDefault(x => x.Name == "PixivId")?.Value;
-                return new { Sauce = x, Similarity = similarity, Title = title, PixivId = pixivId };
+                return new SauceResult
+                {
+                    Sauce = x,
+                    Similarity = similarity,
+                    Title = title,
+                    PixivId = pixivId
+                };
             }).OrderByDescending(x => x.Similarity);
 
             var sauceWithUrls = sauceWithSimilarity.Where(x => !string.IsNullOrEmpty(x.Sauce.SourceURL));
-            if (sauceWithUrls.Any(x =>
+            if (!multiline && sauceWithUrls.Any(x =>
                 message.Content.Contains(x.Sauce.SourceURL)
                 || (!string.IsNullOrEmpty(x.PixivId) && message.Content.Contains(x.PixivId))
                ))
@@ -231,43 +266,60 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     && highestSimilarity < minimumSimilarity)
                 {
                     // Similarity too low.
-                    return "";
+                    return GetResultText(null, multiline: multiline);
                 }
 
                 // 1. Pixiv
                 var saucePixiv = sauceWithUrls.FirstOrDefault(x => x.Sauce.SourceURL.Contains("pixiv.net"));
-                if (saucePixiv != null && saucePixiv.Similarity > (highestSimilarity - SimilarityTolerance))
+                if (saucePixiv != null
+                    && saucePixiv.Similarity > (highestSimilarity - SimilarityTolerance)
+                    && saucePixiv.Similarity >= minimumSimilarity)
                 {
                     var pixivUrl = saucePixiv.PixivId != null ? $"https://www.pixiv.net/en/artworks/{saucePixiv.PixivId}" : saucePixiv.Sauce.SourceURL;
-                    if (saucePixiv.Title == null)
-                        return $"{pixivUrl} {GetSimilarText(saucePixiv.Sauce)}";
-                    else
-                        return $"{pixivUrl} ({saucePixiv.Title}) {GetSimilarText(saucePixiv.Sauce)}";
+                    return GetResultText(saucePixiv, pixivUrl, multiline);
                 }
 
                 // 2. Twitter
                 var sauceTwitter = sauceWithUrls.FirstOrDefault(x => x.Sauce.SourceURL.Contains("twitter.com"));
-                if (sauceTwitter != null && sauceTwitter.Similarity > (highestSimilarity - SimilarityTolerance))
+                if (sauceTwitter != null
+                    && sauceTwitter.Similarity > (highestSimilarity - SimilarityTolerance)
+                    && sauceTwitter.Similarity >= minimumSimilarity)
                 {
                     var twitterUrl = sauceTwitter.Sauce.SourceURL;
-                    if (sauceTwitter.Title == null)
-                        return $"{twitterUrl} {GetSimilarText(sauceTwitter.Sauce)}";
-                    else
-                        return $"{twitterUrl} ({sauceTwitter.Title}) {GetSimilarText(sauceTwitter.Sauce)}";
+                    return GetResultText(sauceTwitter, twitterUrl, multiline);
                 }
 
                 // 3. Others
-                var firstSauceWithUrl = sauceWithUrls.FirstOrDefault().Sauce;
-                return $"{firstSauceWithUrl.SourceURL} {GetSimilarText(firstSauceWithUrl)}";
+                return GetResultText(sauceWithUrls.FirstOrDefault(), multiline: multiline);
             }
 
-            var firstSauce = sauceWithSimilarity.FirstOrDefault()?.Sauce;
-            return (firstSauce != null ? $"{firstSauce.Name}: <no url>" : "") + $" {GetSimilarText(firstSauce)}";
+            // No sauce found or no sauce with url found.
+            return GetResultText(sauceWithSimilarity.FirstOrDefault(), multiline: multiline);
         }
 
-        private static string GetSimilarText(Result sauce)
+        private static string GetResultText(SauceResult result, string url = null, bool multiline = false)
         {
-            return $"`[{sauce.Similarity}% similar]`";
+            var lineEndText = multiline ? $"\n{Globals.Character.HiddenSpace}" : "";
+
+            if (result?.Sauce == null || result?.Title == null)
+                return multiline ? $"`<unknown>`{lineEndText}" : "";
+
+            if (string.IsNullOrEmpty(url))
+                url = result.Sauce.SourceURL;
+
+            if (string.IsNullOrEmpty(url))
+                url = $"`<no url>`{lineEndText}";
+
+            var similarText = $"`[{result.Sauce.Similarity}% similar]`";
+            if (result.Title == null)
+            {
+                return $"{url}\n{similarText}{lineEndText}";
+            }
+            else
+            {
+                return $"{url}\n{result.Title}\n{similarText}{lineEndText}";
+            }
+
         }
 
         private static async Task GetSauceAndPostResponse(IUserMessage message)
@@ -280,18 +332,56 @@ namespace Ditto.Bot.Modules.Utility.Linking
             }
 
             var description = "";
+            int number = 1;
             foreach (var attachment in message.Attachments)
             {
-                if (message.Attachments.Count > 1)
+                int retryAttempt = 0;
+                while(true)
                 {
-                    await Task.Delay(Timeout).ConfigureAwait(false);
-                }
+                    try
+                    {
+                        var sauce = await GetSauce(attachment.Url).ConfigureAwait(false);
+                        var sauceText = GetPreferredSauceNameWithUrl(message, sauce.Results, message.Attachments.Count > 1);
+                        if (!string.IsNullOrEmpty(sauceText))
+                        {
+                            if (message.Attachments.Count > 1)
+                                description += $"`{number++}.` ";
 
-                var sauce = await GetSauce(attachment.Url).ConfigureAwait(false);
-                var sauceText = GetPreferredSauceNameWithUrl(message, sauce.Results);
-                if (!string.IsNullOrEmpty(sauceText))
-                {
-                    description += $"{sauceText}\n";
+                            description += $"{sauceText}\n";
+                        }
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex is SauceNaoRateLimitException)
+                        {
+                            if (retryAttempt >= RetryAttempts)
+                            {
+                                Log.Warn("Rate limit detected 3 times in a row, has the API key exceeded the daily limit?");
+                                await message.AddReactionsAsync(Emotes.Interrobang).ConfigureAwait(false);
+                                return;
+                            }
+                            else
+                            {
+                                Log.Debug("Rate limit detected, waiting...");
+                                await Task.Delay(TimeoutRateLimit).ConfigureAwait(false);
+                            }
+                        }
+                        else if (ex is SauceNaoDailyRateLimitException)
+                        {
+                            Log.Warn("SauceNao is rate limited because the API key exceeded the daily limit.");
+                            await message.AddReactionsAsync(Emotes.NoEntrySign).ConfigureAwait(false);
+                            return;
+                        }
+                        else
+                        {
+                            Log.Error("Unknown exception occurred in SauceNao", ex);
+                            await message.AddReactionsAsync(Emotes.Anger).ConfigureAwait(false);
+                            return;
+                        }
+                    }
+
+                    ++retryAttempt;
                 }
             }
 
