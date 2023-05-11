@@ -32,7 +32,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
         private static TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(20);
         private static IWebProxy Proxy { get; set; } = new WebProxy();
 
-        private const double SimilarityTolerance = 25;
+        private const double SimilarityTolerance = 5;
         private const double DefaultMinSimilarity = 50;
 
         static SauceNaoLinkUtility()
