@@ -289,6 +289,27 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     return GetResultText(sauceTwitter, twitterUrl, multiline);
                 }
 
+                // 3. Fanbox
+                var sauceFanbox = sauceWithUrls.FirstOrDefault(x => x.Sauce.SourceURL.Contains("fanbox.cc"));
+                if (sauceFanbox != null
+                    && sauceFanbox.Similarity > (highestSimilarity - SimilarityTolerance)
+                    && sauceFanbox.Similarity >= minimumSimilarity)
+                {
+                    var fanboxUrl = sauceFanbox.Sauce.SourceURL;
+                    return GetResultText(sauceFanbox, fanboxUrl, multiline);
+                }
+
+                // 4. Fanbox (inner source)
+                sauceFanbox = sauceWithUrls.FirstOrDefault(x => x.Sauce.InnerSource?.Contains("fanbox.cc") == true);
+                if (sauceFanbox != null
+                    && sauceFanbox.Similarity > (highestSimilarity - SimilarityTolerance)
+                    && sauceFanbox.Similarity >= minimumSimilarity)
+                {
+                    var fanboxUrl = sauceFanbox.Sauce.InnerSource;
+                    return GetResultText(sauceFanbox, fanboxUrl, multiline);
+                }
+
+
                 // 3. Others
                 return GetResultText(sauceWithUrls.FirstOrDefault(), multiline: multiline);
             }
@@ -301,7 +322,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
         {
             var lineEndText = multiline ? $"\n{Globals.Character.HiddenSpace}" : "";
 
-            if (result?.Sauce == null || result?.Title == null)
+            if (result?.Sauce == null)
                 return multiline ? $"`<unknown>`{lineEndText}" : "";
 
             if (string.IsNullOrEmpty(url))
