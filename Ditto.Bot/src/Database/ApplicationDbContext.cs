@@ -1,10 +1,6 @@
 ﻿using Ditto.Bot.Database.Models;
-using Ditto.Data;
 using Ditto.Extensions;
 using Microsoft.EntityFrameworkCore;
-using MySql.Data.MySqlClient;
-using System.IO;
-using System.Runtime.InteropServices;
 
 namespace Ditto.Bot.Database
 {
@@ -30,16 +26,15 @@ namespace Ditto.Bot.Database
             //optionsBuilder.UseSqlite($"Data Source=\"{filePath}\"");
 
             //// Mysql
-            optionsBuilder.UseMySql(new MySqlConnectionStringBuilder()
+            optionsBuilder.UseMySQL(new MySql.Data.MySqlClient.MySqlConnectionStringBuilder()
             {
                 Server = "localhost",
                 Port = 3306,
                 Database = "ditto",
                 UserID = "root",
-                Password = "",
-                SslMode = MySqlSslMode.Preferred,
-            }.ConnectionString
-            );
+                Password = "root",
+                SslMode = MySql.Data.MySqlClient.MySqlSslMode.Preferred,
+            }.ConnectionString);
 #endif
             base.OnConfiguring(optionsBuilder);
         }

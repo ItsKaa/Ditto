@@ -4,10 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace Ditto.Bot.Data
 {
-    public class UrbanDictionary
+    public static class UrbanDictionary
     {
         public enum ResultType
         {
@@ -33,9 +34,9 @@ namespace Ditto.Bot.Data
             public IEnumerable<string> SoundUrls { get; set; }
         }
         
-        public static Result Define(string query)
+        public static async Task<Result> Define(string query)
         {
-            var htmlCode = WebHelper.GetSourceCode($"http://api.urbandictionary.com/v0/define?term={WebUtility.UrlEncode(query)}");
+            var htmlCode = await WebHelper.GetSourceCodeAsync($"http://api.urbandictionary.com/v0/define?term={WebUtility.UrlEncode(query)}").ConfigureAwait(false);
             if (htmlCode != null)
             {
                 try

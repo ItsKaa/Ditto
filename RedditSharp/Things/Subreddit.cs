@@ -415,7 +415,7 @@ namespace RedditSharp.Things
             string sort = sortE.ToString().ToLower();
             string time = timeE.ToString().ToLower();
 
-            return Listing<Post>.Create(WebAgent, SearchUrl(Uri.EscapeUriString(terms), sort, time), max, 100);
+            return Listing<Post>.Create(WebAgent, SearchUrl(Uri.EscapeDataString(terms), sort, time), max, 100);
         }
 
         /// <summary>
@@ -573,9 +573,9 @@ namespace RedditSharp.Things
         /// <summary>
         /// Subscribe to a subreddit
         /// </summary>
-        public async Task SubscribeAsync()
+        public Task SubscribeAsync()
         {
-            await WebAgent.Post(SubscribeUrl, new
+            return WebAgent.Post(SubscribeUrl, new
             {
                 action = "sub",
                 sr = FullName
@@ -586,13 +586,13 @@ namespace RedditSharp.Things
         /// <summary>
         /// Unsubscribes from a subreddit
         /// </summary>
-        public async Task UnsubscribeAsync()
+        public Task UnsubscribeAsync()
         {
-            await WebAgent.Post(SubscribeUrl, new
+            return WebAgent.Post(SubscribeUrl, new
             {
                 action = "unsub",
                 sr = FullName
-            }).ConfigureAwait(false);
+            });
             //Dispose and discard
         }
 
@@ -600,13 +600,13 @@ namespace RedditSharp.Things
         /// Clear templates of specified <see cref="FlairType"/>
         /// </summary>
         /// <param name="flairType"><see cref="FlairType"/></param>
-        public async Task ClearFlairTemplatesAsync(FlairType flairType)
+        public Task ClearFlairTemplatesAsync(FlairType flairType)
         {
             //TODO Unit Tests
-            await WebAgent.Post(ClearFlairTemplatesUrl, new
+            return WebAgent.Post(ClearFlairTemplatesUrl, new
             {
                 flair_type = flairType == FlairType.Link ? "LINK_FLAIR" : "USER_FLAIR"
-            }).ConfigureAwait(false);
+            });
         }
 
         /// <summary>
@@ -616,17 +616,17 @@ namespace RedditSharp.Things
         /// <param name="flairType"><see cref="FlairType"/></param>
         /// <param name="text">flair text</param>
         /// <param name="userEditable">set flair user editable</param>
-        public async Task AddFlairTemplateAsync(string cssClass, FlairType flairType, string text, bool userEditable)
+        public Task AddFlairTemplateAsync(string cssClass, FlairType flairType, string text, bool userEditable)
         {
             //TODO Unit Tests
-            await WebAgent.Post(FlairTemplateUrl, new
+            return WebAgent.Post(FlairTemplateUrl, new
             {
                 css_class = cssClass,
                 flair_type = flairType == FlairType.Link ? "LINK_FLAIR" : "USER_FLAIR",
                 text = text,
                 text_editable = userEditable,
                 api_type = "json"
-            }).ConfigureAwait(false);
+            });
         }
 
         /// <summary>
@@ -662,15 +662,15 @@ namespace RedditSharp.Things
         /// <param name="user">reddit username</param>
         /// <param name="cssClass">flair css class</param>
         /// <param name="text">flair text</param>
-        public async Task SetUserFlairAsync(string user, string cssClass, string text)
+        public Task SetUserFlairAsync(string user, string cssClass, string text)
         {
             //TODO Unit Tests
-            await WebAgent.Post(SetUserFlairUrl, new
+            return WebAgent.Post(SetUserFlairUrl, new
             {
                 css_class = cssClass,
                 text = text,
                 name = user
-            }).ConfigureAwait(false);
+            });
         }
 
         /// <summary>
@@ -703,42 +703,42 @@ namespace RedditSharp.Things
         /// Adds a moderator
         /// </summary>
         /// <param name="user">User to add, by username</param>
-        public async Task AddModeratorAsync(string user)
+        public Task AddModeratorAsync(string user)
         {
-            await WebAgent.Post(AddModeratorUrl, new
+            return WebAgent.Post(AddModeratorUrl, new
             {
                 api_type = "json",
                 r = Name,
                 type = "moderator",
                 name = user
-            }).ConfigureAwait(false);
+            });
         }
 
         /// <summary>
         /// Accept invitation to moderate this subreddit.
         /// </summary>
-        public async Task AcceptModeratorInviteAsync()
+        public Task AcceptModeratorInviteAsync()
         {
-            await WebAgent.Post(AcceptModeratorInviteUrl, new
+            return WebAgent.Post(AcceptModeratorInviteUrl, new
             {
                 api_type = "json",
                 r = Name
-            }).ConfigureAwait(false);
+            });
         }
 
         /// <summary>
         /// Remove a moderator from this subreddit.
         /// </summary>
         /// <param name="id">reddit user fullname</param>
-        public async Task RemoveModeratorAsync(string id)
+        public Task RemoveModeratorAsync(string id)
         {
-            await WebAgent.Post(LeaveModerationUrl, new
+            return WebAgent.Post(LeaveModerationUrl, new
             {
                 api_type = "json",
                 r = Name,
                 type = "moderator",
                 id
-            }).ConfigureAwait(false);
+            });
         }
 
         /// <inheritdoc/>
@@ -748,30 +748,30 @@ namespace RedditSharp.Things
         /// Add a contributor to this subreddit.
         /// </summary>
         /// <param name="user">reddit username.</param>
-        public async Task AddContributorAsync(string user)
+        public Task AddContributorAsync(string user)
         {
-            await WebAgent.Post(AddContributorUrl, new
+            return WebAgent.Post(AddContributorUrl, new
             {
                 api_type = "json",
                 r = Name,
                 type = "contributor",
                 name = user
-            }).ConfigureAwait(false);
+            });
         }
 
         /// <summary>
         /// Remove a contributor from this subreddit.
         /// </summary>
         /// <param name="id">reddit user full name</param>
-        public async Task RemoveContributorAsync(string id)
+        public Task RemoveContributorAsync(string id)
         {
-            await WebAgent.Post(LeaveModerationUrl, new
+            return WebAgent.Post(LeaveModerationUrl, new
             {
                 api_type = "json",
                 r = Name,
                 type = "contributor",
                 id
-            }).ConfigureAwait(false);
+            });
         }
 
         /// <summary>
@@ -782,9 +782,9 @@ namespace RedditSharp.Things
         /// <param name="note">Mod notes about ban, shows in ban note as 'reason: note'</param>
         /// <param name="duration">Number of days to ban user, 0 for permanent</param>
         /// <param name="message">Message to include in ban PM</param>
-        public async Task BanUserAsync(string user, string reason, string note, int duration, string message)
+        public Task BanUserAsync(string user, string reason, string note, int duration, string message)
         {
-            await WebAgent.Post(BanUserUrl, new
+            return WebAgent.Post(BanUserUrl, new
             {
                 api_type = "json",
                 r = Name,
@@ -795,7 +795,7 @@ namespace RedditSharp.Things
                 note = note,
                 duration = duration <= 0 ? "" : duration.ToString(),
                 ban_message = message
-            }).ConfigureAwait(false);
+            });
         }
 
         /// <summary>
@@ -809,16 +809,16 @@ namespace RedditSharp.Things
         /// Unbans a user
         /// </summary>
         /// <param name="user">User to unban, by username</param>
-        public async Task UnBanUserAsync(string user)
+        public Task UnBanUserAsync(string user)
         {
-            await WebAgent.Post(UnBanUserUrl, new
+            return WebAgent.Post(UnBanUserUrl, new
             {
                 r = Name,
                 type = "banned",
                 container = FullName,
                 executed = "removed",
                 name = user,
-            }).ConfigureAwait(false);
+            });
         }
 
         private async Task<Post> SubmitAsync(SubmitData data, ICaptchaSolver solver = null)
@@ -864,9 +864,9 @@ namespace RedditSharp.Things
         /// <param name="captchaId"></param>
         /// <param name="captchaAnswer"></param>
         /// <param name="resubmit"></param>
-        public async Task<Post> SubmitPostAsync(string title, string url, string captchaId = "", string captchaAnswer = "", bool resubmit = false)
+        public Task<Post> SubmitPostAsync(string title, string url, string captchaId = "", string captchaAnswer = "", bool resubmit = false)
         {
-            return await SubmitAsync(new LinkData
+            return SubmitAsync(new LinkData
             {
                 Subreddit = Name,
                 Title = title,
@@ -874,7 +874,7 @@ namespace RedditSharp.Things
                 Resubmit = resubmit,
                 Iden = captchaId,
                 Captcha = captchaAnswer
-            }).ConfigureAwait(false);
+            });
         }
 
         /// <summary>
@@ -884,16 +884,16 @@ namespace RedditSharp.Things
         /// <param name="text">The raw markdown text of the submission</param>
         /// <param name="captchaId"></param>
         /// <param name="captchaAnswer"></param>
-        public async Task<Post> SubmitTextPostAsync(string title, string text, string captchaId = "", string captchaAnswer = "")
+        public Task<Post> SubmitTextPostAsync(string title, string text, string captchaId = "", string captchaAnswer = "")
         {
-            return await SubmitAsync(new TextData
+            return SubmitAsync(new TextData
             {
                 Subreddit = Name,
                 Title = title,
                 Text = text,
                 Iden = captchaId,
                 Captcha = captchaAnswer
-            }).ConfigureAwait(false);
+            });
         }
 
         /// <summary>

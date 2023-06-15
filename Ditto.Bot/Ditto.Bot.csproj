@@ -7,7 +7,7 @@
   
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <DisableImplicitAssetTargetFallback>true</DisableImplicitAssetTargetFallback>
     <!--<PackageTargetFallback>$(PackageTargetFallback);dnxcore50;portable-net45+win8+wpa81</PackageTargetFallback>-->
     <!--<PackageTargetFallback>dnxcore50;portable-net45+win8+wpa81</PackageTargetFallback>-->
@@ -54,12 +54,7 @@
   <ItemGroup>
     <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.49.0.2084" />
     <PackageReference Include="Google.Apis.Urlshortener.v1" Version="1.41.1.138" />
-    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.57.0.2749" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="3.1.3">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="3.1.3" />
+    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.60.0.3064" />
     <PackageReference Include="MoonSharp" Version="2.0.0" />
     <PackageReference Include="SauceNET" Version="1.1.1" />
     <PackageReference Include="SixLabors.Fonts" Version="1.0.0-beta18" />

@@ -42,55 +42,28 @@ namespace Ditto.Helpers
                 UriFormat.SafeUnescaped, StringComparison.OrdinalIgnoreCase);
         }
 
-
-        public static string GetSourceCode(string url)
-        {
-            try
-            {
-                using (var client = new WebClient())
-                {
-                    return client.DownloadString(url);
-                }
-            }
-            catch { }
-            return null;
-        }
-        public static string GetSourceCode(Uri uri)
-            => GetSourceCode(uri.ToString());
-
-        public static Stream GetStream(string url)
-        {
-            var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
-            var httpWebReponse = (HttpWebResponse)httpWebRequest.GetResponse();
-            return httpWebReponse.GetResponseStream();
-        }
-        public static Stream GetStream(Uri uri)
-            => GetStream(uri.ToString());
-
         public static async Task<Stream> GetStreamAsync(string url)
         {
-            var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
-            var httpWebReponse = (HttpWebResponse)(await httpWebRequest.GetResponseAsync().ConfigureAwait(false));
-            return httpWebReponse.GetResponseStream();
+            using var client = new HttpClient();
+            return await client.GetStreamAsync(url).ConfigureAwait(false);
         }
         public static Task<Stream> GetStreamAsync(Uri uri)
             => GetStreamAsync(uri.ToString());
 
-        public static async Task<string> GetSourceCodeAsync(string url)
+        public static Task<string> GetSourceCodeAsync(string url)
         {
+
             try
             {
-                using (var client = new WebClient())
-                {
-                    return await client.DownloadStringTaskAsync(url).ConfigureAwait(false);
-                }
+                using var client = new HttpClient();
+                return client.GetStringAsync(url);
             }
             catch { }
-            return null;
+            return Task.FromResult<string>(null);
         }
+
         public static Task<string> GetSourceCodeAsync(Uri uri)
             => GetSourceCodeAsync(uri.ToString());
-
 
         public static string GetTitleFromHtml(string html)
         {
@@ -98,8 +71,8 @@ namespace Ditto.Helpers
                 return string.Empty;
             return Regex.Match(html, @"\<title\b[^>]*\>\s*(?<Title>[\s\S]*?)\</title\>", RegexOptions.IgnoreCase).Groups["Title"].Value;
         }
-        public static string GetTitle(string url)
-            => GetTitleFromHtml(GetSourceCode(url));
+        public static async Task<string> GetTitle(string url)
+            => GetTitleFromHtml(await GetSourceCodeAsync(url).ConfigureAwait(false));
         
         public static string GetIconUrlFromHtml(string html)
         {
@@ -113,8 +86,8 @@ namespace Ditto.Helpers
             }
             return null;
         }
-        public static string GetIconUrl(string url)
-            => GetIconUrlFromHtml(GetSourceCode(url));
+        public static async Task<string> GetIconUrl(string url)
+            => GetIconUrlFromHtml(await GetSourceCodeAsync(url).ConfigureAwait(false));
 
 
         public static IEnumerable<HttpMetaItem> GetMetaInfoFromHtml(string html)
@@ -136,22 +109,25 @@ namespace Ditto.Helpers
             return Enumerable.Empty<HttpMetaItem>();
         }
 
-        public static IEnumerable<HttpMetaItem> GetMetaInfo(string url)
-            => GetMetaInfoFromHtml(GetSourceCode(url));
+        public static async Task<IEnumerable<HttpMetaItem>> GetMetaInfo(string url)
+            => GetMetaInfoFromHtml(await GetSourceCodeAsync(url).ConfigureAwait(false));
 
         public static IEnumerable<HttpMetaItem> GetMetaInfo(Uri uri)
             => GetMetaInfoFromHtml(uri.ToString());
 
         public static async Task<string> GetResponseUrlAsync(this string url)
         {
-            var httpWebRequest = WebRequest.Create(url) as HttpWebRequest;
-            httpWebRequest.AllowAutoRedirect = true;
-            httpWebRequest.Method = "HEAD";
-
             try
             {
-                using var httpWebReponse = await httpWebRequest.GetResponseAsync().ConfigureAwait(false) as HttpWebResponse;
-                return httpWebReponse.ResponseUri.AbsoluteUri;
+                using var handler = new HttpClientHandler()
+                {
+                    AllowAutoRedirect = true,
+                };
+                using var client = new HttpClient(handler);
+                var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, url)).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                // Slightly weird but the request message is actually the response.
+                return response.RequestMessage.RequestUri.AbsoluteUri;
             }
             catch { }
             return null;

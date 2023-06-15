@@ -42,7 +42,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         try
                         {
                             Log.Info($"Posting \"{item.Title}\" ({LinkType.RSS.ToString()}) in \"{link.Guild.Name}:{link.Channel.Name}\""); // Posting "10,408 Mysterious Necklaces" (Reddit) in "Team Aqua:general"
-                            await channel.EmbedAsync(ParseEmbed(item.Link, channel.Guild, feed.Channel?.Title),
+                            await channel.EmbedAsync(await ParseEmbed(item.Link, channel.Guild, feed.Channel?.Title).ConfigureAwait(false),
                                 options: new RequestOptions() { RetryMode = RetryMode.AlwaysFail }
                             );
                             listUrls.Add(item.Guid ?? item.Link);
@@ -106,9 +106,9 @@ namespace Ditto.Bot.Modules.Utility.Linking
             }
         }
 
-        protected static EmbedBuilder ParseEmbed(string url, IGuild guild, string channelName)
+        protected static async Task<EmbedBuilder> ParseEmbed(string url, IGuild guild, string channelName)
         {
-            var htmlCode = WebHelper.GetSourceCode(url);
+            var htmlCode = await WebHelper.GetSourceCodeAsync(url).ConfigureAwait(false);
             var metaInfo = WebHelper.GetMetaInfoFromHtml(htmlCode);
             var siteName = metaInfo.FirstOrDefault(e => e.Name.Equals("og:site_name", StringComparison.CurrentCultureIgnoreCase))?.Value;
             var title = metaInfo.FirstOrDefault(e => e.Name.Equals("title", StringComparison.CurrentCultureIgnoreCase))?.Value

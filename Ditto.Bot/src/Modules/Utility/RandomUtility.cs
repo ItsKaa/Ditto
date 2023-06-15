@@ -309,12 +309,12 @@ namespace Ditto.Bot.Modules.Utility
             try
             {
                 // Read the image file from the network.
-                Stream inputStream = await WebHelper.GetStreamAsync(sourceUrl).ConfigureAwait(false);
+                var inputStream = await WebHelper.GetStreamAsync(sourceUrl).ConfigureAwait(false);
 
                 // Convert to MemoryStream because this image class doesn't like HttpBaseStreams
                 using (var ms = new MemoryStream())
                 {
-                    inputStream.CopyTo(ms);
+                    await inputStream.CopyToAsync(ms).ConfigureAwait(false);
                     ms.Position = 0;
                     originalGifImage = SixLabors.ImageSharp.Image.Load(ms);
                 }

@@ -61,7 +61,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                             return listUrls;
                         }
 
-                        await channel.EmbedAsync(ParseEmbed(post, sub, channel.Guild),
+                        await channel.EmbedAsync(await ParseEmbed(post, sub, channel.Guild).ConfigureAwait(false),
                             options: new RequestOptions() { RetryMode = RetryMode.AlwaysFail }
                         ).ConfigureAwait(false);
                         retryCount = 0;
@@ -87,9 +87,9 @@ namespace Ditto.Bot.Modules.Utility.Linking
             });
         }
 
-        private static EmbedBuilder ParseEmbed(Post post, Subreddit subreddit, IGuild guild)
+        private static async Task<EmbedBuilder> ParseEmbed(Post post, Subreddit subreddit, IGuild guild)
         {
-            var htmlCode = WebHelper.GetSourceCode(post.Shortlink);
+            var htmlCode = await WebHelper.GetSourceCodeAsync(post.Shortlink).ConfigureAwait(false);
             var metaInfo = WebHelper.GetMetaInfoFromHtml(htmlCode);
             //var siteName = metaInfo.FirstOrDefault(e => e.Name.Equals("og:site_name", StringComparison.CurrentCultureIgnoreCase))?.Value;
             var title = metaInfo.FirstOrDefault(e => e.Name.Equals("title", StringComparison.CurrentCultureIgnoreCase))?.Value
@@ -101,7 +101,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
             var image = metaInfo.FirstOrDefault(e => e.Name.Equals("og:image", StringComparison.CurrentCultureIgnoreCase))?.Value;
 
 
-            var linkHtmlCode = WebHelper.GetSourceCode(post.Url.ToString());
+            var linkHtmlCode = await WebHelper.GetSourceCodeAsync(post.Url.ToString()).ConfigureAwait(false);
             var linkMeta = WebHelper.GetMetaInfoFromHtml(linkHtmlCode);
             var linkTitle = linkMeta.FirstOrDefault(e => e.Name.Equals("title", StringComparison.CurrentCultureIgnoreCase))?.Value
                 ?? linkMeta.FirstOrDefault(e => e.Name.Equals("og:title", StringComparison.CurrentCultureIgnoreCase))?.Value

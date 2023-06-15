@@ -53,8 +53,8 @@ namespace Ditto.Bot.Data.API.Rest
 
             var result = Call("i/r/", new[]
             {
-                new RestSharp.Parameter("type", typeString, RestSharp.ParameterType.GetOrPost),
-                new RestSharp.Parameter("nsfw", nsfw.ToString().ToLower(), RestSharp.ParameterType.GetOrPost),
+                new Parameter("type", typeString),
+                new Parameter("nsfw", nsfw.ToString().ToLower()),
             });
 
             // Absolute path.

@@ -32,9 +32,18 @@ namespace Ditto.Bot.Modules.Utility.Linking
             public double Similarity { get; set; }
             public string PixivId { get; set; }
         }
-        private class SauceNaoDailyRateLimitException : Exception { }
-        private class SauceNaoRateLimitException : Exception { }
 
+        private class SauceNaoDailyRateLimitException : Exception {
+            public SauceNaoDailyRateLimitException() { }
+            public SauceNaoDailyRateLimitException(string message) : base(message) { }
+            public SauceNaoDailyRateLimitException(string message, Exception innerException) : base(message, innerException) { }
+        }
+
+        private class SauceNaoRateLimitException : Exception {
+            public SauceNaoRateLimitException() { }
+            public SauceNaoRateLimitException(string message) : base(message) { }
+            public SauceNaoRateLimitException(string message, Exception innerException) : base(message, innerException) { }
+        }
 
         private static ConcurrentList<Link> Links { get; set; } = new ConcurrentList<Link>();
         private static ConcurrentQueue<IUserMessage> MessageQueue { get; set; } = new ConcurrentQueue<IUserMessage>();

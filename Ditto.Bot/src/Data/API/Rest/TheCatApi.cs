@@ -17,8 +17,8 @@ namespace Ditto.Bot.Data.API.Rest
         public Uri Random()
         {
             var value = Call("/api/images/get", new[] {
-                new RestSharp.Parameter("format", "xml", RestSharp.ParameterType.GetOrPost),
-                new RestSharp.Parameter("size", "full", RestSharp.ParameterType.GetOrPost)
+                new Parameter("format", "xml"),
+                new Parameter("size", "full")
             });
             return value.Url;
         }

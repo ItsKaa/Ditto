@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Ditto
 {
@@ -61,11 +62,11 @@ namespace Ditto
         /// <summary>
         /// Gets a random word from http://www.wordgenerator.net
         /// </summary>
-        public string RandomWordFromWeb()
+        public async Task<string> RandomWordFromWeb()
         {
             try
             {
-                var words = (WebHelper.GetSourceCode(@"http://www.wordgenerator.net/application/p.php?id=dictionary_words&type=1&spaceflag=false")
+                var words = ((await WebHelper.GetSourceCodeAsync(@"http://www.wordgenerator.net/application/p.php?id=dictionary_words&type=1&spaceflag=false").ConfigureAwait(false))
                     .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                 );
                 return words[New(0, words.Length - 1)];
