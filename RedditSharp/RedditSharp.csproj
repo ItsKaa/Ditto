@@ -1,15 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyTitle>RedditSharp</AssemblyTitle>
-    <VersionPrefix>2.0.0</VersionPrefix>
-    <TargetFrameworks Condition="'$(LibraryFrameworks)'==''">netstandard2.0;netcoreapp3.0;</TargetFrameworks>
-    <TargetFrameworks Condition="'$(LibraryFrameworks)'!=''">$(LibraryFrameworks)</TargetFrameworks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Configurations>Debug;Release;Migration</Configurations>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <DisableImplicitAssetTargetFallback>true</DisableImplicitAssetTargetFallback>
+    <ApplicationIcon />
+    <StartupObject />
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <RootNamespace>RedditSharp</RootNamespace>
     <AssemblyName>RedditSharp</AssemblyName>
     <PackageId>RedditSharp</PackageId>
     <PackageProjectUrl>https://github.com/CrustyJew/RedditSharp</PackageProjectUrl>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <TargetFrameworks>netstandard2.0;netcoreapp3.1;</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

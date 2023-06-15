@@ -46,7 +46,7 @@ namespace Ditto.Bot.Modules.Utility
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
         public async Task Define([Multiword] string query)
         {
-            var result = UrbanDictionary.Define(query);
+            var result = await UrbanDictionary.Define(query).ConfigureAwait(false);
             if(result != null)
             {
                 var definition = result.Definitions.FirstOrDefault();

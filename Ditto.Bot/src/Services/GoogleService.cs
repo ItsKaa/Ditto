@@ -41,7 +41,7 @@ namespace Ditto.Bot.Services
             {
                 if(ex is GoogleApiException)
                 {
-                    throw ex;
+                    throw;
                 }
             }
         }

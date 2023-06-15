@@ -93,7 +93,7 @@ namespace Ditto.Bot
             Cache = null;
         }
 
-        private static async Task LogOutAsync() => await Client.DoAsync((c) =>
+        private static Task LogOutAsync() => Client.DoAsync((c) =>
         {
             try
             {
@@ -115,8 +115,7 @@ namespace Ditto.Bot
             }
             return false;
         }
-        public static async Task<bool> IsClientConnectedAsync()
-            => await Client.DoAsync(client => IsClientConnected(client));
+        public static Task<bool> IsClientConnectedAsync() => Client.DoAsync(client => IsClientConnected(client));
             
         public static bool IsClientConnected()
         {
@@ -146,12 +145,11 @@ namespace Ditto.Bot
             try { await client.LogoutAsync(); } catch { }
         }
 
-        private static async Task LoginAsync()
-            => await Client.DoAsync((c) => LoginAsync(c));
+        private static Task LoginAsync() => Client.DoAsync((c) => LoginAsync(c));
 
-        private static async Task LoginAsync(DiscordClientEx client)
+        private static Task LoginAsync(DiscordClientEx client)
         {
-            await client.LoginAsync((Type == BotType.Bot ? TokenType.Bot : 0), Settings.Credentials.BotToken, true).ConfigureAwait(false);
+            return client.LoginAsync((Type == BotType.Bot ? TokenType.Bot : 0), Settings.Credentials.BotToken, true);
         }
 
         public async Task ReconnectAsync()

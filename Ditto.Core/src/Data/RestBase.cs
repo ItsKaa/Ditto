@@ -1,4 +1,4 @@
-﻿using Ditto.Data;
+﻿using Microsoft.Extensions.Options;
 using RestSharp;
 using RestSharp.Authenticators;
 using System;
@@ -10,36 +10,51 @@ namespace Ditto.Data
 {
     public abstract class RestBase : BaseClass
     {
-        protected RestClient Client { get; private set; }
-
-        private IAuthenticator _authenticator = null;
-        protected IAuthenticator Authenticator
+        public class Parameter
         {
-            get => _authenticator;
-            set => Client.Authenticator = (_authenticator = value);
-        }
+            public string Name { get; set; }
+            public object Value { get; set; }
 
-        private Uri _baseUrl;
-        protected Uri BaseUrl
-        {
-            get => _baseUrl;
-            set
+            public Parameter(string name, object value)
             {
-                _baseUrl = value;
-                Client.BaseUrl = _baseUrl;
+                Name = name;
+                Value = value;
             }
         }
 
-        public RestBase()
+        protected RestClient Client { get; private set; }
+        protected RestClientOptions Options { get; } = new RestClientOptions()
         {
-            Client = new RestClient
+            Encoding = Encoding.UTF8,
+            UserAgent = "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36",
+        };
+
+        protected IAuthenticator Authenticator
+        {
+            get => Options.Authenticator;
+            set
             {
-                Encoding = Encoding.UTF8,
-                UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 OPR/50.0.2762.67"
-            };
+                Options.Authenticator = value;
+                Client = new RestClient(Options);
+            }
         }
 
-        protected T Call<T>(string resource, IEnumerable<Parameter> parameters = null, Method method = Method.GET)
+        protected Uri BaseUrl
+        {
+            get => Options.BaseUrl;
+            set
+            {
+                Options.BaseUrl = value;
+                Client = new RestClient(Options);
+            }
+        }
+
+        protected RestBase()
+        {
+            Client = new RestClient(Options);
+        }
+
+        protected T Call<T>(string resource, IEnumerable<Parameter> parameters = null, Method method = Method.Get)
             where T: new()
         {
             var request = new RestRequest(resource, method);
@@ -58,7 +73,7 @@ namespace Ditto.Data
             }
             return response.Data;
         }
-        protected T Call<T>(string resource, Parameter[] parameters = null, Method method = Method.GET)
+        protected T Call<T>(string resource, Parameter[] parameters = null, Method method = Method.Get)
             where T : new()
             => Call<T>(resource, parameters?.ToList(), method);
     }
@@ -70,10 +85,10 @@ namespace Ditto.Data
         {
         }
 
-        protected T Call(string resource, IEnumerable<Parameter> parameters = null, Method method = Method.GET)
+        protected T Call(string resource, IEnumerable<Parameter> parameters = null, Method method = Method.Get)
             => Call<T>(resource, parameters, method);
 
-        protected T Call(string resource, Parameter[] parameters = null, Method method = Method.GET)
+        protected T Call(string resource, Parameter[] parameters = null, Method method = Method.Get)
             => Call(resource, parameters?.ToList(), method);
     }
 }

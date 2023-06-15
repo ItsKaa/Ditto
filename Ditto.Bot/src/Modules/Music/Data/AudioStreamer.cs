@@ -70,11 +70,13 @@ namespace Ditto.Bot.Modules.Music.Data
             };
             if(IsWindows())
             {
+#pragma warning disable CA1416 // Validate platform compatibility
                 startInfo.UserName = original.UserName;
                 startInfo.Password = original.Password;
                 startInfo.PasswordInClearText = original.PasswordInClearText;
                 startInfo.LoadUserProfile = original.LoadUserProfile;
                 startInfo.Domain = original.Domain;
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             return startInfo;
         }
@@ -229,12 +231,12 @@ namespace Ditto.Bot.Modules.Music.Data
                             }
                         }
                         catch (OperationCanceledException) { }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
                             if (CancellationTokenSource?.IsCancellationRequested == false)
                             {
                                 //Log.Error(ex);
-                                throw ex;
+                                throw;
                             }
                         }
                     }

@@ -16,10 +16,10 @@ namespace Ditto.Bot
         {
             public LinuxProgram()
             {
-                Console.CancelKeyPress += async (snder, eventArgs) =>
+                Console.CancelKeyPress += (sender, eventArgs) =>
                 {
                     eventArgs.Cancel = true;
-                    await TryExitAsync();
+                    TryExitAsync().Wait();
                     Thread.Sleep(1000);
                     Environment.Exit(0);
                 };
@@ -95,9 +95,9 @@ namespace Ditto.Bot
                 osProgram = new LinuxProgram();
             }
 
-            AppDomain.CurrentDomain.ProcessExit += async (sender, e) =>
+            AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
             {
-                await TryExitAsync();
+                TryExitAsync().Wait();
                 Thread.Sleep(1000);
             };
 

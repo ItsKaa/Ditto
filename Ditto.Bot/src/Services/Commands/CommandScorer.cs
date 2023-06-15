@@ -147,7 +147,7 @@ namespace Ditto.Bot.Services.Commands
                             //commandInputs.RemoveAt(0);
                             score += Globals.Command.Score.ParseSuccess;
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
                             // If available, use the default value.
                             if (param.IsOptional)
@@ -159,7 +159,7 @@ namespace Ditto.Bot.Services.Commands
                             {
                                 // Parsing failed, score drop
                                 score += Globals.Command.Score.ParseFail;
-                                throw ex;
+                                throw;
                             }
                         }
                     }

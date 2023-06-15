@@ -102,9 +102,9 @@ namespace Ditto.Data
                 action(Value);
             }
             //catch (OperationCanceledException) { }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw ex;
+                throw;
             }
             Release();
         }
@@ -120,9 +120,9 @@ namespace Ditto.Data
                 return func(Value);
             }
             //catch (OperationCanceledException) { }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw ex;
+                throw;
             }
             finally
             {
@@ -141,9 +141,9 @@ namespace Ditto.Data
                 action(Value);
             }
             //catch (OperationCanceledException) { }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw ex;
+                throw;
             }
             finally
             {
@@ -162,9 +162,9 @@ namespace Ditto.Data
                 await func(Value);
             }
             //catch (OperationCanceledException) { }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw ex;
+                throw;
             }
             finally
             {
@@ -182,9 +182,9 @@ namespace Ditto.Data
                 await WaitAsync(token);
                 return func(Value);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw ex;
+                throw;
             }
             finally
             {
@@ -202,9 +202,9 @@ namespace Ditto.Data
                 await WaitAsync(token);
                 return await func(Value);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw ex;
+                throw;
             }
             finally
             {

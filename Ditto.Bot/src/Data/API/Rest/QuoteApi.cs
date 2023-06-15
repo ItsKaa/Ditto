@@ -20,9 +20,9 @@ namespace Ditto.Bot.Data.API.Rest
         {
             return Call("api/1.0/", new[]
             {
-                new RestSharp.Parameter("method", "getQuote", RestSharp.ParameterType.GetOrPost),
-                new RestSharp.Parameter("lang", "en", RestSharp.ParameterType.GetOrPost),
-                new RestSharp.Parameter("format", "json", RestSharp.ParameterType.GetOrPost),
+                new Parameter("method", "getQuote"),
+                new Parameter("lang", "en"),
+                new Parameter("format", "json"),
             });
         }
     }

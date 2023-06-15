@@ -2,8 +2,6 @@
 using Ditto.Data;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Services
@@ -16,7 +14,7 @@ namespace Ditto.Bot.Services
     public class DatabaseHandler : BaseClass
     {
         private DbContextOptions _options;
-        public UnitOfWork UnitOfWork => new UnitOfWork(GetContext());
+        public UnitOfWork UnitOfWork => new(GetContext());
 
         public void Setup(DatabaseType databaseType, string connectionString = null)
         {
@@ -25,23 +23,22 @@ namespace Ditto.Bot.Services
             switch (databaseType)
             {
                 case DatabaseType.Mysql:
-                    builder.UseMySql(connectionString);
+                    builder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
                     break;
 
-                case DatabaseType.Sqlite:
-                    var filePath = GetProperPathAndCreate($"{Globals.AppDirectory}/data/Kaabot.db");
-                    builder.UseSqlite($"Data Source=\"{filePath}\"");
-                    break;
+                //case DatabaseType.Sqlite:
+                //    var filePath = GetProperPathAndCreate($"{Globals.AppDirectory}/data/Kaabot.db");
+                //    builder.UseSqlite($"Data Source=\"{filePath}\"");
+                //    return;
 
                 default:
-                    Log.Warn($"Unsupported database type \"{databaseType}\", falling back to SQLite.");
-                    Setup(DatabaseType.Sqlite, connectionString);
-                    return;
+                    Log.Fatal($"Unsupported database type \"{databaseType}\"");
+                    throw new Exception($"Unsupported database type \"{databaseType}\"");
             }
             _options = builder.Options;
 
             // Attempt a connection
-            Read((uow) => { }, true, true);
+            Read((_) => { }, true, false);
         }
 
         public ApplicationDbContext GetContext()
@@ -75,16 +72,14 @@ namespace Ditto.Bot.Services
 
         public TResult Do<TResult>(Func<UnitOfWork, TResult> func, bool complete = true, bool throwOnError = false, bool silent = false)
         {
-            TResult result = default(TResult);
+            var result = default(TResult);
             try
             {
-                using (var uow = UnitOfWork)
+                using var uow = UnitOfWork;
+                result = func(uow);
+                if (complete)
                 {
-                    result = func(uow);
-                    if (complete)
-                    {
-                        uow.Complete();
-                    }
+                    uow.Complete();
                 }
             }
             catch (Exception ex)
@@ -94,27 +89,27 @@ namespace Ditto.Bot.Services
             return result;
         }
 
-        public async Task DoAsync(Action<UnitOfWork> action, bool complete = true, bool throwOnError = false, bool silent = false)
+        public Task DoAsync(Action<UnitOfWork> action, bool complete = true, bool throwOnError = false, bool silent = false)
         {
-            await DoAsync(uow =>
+            return DoAsync(uow =>
             {
                 action(uow);
                 return Task.FromResult(true);
             }, complete, throwOnError, silent);
         }
 
-        public async Task DoAsync(Func<UnitOfWork, Task> func, bool complete = true, bool throwOnError = false, bool silent = false)
+        public Task DoAsync(Func<UnitOfWork, Task> func, bool complete = true, bool throwOnError = false, bool silent = false)
         {
-            await DoAsync(async uow =>
+            return DoAsync(async uow =>
             {
                 await func(uow);
                 return true;
             }, complete, throwOnError, silent);
         }
 
-        public async Task<TResult> DoAsync<TResult>(Func<UnitOfWork, TResult> func, bool complete = true, bool throwOnError = false, bool silent = false)
+        public Task<TResult> DoAsync<TResult>(Func<UnitOfWork, TResult> func, bool complete = true, bool throwOnError = false, bool silent = false)
         {
-            return await DoAsync(uow =>
+            return DoAsync(uow =>
             {
                 return Task.FromResult(func(uow));
             }, complete, throwOnError, silent);
@@ -122,16 +117,14 @@ namespace Ditto.Bot.Services
 
         public async Task<TResult> DoAsync<TResult>(Func<UnitOfWork, Task<TResult>> func, bool complete = true, bool throwOnError = false, bool silent = false)
         {
-            TResult result = default(TResult);
+            var result = default(TResult);
             try
             {
-                using (var uow = UnitOfWork)
+                using var uow = UnitOfWork;
+                result = await func(uow);
+                if (complete)
                 {
-                    result = await func(uow);
-                    if (complete)
-                    {
-                        await uow.CompleteAsync();
-                    }
+                    await uow.CompleteAsync();
                 }
             }
             catch (Exception ex)
