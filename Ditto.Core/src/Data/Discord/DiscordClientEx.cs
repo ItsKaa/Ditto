@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 
 namespace Ditto.Data.Discord
 {
-
     public class DiscordClientEx : DiscordSocketClient
     {
         public DiscordClientEx(DiscordSocketConfig config) : base(config)
@@ -15,11 +14,11 @@ namespace Ditto.Data.Discord
 
         public Task SetStatusAsync(UserStatusEx status)
             => SetStatusAsync(status.ToUserStatus());
-        
-        public Task<IGuildUser> GetGuildUserAsync(IGuild guild, ulong userId)
-        {
-            return guild?.GetUserAsync(userId);
-        }
+
+        public Task<IGuildUser> GetGuildUserAsync(IGuild guild, ulong userId) => guild != null
+                ? guild.GetUserAsync(userId)
+                : Task.FromResult<IGuildUser>(null);
+
         public Task<IGuildUser> GetGuildUserAsync(ulong guildId, ulong userId) => GetGuildUserAsync(GetGuild(guildId), userId);
         public Task<IGuildUser> GetGuildUserAsync(IGuild guild, IUser user) => GetGuildUserAsync(guild, user?.Id ?? 0);
         public Task<IGuildUser> GetGuildUserAsync(ulong guildId, IUser user) => GetGuildUserAsync(GetGuild(guildId), user);
