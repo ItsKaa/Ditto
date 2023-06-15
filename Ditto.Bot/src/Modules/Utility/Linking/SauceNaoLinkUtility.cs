@@ -386,10 +386,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     try
                     {
                         var sauce = await GetSauce(url).ConfigureAwait(false);
-                        var sauceText = GetPreferredSauceNameWithUrl(message, sauce.Results, message.Attachments.Count > 1);
+                        var sauceText = GetPreferredSauceNameWithUrl(message, sauce.Results, urls.Count() > 1);
                         if (!string.IsNullOrEmpty(sauceText))
                         {
-                            if (message.Attachments.Count > 1)
+                            if (urls.Count() > 1)
                                 description += $"`{number++}.` ";
 
                             description += $"{sauceText}\n";
