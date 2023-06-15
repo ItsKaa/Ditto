@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Utility.Linking
@@ -125,7 +126,9 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 if (link == null || link.Channel == null)
                     continue;
 
-                if (message.Attachments.Any(x => x.ContentType.Contains("image")))
+                if (message.Attachments.Any(x => x.ContentType.Contains("image"))
+                    || (Globals.RegularExpression.Urls.Matches(message.Content) is MatchCollection urlMatches
+                    && urlMatches.Any(x => x.Success && WebHelper.IsValidWebsite(x.Value))))
                 {
                     MessageQueue.Enqueue(message);
                 }
@@ -346,22 +349,43 @@ namespace Ditto.Bot.Modules.Utility.Linking
         private static async Task GetSauceAndPostResponse(IUserMessage message)
         {
             // Check number of links compared to the number of attachments.
-            var matches = Globals.RegularExpression.Urls.Matches(message.Content);
-            if (matches.Any(x => x.Success) && matches.Count >= message.Attachments.Count)
+            var urlMatches = Globals.RegularExpression.Urls.Matches(message.Content);
+            if (urlMatches.Any(x => x.Success)
+                && message.Attachments.Count > 0
+                && urlMatches.Count >= message.Attachments.Count)
             {
                 return;
             }
 
+            // Get the urls from the attachments or if it does not contain any attachments then use the image URLs from the message.
+            var urls = message.Attachments.Select(x => x.Url);
+            if (!urls.Any())
+            {
+                foreach(var match in urlMatches.Where(x => x.Success))
+                {
+                    if (WebHelper.IsValidWebsite(match.Value)
+                        && await match.Value.IsImageUrlAsync().ConfigureAwait(false))
+                    {
+                        urls = urls.Append(match.Value);
+                    }
+                }
+            }
+            urls = urls.Distinct();
+
+            // Exit out if we cannot detect a valid url so that we don't add an unnecessary reaction.
+            if (!urls.Any())
+                return;
+
             var description = "";
             int number = 1;
-            foreach (var attachment in message.Attachments)
+            foreach (var url in urls)
             {
                 int retryAttempt = 0;
                 while(true)
                 {
                     try
                     {
-                        var sauce = await GetSauce(attachment.Url).ConfigureAwait(false);
+                        var sauce = await GetSauce(url).ConfigureAwait(false);
                         var sauceText = GetPreferredSauceNameWithUrl(message, sauce.Results, message.Attachments.Count > 1);
                         if (!string.IsNullOrEmpty(sauceText))
                         {
