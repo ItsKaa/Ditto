@@ -282,6 +282,31 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     return GetResultText(saucePixiv, pixivUrl, multiline);
                 }
 
+                // 1b. Pixiv (inner source)
+                saucePixiv = sauceWithUrls.FirstOrDefault(x => x.Sauce.InnerSource?.Contains("pixiv.net") == true);
+                if (saucePixiv != null
+                    && saucePixiv.Similarity > (highestSimilarity - SimilarityTolerance)
+                    && saucePixiv.Similarity >= minimumSimilarity)
+                {
+                    var pixivUrl = saucePixiv.Sauce.InnerSource;
+                    return GetResultText(saucePixiv, pixivUrl, multiline);
+                }
+
+                // 1c. Pixiv (inner source through pximg.net)
+                saucePixiv = sauceWithUrls.FirstOrDefault(x => x.Sauce.InnerSource?.Contains("i.pximg.net") == true);
+                if (saucePixiv != null
+                    && saucePixiv.Similarity > (highestSimilarity - SimilarityTolerance)
+                    && saucePixiv.Similarity >= minimumSimilarity)
+                {
+                    var pximgUrl = saucePixiv.Sauce.InnerSource;
+                    var match = Regex.Match(pximgUrl, "https?://i.pximg.net/img-original/img/[\\d]*/[\\d]*/[\\d]*/[\\d]*/[\\d]*/[\\d]*/(?<id>[\\d]*)");
+                    if (match.Success && match.Groups.ContainsKey("id"))
+                    {
+                        var pixivUrl = $"https://www.pixiv.net/en/artworks/{(match.Groups["id"].Value)}";
+                        return GetResultText(saucePixiv, pixivUrl, multiline);
+                    }
+                }
+
                 // 2. Twitter
                 var sauceTwitter = sauceWithUrls.FirstOrDefault(x => x.Sauce.SourceURL.Contains("twitter.com"));
                 if (sauceTwitter != null
@@ -289,6 +314,16 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     && sauceTwitter.Similarity >= minimumSimilarity)
                 {
                     var twitterUrl = sauceTwitter.Sauce.SourceURL;
+                    return GetResultText(sauceTwitter, twitterUrl, multiline);
+                }
+
+                // 2b. Twitter (inner source)
+                sauceTwitter = sauceWithUrls.FirstOrDefault(x => x.Sauce.InnerSource?.Contains("twitter.com") == true);
+                if (sauceTwitter != null
+                    && sauceTwitter.Similarity > (highestSimilarity - SimilarityTolerance)
+                    && sauceTwitter.Similarity >= minimumSimilarity)
+                {
+                    var twitterUrl = sauceTwitter.Sauce.InnerSource;
                     return GetResultText(sauceTwitter, twitterUrl, multiline);
                 }
 
@@ -302,7 +337,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     return GetResultText(sauceFanbox, fanboxUrl, multiline);
                 }
 
-                // 4. Fanbox (inner source)
+                // 3b. Fanbox (inner source)
                 sauceFanbox = sauceWithUrls.FirstOrDefault(x => x.Sauce.InnerSource?.Contains("fanbox.cc") == true);
                 if (sauceFanbox != null
                     && sauceFanbox.Similarity > (highestSimilarity - SimilarityTolerance)
