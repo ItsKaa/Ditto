@@ -1,23 +1,18 @@
-﻿using Discord;
-using Discord.Commands;
-using Ditto.Attributes;
-using Ditto.Bot.Data.API.Rest;
-using Ditto.Bot.Modules.Admin;
-using Ditto.Data.Chatting;
-using Ditto.Data.Commands;
-using Ditto.Data.Discord;
+﻿using Ditto.Data.Chatting;
 using Ditto.Extensions;
-using Ditto.Helpers;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
+using System;
+using Ditto.Data.Discord;
 using System.Linq;
 using System.Threading.Tasks;
+using Discord;
+using Ditto.Bot.Data.API.Rest;
 
 namespace Ditto.Bot.Modules.Chat
 {
     public class Chat : DiscordModule
     {
+        public const int PruneConfirmationMessageCount = 10;
         public static ConcurrentDictionary<ulong, Lazy<CleverbotSession>> CleverbotSessions { get; private set; }
 
         static Chat()
@@ -58,23 +53,24 @@ namespace Ditto.Bot.Modules.Chat
             };
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All, RequireBotTag = false)]
-        public async Task Talk([Multiword] string message)
+        public static string GetPruneConfirmationMessage(IUser user, int count)
+            => $"{user.Mention} Please verify. Do you wish to delete {count} messages from this channel?";
+
+        public static async Task<string> Talk(IGuild guild, IMessageChannel channel, string message)
         {
             try
             {
-                if (CleverbotSessions.TryGetValue(Context.Guild.Id, out Lazy<CleverbotSession> cleverbot))
+                if (CleverbotSessions.TryGetValue(guild.Id, out Lazy<CleverbotSession> cleverbot))
                 {
                     if (cleverbot.Value.Valid)
                     {
-                        await Context.Channel.TriggerTypingAsync().ConfigureAwait(false);
+                        await channel.TriggerTypingAsync().ConfigureAwait(false);
                         var tags = message.ParseDiscordTags();
                         var response = await cleverbot.Value.GetResponseAsync(message).ConfigureAwait(false);
-                        await Context.Channel.SendMessageAsync(response.Response).ConfigureAwait(false);
+                        return response.Response;
                     }
                     else
                     {
-                        await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                         throw new Exception("Invalid Cleverbot API key.");
                     }
                 }
@@ -83,68 +79,37 @@ namespace Ditto.Bot.Modules.Chat
             {
                 Log.Error(ex);
             }
+
+            return null;
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All, DeleteUserMessage = true)]
-        [Priority(1)]
-        public Task Insult(IUser user)
-        {
-            return Insult(user?.Mention);
-        }
-
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All, DeleteUserMessage = true)]
-        [Priority(0)]
-        public async Task Insult([Multiword] string name)
+        public static string Insult(string name)
         {
             var insult = new InsultApi().Insult("");
-            if (!string.IsNullOrEmpty(insult?.Insult))
-            {
-                await Context.Channel.SendMessageAsync(name + insult.Insult).ConfigureAwait(false);
-            }
-            else
-            {
-                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
-            }
+            return !string.IsNullOrEmpty(insult?.Insult)
+                ? name + insult.Insult
+                : null;
         }
 
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        [Alias("purge")]
-        public async Task Prune(int count = 100, IUser user = null, [Multiword] string pattern = null)
+
+        public static async Task<int> PruneMessagesAsync(ITextChannel channel, int count, IUser user = null, string pattern = "")
         {
-            if (!Permissions.IsAdministratorOrBotOwner(Context))
-            {
-                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
-                return;
-            }
-
-            await Context.Message.DeleteAsync().ConfigureAwait(false);
-            await Task.Delay(100).ConfigureAwait(false);
-
-            if (count > 10)
-            {
-                var usedReaction = await Context.SendOptionDialogueAsync(
-                    $"{Context.User.Mention} Please verify. Do you wish to delete {count} messages from this channel?",
-                    new List<string>(), true,
-                    new[] { EmotesHelper.GetEmoji(Emotes.WhiteCheckMark), EmotesHelper.GetEmoji(Emotes.NoEntrySign) }, null, 60000, 0
-                ).ConfigureAwait(false);
-                if(usedReaction != 1)
-                {
-                    return;
-                }
-            }
-
             if (count > 100)
                 count = 100;
             else if (count <= 0)
                 count = 1;
 
+            var deletedCount = 0;
+
             // First attempt to delete it by bulk (only 14 days)
             try
             {
-                var list14Days = (await Context.Channel.GetMessagesAsync(count).ToListAsync())
+                var list14Days = (await channel.GetMessagesAsync(count).ToListAsync())
                     .SelectMany(i => i)
-                    .Where(x => !x.IsPinned)
-                    .Where(x => Math.Abs((DateTime.Now - x.CreatedAt.UtcDateTime).TotalDays) < 14);
+                    .Where(x => !x.IsPinned
+                        && Math.Abs((DateTime.Now - x.CreatedAt.UtcDateTime).TotalDays) < 14
+                        && x.Flags?.HasFlag(MessageFlags.Ephemeral) == false
+                    );
 
                 if (!string.IsNullOrEmpty(pattern))
                 {
@@ -157,7 +122,11 @@ namespace Ditto.Bot.Modules.Chat
                 }
 
                 // Attempt to bulk delete
-                await Context.TextChannel.DeleteMessagesAsync(list14Days).ConfigureAwait(false);
+                await channel.DeleteMessagesAsync(list14Days).ConfigureAwait(false);
+                deletedCount += list14Days.Count();
+
+                if (count <= deletedCount)
+                    return deletedCount;
 
                 // Wait a little bit because it takes some time and it's not in the async await.
                 await Task.Delay(2000).ConfigureAwait(false);
@@ -165,9 +134,9 @@ namespace Ditto.Bot.Modules.Chat
             catch { }
 
             // Manually delete older messages
-            var list = (await Context.Channel.GetMessagesAsync(count).ToListAsync())
+            var list = (await channel.GetMessagesAsync(count - deletedCount).ToListAsync())
                 .SelectMany(i => i)
-                .Where(x => !x.IsPinned);
+            .Where(x => !x.IsPinned);
 
             if (!string.IsNullOrEmpty(pattern))
             {
@@ -183,73 +152,16 @@ namespace Ditto.Bot.Modules.Chat
             {
                 try
                 {
-                    await msg.DeleteAsync().ConfigureAwait(false);
+                    if (msg.Flags?.HasFlag(MessageFlags.Ephemeral) == false)
+                    {
+                        await msg.DeleteAsync().ConfigureAwait(false);
+                        deletedCount++;
+                    }
                 }
                 catch { }
             }
+
+            return deletedCount;
         }
-
-
-        [Priority(4), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        [Help(null, "Make the bot user send a message.")]
-        public async Task Say(
-            [Help("channel", "The targeted text channel", optional: true)]
-            ITextChannel channel,
-            [Help("user", "The user to mention", optional: true)]
-            IUser user,
-            [Help("message", "The message to write")]
-            [Multiword] string message)
-        {
-            if (!Permissions.IsAdministratorOrBotOwner(Context))
-            {
-                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
-                return;
-            }
-
-            // Check the channel
-            if (channel == null)
-            {
-                channel = Context.TextChannel;
-                if(channel == null)
-                {
-                    await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
-                    return;
-                }
-            }
-
-            // Check user permissions
-            var guildUserPermissions = Context.GuildUser?.GetPermissions(channel);
-            if(guildUserPermissions?.ViewChannel != true || guildUserPermissions?.SendMessages != true)
-            {
-                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
-                return;
-            }
-
-            // Check bot permissions
-            var channelPermissions = await Ditto.Client.GetPermissionsAsync(channel);
-            if (!channelPermissions.ViewChannel || !channelPermissions.SendMessages)
-            {
-                await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
-                return;
-            }
-
-            await channel.SendMessageAsync((user == null ? string.Empty : $"{user?.Mention} ") + message).ConfigureAwait(false);
-        }
-
-        [Priority(3), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        public Task Say(IUser user, ITextChannel channel, [Multiword] string message)
-            => Say(channel, user, message);
-
-        [Priority(2), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        public Task Say(IUser user, [Multiword] string message)
-            => Say(null, user, message);
-
-        [Priority(1), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        public Task Say(ITextChannel channel, [Multiword] string message)
-            => Say(channel, null, message);
-
-        [Priority(0), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        public Task Say([Multiword] string message)
-            => Say((ITextChannel)null, null, message);
     }
 }

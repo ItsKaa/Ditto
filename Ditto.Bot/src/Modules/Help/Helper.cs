@@ -35,7 +35,7 @@ namespace Ditto.Bot.Modules.Help
                 // Chat bot
                 if(Context.IsBotUserTagged)
                 {
-                    await Module<Chat.Chat>().Talk(value).ConfigureAwait(false);
+                    await Module<Chat.ChatText>().Talk(value).ConfigureAwait(false);
                 }
             }
         }
