@@ -4,7 +4,7 @@ using Ditto.Bot.Data.API;
 using Ditto.Bot.Data.Configuration;
 using Ditto.Bot.Services;
 using Ditto.Bot.Services.Commands;
-using Ditto.Data;
+using Ditto.Extensions;
 using Ditto.Data.Discord;
 using Ditto.Data.Exceptions;
 using System;
@@ -26,7 +26,7 @@ namespace Ditto.Bot
         private static bool Stopping { get; set; } = false;
         public static bool Reconnecting { get; private set; } = false;
         public static bool Exiting { get; private set; } = false;
-        public static DiscordClientEx Client { get; private set; }
+        public static DiscordSocketClient Client { get; private set; }
         public static DatabaseHandler Database { get; private set; }
         public static CommandHandler CommandHandler { get; private set; }
         public static CacheHandler Cache { get; private set; }
@@ -103,7 +103,7 @@ namespace Ditto.Bot
             return;
         }
 
-        public static bool IsClientConnected(DiscordClientEx client)
+        public static bool IsClientConnected(DiscordSocketClient client)
         {
             if (client != null)
             {
@@ -125,20 +125,20 @@ namespace Ditto.Bot
         }
 
 
-        private static async Task LogOutAsync(DiscordClientEx client)
+        private static async Task LogOutAsync(DiscordSocketClient client)
         {
             if (!Running)
                 return;
             Running = false;
 
             try { await client.SetGameAsync(null); } catch { }
-            try { await client.SetStatusAsync(UserStatusEx.Invisible); } catch { }
+            try { await client.SetStatusExAsync(UserStatusEx.Invisible); } catch { }
             try { await client.LogoutAsync(); } catch { }
         }
 
         private static Task LoginAsync() => LoginAsync(Client);
 
-        private static Task LoginAsync(DiscordClientEx client)
+        private static Task LoginAsync(DiscordSocketClient client)
         {
             return client?.LoginAsync(Type == BotType.Bot ? TokenType.Bot : 0, Settings.Credentials.BotToken, true) ?? Task.CompletedTask;
         }
@@ -274,7 +274,7 @@ namespace Ditto.Bot
 
             // Create our discord client
             Client?.Dispose();
-            Client = new DiscordClientEx(new DiscordSocketConfig()
+            Client = new DiscordSocketClient(new DiscordSocketConfig()
             {
                 MessageCacheSize = Settings.Cache.AmountOfCachedMessages,
                 LogLevel = LogSeverity.Warning,
@@ -330,7 +330,7 @@ namespace Ditto.Bot
                 if (Type == BotType.Bot)
                 {
                     await Client.SetGameAsync(null);
-                    await Client.SetStatusAsync(UserStatusEx.Online);
+                    await Client.SetStatusExAsync(UserStatusEx.Online);
                 }
             };
 

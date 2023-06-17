@@ -1,4 +1,5 @@
-﻿using Ditto.Bot.Services.Data;
+﻿using Discord.WebSocket;
+using Ditto.Bot.Services.Data;
 using Ditto.Data.Discord;
 using System;
 using System.Collections.Concurrent;
@@ -117,7 +118,7 @@ namespace Ditto.Bot.Services
             _playingStatusItems.Clear();
         }
 
-        public static void Register(PriorityLevel priorityLevel, Func<DiscordClientEx, Task<string>> func)
+        public static void Register(PriorityLevel priorityLevel, Func<DiscordSocketClient, Task<string>> func)
         {
             _playingStatusItems.Enqueue(new PlayingStatusItem<Task<string>>(_idCounter++)
             {
@@ -127,7 +128,7 @@ namespace Ditto.Bot.Services
             });
         }
 
-        public static void Register(PriorityLevel priorityLevel, Func<DiscordClientEx, string> func)
+        public static void Register(PriorityLevel priorityLevel, Func<DiscordSocketClient, string> func)
             => Register(priorityLevel, (client) => Task.FromResult(func(client)));
     }
 }

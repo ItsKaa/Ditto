@@ -9,7 +9,7 @@ using Ditto.Bot.Modules.Utility.Linking;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Helpers;
-using Microsoft.EntityFrameworkCore.Internal;
+using Ditto.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;

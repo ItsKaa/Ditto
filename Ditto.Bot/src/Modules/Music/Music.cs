@@ -1,10 +1,10 @@
 ﻿using Discord;
 using Discord.Commands;
 using Ditto.Attributes;
-using Ditto.Bot.Modules.Admin;
 using Ditto.Bot.Modules.Music.Data;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
+using Ditto.Extensions;
 using Ditto.Extensions.Discord;
 using System;
 using System.Collections.Concurrent;

@@ -16,10 +16,10 @@ namespace Ditto.Bot.Services
     }
     public class ReactionHandler : IDisposable
     {
-        private DiscordClientEx _discordClient = null;
+        private DiscordSocketClient _discordClient = null;
         private Dictionary<ulong, ReactionData> _messageData = new Dictionary<ulong, ReactionData>();
 
-        public async Task SetupAsync(DiscordClientEx discordClient)
+        public async Task SetupAsync(DiscordSocketClient discordClient)
         {
             _discordClient = discordClient;
             _discordClient.ReactionAdded += DiscordClient_ReactionAdded;

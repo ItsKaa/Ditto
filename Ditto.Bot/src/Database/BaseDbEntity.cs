@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Ditto.Data.Database;
+using Ditto.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
