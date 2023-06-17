@@ -6,8 +6,6 @@ using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
 using Ditto.Helpers;
-using RedditSharp;
-using RedditSharp.Things;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +15,7 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Utility.Linking
 {
+    /*
     [Alias("reddit")]
     public class RedditUtility : DiscordModule<LinkUtility>
     {
@@ -212,4 +211,5 @@ namespace Ditto.Bot.Modules.Utility.Linking
             });
         }
     }
+    */
 }
