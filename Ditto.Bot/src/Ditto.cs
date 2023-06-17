@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.Interactions;
 using Discord.WebSocket;
 using Ditto.Bot.Data.API;
 using Ditto.Bot.Data.Configuration;
@@ -7,6 +8,7 @@ using Ditto.Bot.Services.Commands;
 using Ditto.Extensions;
 using Ditto.Data.Discord;
 using Ditto.Data.Exceptions;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,6 +31,9 @@ namespace Ditto.Bot
         public static DiscordSocketClient Client { get; private set; }
         public static DatabaseHandler Database { get; private set; }
         public static CommandHandler CommandHandler { get; private set; }
+        public static InteractionService InteractionService { get; private set;  }
+        public static IServiceProvider ServiceProvider { get; private set; }
+
         public static CacheHandler Cache { get; private set; }
         public static GoogleService Google { get; private set; }
         public static TwitchLib.Api.TwitchAPI Twitch { get; private set; }
@@ -192,7 +197,35 @@ namespace Ditto.Bot
             }
             Reconnecting = false;
         }
-        
+
+        private static IServiceProvider CreateServiceProvider()
+        {
+            var config = new DiscordSocketConfig()
+            {
+                MessageCacheSize = Settings.Cache.AmountOfCachedMessages,
+                LogLevel = LogSeverity.Warning,
+                ConnectionTimeout = (int)(Settings.Timeout * 60),
+                HandlerTimeout = (int)(Settings.Timeout * 60),
+                DefaultRetryMode = RetryMode.AlwaysRetry,
+                GatewayIntents = GatewayIntents.All,
+            };
+
+            var serviceConfig = new InteractionServiceConfig()
+            {
+                LogLevel = LogSeverity.Warning,
+                DefaultRunMode = RunMode.Async,
+                UseCompiledLambda = true,
+                AutoServiceScopes = true,
+            };
+
+            var collection = new ServiceCollection()
+                .AddSingleton(config)
+                .AddSingleton<DiscordSocketClient>()
+                .AddSingleton(serviceConfig)
+                .AddSingleton<InteractionService>()
+                ;
+            return collection.BuildServiceProvider();
+        }
 
         public async Task<bool> RunAsync()
         {
@@ -215,7 +248,7 @@ namespace Ditto.Bot
                 Log.Fatal(ex);
                 return false;
             }
-            
+
             // Try to initialize the database
             try
             {
@@ -226,7 +259,10 @@ namespace Ditto.Bot
                 Log.Fatal("Unable to create a connection with the database, please check the file \"/data/settings.xml\"", ex);
                 return false;
             }
-            
+
+            // Initialize the providers
+            ServiceProvider = CreateServiceProvider();
+
             // Try to initialise the service 'Google'
             try
             {
@@ -273,38 +309,36 @@ namespace Ditto.Bot
             }
 
             // Create our discord client
-            Client?.Dispose();
-            Client = new DiscordSocketClient(new DiscordSocketConfig()
-            {
-                MessageCacheSize = Settings.Cache.AmountOfCachedMessages,
-                LogLevel = LogSeverity.Warning,
-                //TotalShards = 1,
-                ConnectionTimeout = (int)(Settings.Timeout * 60),
-                HandlerTimeout = (int)(Settings.Timeout * 60),
-                DefaultRetryMode = RetryMode.AlwaysRetry,
-                //AlwaysDownloadUsers = true,
-                GatewayIntents = GatewayIntents.All,
-            });
+            Client = ServiceProvider.GetRequiredService<DiscordSocketClient>();
+            InteractionService = ServiceProvider.GetRequiredService<InteractionService>();
+
+            await InteractionService.AddModulesAsync(typeof(Ditto).Assembly, ServiceProvider);
             
             // Various services
             if (Cache == null)
             {
                 (Cache = new CacheHandler()).Setup(TimeSpan.FromSeconds(Settings.Cache.CacheTime));
             }
+
             CommandHandler?.Dispose();
             await (CommandHandler = new CommandHandler(Client)).SetupAsync().ConfigureAwait(false);
 
-            Client.Connected += async () =>
-            {
-                // Setup services
-                await CommandHandler.SetupAsync().ConfigureAwait(false);
-                ReactionHandler?.Dispose();
-                await (ReactionHandler = new ReactionHandler()).SetupAsync(Client).ConfigureAwait(false);
-                PlayingStatusHandler.Setup(TimeSpan.FromMinutes(1));
-            };
-
             if (_firstStart)
             {
+                Client.Connected += async () =>
+                {
+                    if (_firstStart)
+                    {
+                        // Setup services
+                        await CommandHandler.SetupAsync().ConfigureAwait(false);
+                        ReactionHandler?.Dispose();
+                        await (ReactionHandler = new ReactionHandler()).SetupAsync(Client).ConfigureAwait(false);
+                        PlayingStatusHandler.Setup(TimeSpan.FromMinutes(1));
+                    }
+
+                    _firstStart = false;
+                };
+
                 Connected += async () =>
                 {
                     // Start services
@@ -314,52 +348,68 @@ namespace Ditto.Bot
                     Connected -= Initialised;
                 };
 
+                Client.InteractionCreated += async (interaction) =>
+                {
+                    var context = new SocketInteractionContext(Client, interaction);
+                    await InteractionService.ExecuteCommandAsync(context, ServiceProvider);
+                };
+
                 // Call this once after a successful connection.
                 Connected += Initialised;
-            }
 
-            Client.Ready += async () =>
-            {
-                if (!Running)
+                Client.Ready += async () =>
                 {
-                    Running = true;
-                    await Connected().ConfigureAwait(false);
-                }
-                Log.Info("Connected");
+                    if (!Running)
+                    {
+                        Running = true;
+                        await Connected().ConfigureAwait(false);
+                    }
+                    Log.Info("Connected");
 
-                if (Type == BotType.Bot)
-                {
-                    await Client.SetGameAsync(null);
-                    await Client.SetStatusExAsync(UserStatusEx.Online);
-                }
-            };
+                    if (Type == BotType.Bot)
+                    {
+                        await Client.SetGameAsync(null);
+                        await Client.SetStatusExAsync(UserStatusEx.Online);
+                    }
 
-            Client.Disconnected += (e) =>
-            {
-                if (Reconnecting)
+                    try
+                    {
+                        await InteractionService.RegisterCommandsGloballyAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Fatal(ex);
+                        throw;
+                    }
+                };
+
+                Client.Disconnected += (e) =>
                 {
-                    //_reconnecting = false;
-                }
-                else
+                    if (Reconnecting)
+                    {
+                        //_reconnecting = false;
+                    }
+                    else
+                    {
+                        Log.Warn("Bot has been disconnected. {0}", (object)(Exiting ? null : $"| {e}"));
+                        if (!Exiting && Settings.AutoReconnect && !Reconnecting)
+                        {
+                            var _ = Task.Run(() => ReconnectAsync());
+                        }
+                    }
+                    return Task.CompletedTask;
+                };
+
+                Client.LoggedOut += () =>
                 {
-                    Log.Warn("Bot has been disconnected. {0}", (object)(Exiting ? null : $"| {e}"));
+                    Log.Warn("Bot has logged out.");
                     if (!Exiting && Settings.AutoReconnect && !Reconnecting)
                     {
                         var _ = Task.Run(() => ReconnectAsync());
                     }
-                }
-                return Task.CompletedTask;
-            };
-
-            Client.LoggedOut += () =>
-            {
-                Log.Warn("Bot has logged out.");
-                if (!Exiting && Settings.AutoReconnect && !Reconnecting)
-                {
-                    var _ = Task.Run(() => ReconnectAsync());
-                }
-                return Task.CompletedTask;
-            };
+                    return Task.CompletedTask;
+                };
+            }
 
             var autoReconnect = Settings.AutoReconnect;
             Settings.AutoReconnect = false;
@@ -375,7 +425,6 @@ namespace Ditto.Bot
             }
 
             await Client.StartAsync();
-            _firstStart = false;
             return true;
         }
         
