@@ -85,4 +85,8 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="src\ModulesSlash\Chat\" />
+  </ItemGroup>
+
 </Project>
