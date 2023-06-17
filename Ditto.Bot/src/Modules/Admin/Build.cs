@@ -43,40 +43,38 @@ namespace Ditto.Bot.Modules.Admin
                             IMessage message = null;
                             IGuild guild = null;
                             ITextChannel channel = null;
-                            await Ditto.Client.DoAsync(async client =>
+
+                            guild = Ditto.Client.GetGuild(link.GuildId);
+                            channel = await guild.GetTextChannelAsync(link.ChannelId).ConfigureAwait(false);
+                            message = await channel.GetMessageAsync(messageId, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit }).ConfigureAwait(false);
+                            if (message != null)
                             {
-                                guild = client.GetGuild(link.GuildId);
-                                channel = await guild.GetTextChannelAsync(link.ChannelId).ConfigureAwait(false);
-                                message = await channel.GetMessageAsync(messageId, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit }).ConfigureAwait(false);
-                                if (message != null)
-                                {
-                                    await message.SetResultAsync(CommandResult.Success).ConfigureAwait(false);
-                                }
+                                await message.SetResultAsync(CommandResult.Success).ConfigureAwait(false);
+                            }
 
-                                // Post build info in a secondary task
-                                try
+                            // Post build info in a secondary task
+                            try
+                            {
+                                var _ = new Build()
                                 {
-                                    var _ = new Build()
+                                    Context = new CommandContextEx(Ditto.Client, message as IUserMessage)
                                     {
-                                        Context = new CommandContextEx(client, message as IUserMessage)
-                                        {
-                                            Channel = channel,
-                                            Guild = guild
-                                        }
-                                    }.Info(); //commitHash
-                                }
-                                catch(Exception ex)
-                                {
-                                    Log.Error(ex);
-                                }
+                                        Channel = channel,
+                                        Guild = guild
+                                    }
+                                }.Info(); //commitHash
+                            }
+                            catch(Exception ex)
+                            {
+                                Log.Error(ex);
+                            }
 
-                                // Remove link
-                                await Ditto.Database.DoAsync(uow =>
-                                {
-                                    uow.Links.Remove(link);
-                                }, true).ConfigureAwait(false);
+                            // Remove link
+                            await Ditto.Database.DoAsync(uow =>
+                            {
+                                uow.Links.Remove(link);
+                            }, true).ConfigureAwait(false);
 
-                            }).ConfigureAwait(false);
                         }
                     }
                 }

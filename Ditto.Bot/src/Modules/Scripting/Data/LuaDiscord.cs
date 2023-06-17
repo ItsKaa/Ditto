@@ -34,7 +34,7 @@ namespace Ditto.Bot.Modules.Scripting.Data
             get => Channel?.Id.ToString() ?? "0";
             private set
             {
-                Channel = Ditto.Client.Do(client => client.GetChannel(Convert.ToUInt64(value))) as IMessageChannel;
+                Channel = Ditto.Client.GetChannel(Convert.ToUInt64(value)) as IMessageChannel;
             }
         }
 
@@ -78,7 +78,7 @@ namespace Ditto.Bot.Modules.Scripting.Data
         {
             Context = new Lazy<ICommandContextEx>(() =>
             {
-                return new CommandContextEx(Ditto.Client.Do(client => client), UserMessage)
+                return new CommandContextEx(Ditto.Client, UserMessage)
                 {
                     Channel = Channel,
                     Guild = Guild,
@@ -138,13 +138,14 @@ namespace Ditto.Bot.Modules.Scripting.Data
                 }
                 return Task.CompletedTask;
             });
-            Ditto.Client.Do(client => client.MessageReceived += waitAction);
+
+            Ditto.Client.MessageReceived += waitAction;
             
             while(response == null)
             {
                 Thread.Sleep(100);
             }
-            Ditto.Client.Do(client => client.MessageReceived -= waitAction);
+            Ditto.Client.MessageReceived -= waitAction;
             return response;
         }
 

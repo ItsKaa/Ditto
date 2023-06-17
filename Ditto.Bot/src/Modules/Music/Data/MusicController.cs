@@ -242,11 +242,11 @@ namespace Ditto.Bot.Modules.Music.Data
                         if (_userMessage == null)
                         {
                             _userMessage = await Channel.EmbedAsync(embedBuilder, Guild).ConfigureAwait(false);
-                            var botUserId = await Ditto.Client.DoAsync(c => c.CurrentUser.Id);
+                            var botUserId = Ditto.Client.CurrentUser.Id;
                             Ditto.ReactionHandler.Add(_userMessage,
-                                (async r =>
+                                async r =>
                                 {
-                                    if (r != null && r.Emote != null && r.UserId != botUserId)
+                                    if (r?.Emote != null && r.UserId != botUserId)
                                     {
                                         var update = false;
                                         foreach (var item in ControllerItems.Where(e => EmotesHelper.GetString(e.Emote) == r.Emote.Name))
@@ -267,8 +267,8 @@ namespace Ditto.Bot.Modules.Music.Data
                                             await UpdateAsync().ConfigureAwait(false);
                                         }
                                     }
-                                }),
-                                (async r =>
+                                },
+                                async r =>
                                 {
                                     if (r.UserId != botUserId)
                                     {
@@ -291,7 +291,7 @@ namespace Ditto.Bot.Modules.Music.Data
                                             await UpdateAsync().ConfigureAwait(false);
                                         }
                                     }
-                                })
+                                }
                             );
 
                             foreach (var item in ControllerItems)

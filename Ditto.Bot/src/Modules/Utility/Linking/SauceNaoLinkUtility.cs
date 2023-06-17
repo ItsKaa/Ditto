@@ -102,11 +102,8 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     Links.Clear();
                     Links.AddRange(await Ditto.Database.ReadAsync(uow => uow.Links.GetAllWithLinks(l => l.Type == LinkType.SauceNAO)).ConfigureAwait(false));
 
-                    await Ditto.Client.DoAsync(c =>
-                    {
-                        c.MessageReceived -= Ditto_MessageReceived;
-                        c.MessageReceived += Ditto_MessageReceived;
-                    }).ConfigureAwait(false);
+                    Ditto.Client.MessageReceived -= Ditto_MessageReceived;
+                    Ditto.Client.MessageReceived += Ditto_MessageReceived;
 
                     Initialized = true;
                 });

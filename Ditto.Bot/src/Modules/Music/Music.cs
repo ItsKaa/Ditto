@@ -134,7 +134,7 @@ namespace Ditto.Bot.Modules.Music
             }
             else
             {
-                if (!await Ditto.Client.DoAsync(c => c.CanJoinChannel(voiceChannel)))
+                if (!await Ditto.Client.CanJoinChannel(voiceChannel))
                 {
                     await Context.EmbedAsync(
                         "I'm unable to join the selected voice channel.",

@@ -354,7 +354,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 return;
             }
 
-            if (!(await Ditto.Client.DoAsync(c => c.GetPermissionsAsync(textChannel)).ConfigureAwait(false)).HasAccess())
+            if (!(await Ditto.Client.GetPermissionsAsync(textChannel)).HasAccess())
             {
                 await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
                 return;

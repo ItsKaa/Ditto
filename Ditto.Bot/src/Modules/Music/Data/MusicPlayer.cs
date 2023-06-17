@@ -240,7 +240,7 @@ namespace Ditto.Bot.Modules.Music.Data
             if (VoiceChannel == null || AudioClient == null
                 || (AudioClient.ConnectionState == ConnectionState.Disconnected || AudioClient.ConnectionState == ConnectionState.Disconnecting)
                 || !voiceChannel.Id.Equals(VoiceChannel?.Id)
-                || await voiceChannel.GetUserAsync((await Ditto.Client.DoAsync(c => c.CurrentUser).ConfigureAwait(false)).Id) == null
+                || await voiceChannel.GetUserAsync(Ditto.Client.CurrentUser.Id) == null
             )
             {
                 VoiceChannel = voiceChannel;

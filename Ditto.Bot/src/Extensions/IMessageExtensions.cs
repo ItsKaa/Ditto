@@ -38,7 +38,7 @@ namespace Ditto.Bot.Extensions
                 return Task.CompletedTask;
             });
             // Hook our function to the MessageReceived event.
-            await Ditto.Client.DoAsync(e => e.MessageReceived += func, cancellationSource.Token).ConfigureAwait(false);
+            Ditto.Client.MessageReceived += func;
 
             // Await our response
             while (!response.Success && cancellationSource?.IsCancellationRequested != true)
@@ -53,7 +53,7 @@ namespace Ditto.Bot.Extensions
             }
 
             // Remove our event function
-            await Ditto.Client.DoAsync(e => e.MessageReceived -= func).ConfigureAwait(false);
+            Ditto.Client.MessageReceived -= func;
 
             // Return our response.
             if (deleteQuestionOnResponseOrError)

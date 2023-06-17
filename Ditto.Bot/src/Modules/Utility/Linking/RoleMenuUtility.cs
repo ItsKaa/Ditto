@@ -49,7 +49,6 @@ namespace Ditto.Bot.Modules.Utility
 
         private static async Task<IUserMessage> GetMessageAsync(IGuild guild, ulong messageId, ITextChannel textChannel = null)
         {
-            IUserMessage message = null;
             var textChannels = new List<ITextChannel>();
             if (textChannel != null)
             {
@@ -63,24 +62,20 @@ namespace Ditto.Bot.Modules.Utility
                 }
             }
 
-            await Ditto.Client.DoAsync(async client =>
+            foreach (var channel in textChannels)
             {
-                foreach (var channel in textChannels)
+                if ((await Ditto.Client.GetPermissionsAsync(channel).ConfigureAwait(false)).ViewChannel)
                 {
-                    if ((await client.GetPermissionsAsync(channel).ConfigureAwait(false)).ViewChannel)
+                    try
                     {
-                        try
-                        {
-                            message = await channel.GetMessageAsync(messageId).ConfigureAwait(false) as IUserMessage;
-                            if (message != null)
-                                return;
-                        }
-                        catch { }
+                        if (await channel.GetMessageAsync(messageId).ConfigureAwait(false) is IUserMessage message)
+                            return message;
                     }
+                    catch { }
                 }
-            }).ConfigureAwait(false);
+            }
 
-            return message;
+            return null;
         }
 
         private static async Task<bool> HandleLinkAsync(Link link)

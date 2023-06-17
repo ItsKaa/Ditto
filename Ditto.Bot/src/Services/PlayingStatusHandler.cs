@@ -69,19 +69,17 @@ namespace Ditto.Bot.Services
                                         //    }
                                         //}
                                         
-                                        if (await Ditto.IsClientConnectedAsync())
+                                        if (Ditto.IsClientConnected())
                                         {
                                             var items = _playingStatusItems.OrderByDescending(e => e.Priority).ThenByDescending(e => e.DateAdded);
                                             foreach (var item in items)
                                             {
-                                                var result = await item.Execute(await Ditto.Client.DoAsync(c => c)).ConfigureAwait(false);
+                                                var result = await item.Execute(Ditto.Client).ConfigureAwait(false);
                                                 if (result != null)
                                                 {
-                                                    if (await Ditto.IsClientConnectedAsync())
+                                                    if (Ditto.IsClientConnected())
                                                     {
-                                                        await Ditto.Client.DoAsync(c
-                                                            => c.SetGameAsync(result.Length == 0 ? null : result)
-                                                        ).ConfigureAwait(false);
+                                                        await Ditto.Client.SetGameAsync(result.Length == 0 ? null : result);
                                                     }
                                                     break;
                                                 }

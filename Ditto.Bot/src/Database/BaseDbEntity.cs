@@ -42,19 +42,19 @@ namespace Ditto.Bot.Database
         }
 
         public IGuild GetGuild(ulong? guildId)
-        => guildId.HasValue ? Ditto.Client.Do((c) => c?.GetGuild(guildId.Value)) : null;
+        => guildId.HasValue ? Ditto.Client?.GetGuild(guildId.Value) : null;
 
         public IChannel GetChannel(ulong? channelId)
-            => channelId.HasValue ? Ditto.Client.Do((c) => c?.GetChannel(channelId.Value)) : null;
+            => channelId.HasValue ? Ditto.Client?.GetChannel(channelId.Value) : null;
 
         public IMessage GetMessage(ulong? channelId, ulong? messageId)
-            => messageId.HasValue && channelId.HasValue ? Ditto.Client.Do((c) => (c?.GetChannel(channelId.Value) as IMessageChannel)?.GetMessageAsync(messageId.Value).GetAwaiter().GetResult()) : null;
+            => messageId.HasValue && channelId.HasValue ? (Ditto.Client?.GetChannel(channelId.Value) as IMessageChannel)?.GetMessageAsync(messageId.Value).GetAwaiter().GetResult() : null;
 
         public IUser GetUser(ulong? userId)
-            => userId.HasValue ? Ditto.Client.Do((c) => c?.GetUser(userId.Value)) : null;
+            => userId.HasValue ? Ditto.Client?.GetUser(userId.Value) : null;
 
         public IGuildUser GetUserGuild(ulong? userId)
-            => userId.HasValue ? Ditto.Client.Do((c) => c?.GetGuildUserAsync(userId.Value)?.GetAwaiter().GetResult()) : null;
+            => userId.HasValue ? Ditto.Client?.GetGuildUserAsync(userId.Value)?.GetAwaiter().GetResult() : null;
 
         public IRole GetRole(ulong? guildId, ulong? roleId)
             => roleId.HasValue ? GetGuild(guildId)?.GetRole(roleId.Value) : null;

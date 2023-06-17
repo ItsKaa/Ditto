@@ -167,9 +167,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
         [Alias("add", "link", "hook", "register")]
         public async Task Add(ITextChannel textChannel, [Multiword] string url, DateTime? fromDate = null)
         {
-            if (!(await Ditto.Client.DoAsync(
-                    c => c.GetPermissionsAsync(textChannel)
-                ).ConfigureAwait(false)).HasAccess())
+            if (!(await Ditto.Client.GetPermissionsAsync(textChannel)).HasAccess())
             {
                 await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
             }

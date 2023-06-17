@@ -144,12 +144,8 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         }
                     }
 
-                    await Ditto.Client.DoAsync(c =>
-                    {
-                        c.MessageReceived -= Ditto_MessageReceived;
-                        c.MessageReceived += Ditto_MessageReceived;
-                    }).ConfigureAwait(false);
-
+                    Ditto.Client.MessageReceived -= Ditto_MessageReceived;
+                    Ditto.Client.MessageReceived += Ditto_MessageReceived;
                 });
 
                 return Task.CompletedTask;
@@ -433,9 +429,8 @@ namespace Ditto.Bot.Modules.Utility.Linking
         [Alias("add", "link", "hook", "register")]
         public async Task Add(ITextChannel sourceTextChannel, ITextChannel targetTextChannel, Languages sourceLanguage, Languages targetLanguage, ulong? fromMessageId = null)
         {
-            if (!(await Ditto.Client.DoAsync(
-                    async c => (await c.GetPermissionsAsync(sourceTextChannel)).HasAccess() && (await c.GetPermissionsAsync(targetTextChannel)).HasAccess()
-                ).ConfigureAwait(false)))
+            if (!((await Ditto.Client.GetPermissionsAsync(sourceTextChannel)).HasAccess()
+                && (await Ditto.Client.GetPermissionsAsync(targetTextChannel)).HasAccess()))
             {
                 await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
                 return;

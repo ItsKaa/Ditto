@@ -18,9 +18,7 @@ namespace Ditto.Bot.Modules.Admin
                 var cacheChannelConfig = await Ditto.Database.ReadAsync(uow => uow.Configs.GetGlobalCacheChannel()).ConfigureAwait(false);
                 if (ulong.TryParse(cacheChannelConfig?.Value, out ulong channelId))
                 {
-                    CacheChannel = await Ditto.Client.DoAsync(async x =>
-                        await x.GetChannelAsync(channelId, new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }).ConfigureAwait(false)
-                    ).ConfigureAwait(false) as ITextChannel;
+                    CacheChannel = await Ditto.Client.GetChannelAsync(channelId, new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }) as ITextChannel;
                 }
             };
         }
@@ -55,10 +53,7 @@ namespace Ditto.Bot.Modules.Admin
             }
             else
             {
-                await Ditto.Client.DoAsync(async client =>
-                {
-                    await client.StopAsync().ConfigureAwait(false);
-                }).ConfigureAwait(false);
+                await Ditto.Client.StopAsync();
             }
         }
 

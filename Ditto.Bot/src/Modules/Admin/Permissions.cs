@@ -14,7 +14,7 @@ namespace Ditto.Bot.Modules.Admin
         /// <summary>
         /// Retrieve the bot owner user.
         /// </summary>
-        public static Task<Discord.WebSocket.SocketUser> GetBotOwner() => Ditto.Client.DoAsync(client => client.GetUser(Ditto.Settings.BotOwnerDiscordId));
+        public static Task<IUser> GetBotOwner() => Ditto.Client.GetUserAsync(Ditto.Settings.BotOwnerDiscordId).AsTask();
         public static bool IsBotOwner(IUser user) => user.Id == Ditto.Settings.BotOwnerDiscordId;
         public static bool IsBotOwner(ICommandContextEx context) => IsBotOwner(context.User);
 

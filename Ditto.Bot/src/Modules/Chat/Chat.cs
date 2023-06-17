@@ -22,18 +22,16 @@ namespace Ditto.Bot.Modules.Chat
 
         static Chat()
         {
-            Ditto.Connected += async () =>
+            Ditto.Connected += () =>
             {
                 CleverbotSessions = new ConcurrentDictionary<ulong, Lazy<CleverbotSession>>(
-                    await Ditto.Client.DoAsync((c) => c.Guilds.ToDictionary(g => g.Id,
-                        gc => new Lazy<CleverbotSession>(
-                            () => new CleverbotSession(Ditto.Settings.Credentials.CleverbotApiKey, false), true
-                        )
-                    )).ConfigureAwait(false)
-                );
+                    Ditto.Client.Guilds.ToDictionary(g => g.Id, _ => new Lazy<CleverbotSession>(
+                        () => new CleverbotSession(Ditto.Settings.Credentials.CleverbotApiKey, false), true)
+                    ));
+                return Task.CompletedTask;
             };
 
-            Ditto.Client.Do((c) => c.JoinedGuild += (guild) =>
+            Ditto.Client.JoinedGuild += (guild) =>
             {
                 if (guild != null)
                 {
@@ -42,16 +40,16 @@ namespace Ditto.Bot.Modules.Chat
                     );
                 }
                 return Task.CompletedTask;
-            });
+            };
 
-            Ditto.Client.Do((c) => c.LeftGuild += (guild) =>
+            Ditto.Client.LeftGuild += (guild) =>
             {
                 if (guild != null)
                 {
                     CleverbotSessions.TryRemove(guild.Id, out Lazy<CleverbotSession> session);
                 }
                 return Task.CompletedTask;
-            });
+            };
 
             Ditto.Exit += () =>
             {
@@ -228,7 +226,7 @@ namespace Ditto.Bot.Modules.Chat
             }
 
             // Check bot permissions
-            var channelPermissions = await Ditto.Client.DoAsync(c => c.GetPermissionsAsync(channel)).ConfigureAwait(false);
+            var channelPermissions = await Ditto.Client.GetPermissionsAsync(channel);
             if (!channelPermissions.ViewChannel || !channelPermissions.SendMessages)
             {
                 await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
