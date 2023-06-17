@@ -16,30 +16,24 @@ namespace Ditto.Bot.Services
     }
     public class ReactionHandler : IDisposable
     {
-        private ObjectLock<DiscordClientEx> _discordClient = null;
+        private DiscordClientEx _discordClient = null;
         private Dictionary<ulong, ReactionData> _messageData = new Dictionary<ulong, ReactionData>();
 
-        public async Task SetupAsync(ObjectLock<DiscordClientEx> discordClient)
+        public async Task SetupAsync(DiscordClientEx discordClient)
         {
             _discordClient = discordClient;
-            await _discordClient.DoAsync((client) =>
-            {
-                client.ReactionAdded += DiscordClient_ReactionAdded;
-                client.ReactionRemoved += DiscordClient_ReactionRemoved;
-                client.ReactionsCleared += DiscordClient_ReactionsCleared;
-            }).ConfigureAwait(false);
+            _discordClient.ReactionAdded += DiscordClient_ReactionAdded;
+            _discordClient.ReactionRemoved += DiscordClient_ReactionRemoved;
+            _discordClient.ReactionsCleared += DiscordClient_ReactionsCleared;
         }
         public void Uninstall()
         {
-            _discordClient?.Do((client) =>
+            if (_discordClient != null)
             {
-                if (client != null)
-                {
-                    client.ReactionAdded -= DiscordClient_ReactionAdded;
-                    client.ReactionRemoved -= DiscordClient_ReactionRemoved;
-                    client.ReactionsCleared -= DiscordClient_ReactionsCleared;
-                }
-            });
+                _discordClient.ReactionAdded -= DiscordClient_ReactionAdded;
+                _discordClient.ReactionRemoved -= DiscordClient_ReactionRemoved;
+                _discordClient.ReactionsCleared -= DiscordClient_ReactionsCleared;
+            }
             _messageData.Clear();
         }
         public void Dispose()

@@ -28,12 +28,9 @@ namespace Ditto.Bot.Modules.Scripting
             Ditto.Connected += () =>
             {
                 // Load lua scripts from directory
-                var _ = Ditto.Client.DoAsync(client =>
-                {
-                    client.MessageReceived += DiscordMessageReceived;
-                    client.UserJoined += DiscordUserJoined;
-                    client.GuildMemberUpdated += GuildMemberUpdated;
-                });
+                Ditto.Client.MessageReceived += DiscordMessageReceived;
+                Ditto.Client.UserJoined += DiscordUserJoined;
+                Ditto.Client.GuildMemberUpdated += GuildMemberUpdated;
 
 
                 if (!Initialized)
@@ -47,7 +44,7 @@ namespace Ditto.Bot.Modules.Scripting
                         {
                             var guildId = Convert.ToUInt64(Path.GetDirectoryName(filePath).Split("\\").Last());
                             LuaHandler.CreateLuaScript(out LuaScript luaScript, null, null, null);
-                            luaScript.Guild = await Ditto.Client.DoAsync(client => client.GetGuild(guildId)).ConfigureAwait(false);
+                            luaScript.Guild = Ditto.Client.GetGuild(guildId);
                             luaScript.FileName = Path.GetFileName(filePath);
                             ExecuteMethod(luaScript, LuaScriptMethods.Initialise);
                             LuaHandler.ApplyScriptVariables(luaScript, true);
@@ -100,15 +97,14 @@ namespace Ditto.Bot.Modules.Scripting
             Ditto.Exit += () =>
             {
                 // Load lua scripts from directory
-                return Ditto.Client.DoAsync(client =>
+                if (Ditto.Client != null)
                 {
-                    if (client != null)
-                    {
-                        client.MessageReceived -= DiscordMessageReceived;
-                        client.UserJoined -= DiscordUserJoined;
-                        client.GuildMemberUpdated -= GuildMemberUpdated;
-                    }
-                });
+                    Ditto.Client.MessageReceived -= DiscordMessageReceived;
+                    Ditto.Client.UserJoined -= DiscordUserJoined;
+                    Ditto.Client.GuildMemberUpdated -= GuildMemberUpdated;
+                }
+
+                return Task.CompletedTask;
             };
         }
 

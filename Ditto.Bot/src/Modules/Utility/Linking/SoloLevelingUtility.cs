@@ -88,18 +88,13 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 }
 
                 // Start listening to new messages
-                await Ditto.Client.DoAsync(client =>
-                {
-                    client.MessageReceived += OnMessageReceived;
-                }).ConfigureAwait(false);
+                Ditto.Client.MessageReceived += OnMessageReceived;
             };
 
-            Ditto.Exit += async () =>
+            Ditto.Exit += () =>
             {
-                await Ditto.Client.DoAsync(client =>
-                {
-                    client.MessageReceived -= OnMessageReceived;
-                }).ConfigureAwait(false);
+                Ditto.Client.MessageReceived -= OnMessageReceived;
+                return Task.CompletedTask;
             };
         }
 
@@ -134,10 +129,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
             var userId = GetUserIdFromLink(link);
             if (userId > 0)
             {
-                return (await Ditto.Client.DoAsync(client =>
-                {
-                    return client.GetUser(userId);
-                }).ConfigureAwait(false));
+                return await Ditto.Client.GetUserAsync(userId);
             }
 
             return null;

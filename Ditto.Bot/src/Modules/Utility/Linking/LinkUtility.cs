@@ -52,7 +52,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         var links = _links.Select(i => i.Value).ToList();
                         foreach (var link in links)
                         {
-                            if (!(Ditto.Running && await Ditto.IsClientConnectedAsync().ConfigureAwait(false)))
+                            if (!(Ditto.Running && Ditto.IsClientConnected()))
                             {
                                 break;
                             }
@@ -66,7 +66,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                                     var channel = link.Channel;
                                     if (channel != null
                                         && channel.GuildId == link.GuildId
-                                        && (await Ditto.Client.DoAsync((c) => c.GetPermissionsAsync(channel))).HasAccess()
+                                        && (await Ditto.Client.GetPermissionsAsync(channel)).HasAccess()
                                        )
                                     {
                                         var linkItems = await ReadAndPostLinkAsync(link).ConfigureAwait(false);
@@ -145,7 +145,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
         public static async Task<bool> SendRetryLinkMessageAsync(LinkType linkType, int repostCount, Exception ex = null)
         {
-            if (Ditto.Running && await Ditto.IsClientConnectedAsync().ConfigureAwait(false))
+            if (Ditto.Running && Ditto.IsClientConnected())
             {
                 Log.Debug($"Attempting to repost link ({linkType.ToString()})... {repostCount}{(ex == null ? string.Empty : $" | {ex}")}");
                 await Task.Delay(1000).ConfigureAwait(false);

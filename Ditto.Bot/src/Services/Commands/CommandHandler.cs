@@ -21,14 +21,14 @@ namespace Ditto.Bot.Services.Commands
 {
     public partial class CommandHandler : IDisposable
     {
-        private readonly ObjectLock<DiscordClientEx> _discordClient;
+        private readonly DiscordClientEx _discordClient;
 
         public bool Running { get; private set; }
         public ConcurrentDictionary<ulong, List<ModuleInfo>> Modules { get; private set; }
         public CommandConverter CommandConverter { get; private set; }
         public CommandMethodParser CommandMethodParser { get;set; }
 
-        public CommandHandler(ObjectLock<DiscordClientEx> client)
+        public CommandHandler(DiscordClientEx client)
         {
             _discordClient = client;
             Modules = new ConcurrentDictionary<ulong, List<ModuleInfo>>();
@@ -48,15 +48,12 @@ namespace Ditto.Bot.Services.Commands
         {
             try
             {
-                _discordClient?.Do((client) =>
+                if (_discordClient != null)
                 {
-                    if (client != null)
-                    {
-                        client.MessageReceived -= MessageReceivedHandler;
-                        client.JoinedGuild -= JoinedGuildHandler;
-                        client.LeftGuild -= LeftGuildHandler;
-                    }
-                });
+                    _discordClient.MessageReceived -= MessageReceivedHandler;
+                    _discordClient.JoinedGuild -= JoinedGuildHandler;
+                    _discordClient.LeftGuild -= LeftGuildHandler;
+                }
             }
             catch { }
             try { Modules?.Clear(); } catch { }
@@ -72,12 +69,9 @@ namespace Ditto.Bot.Services.Commands
                 // reload all our modules
                 await ReloadAsync(null).ConfigureAwait(false);
 
-                await _discordClient.DoAsync((client) =>
-                {
-                    client.MessageReceived += MessageReceivedHandler;
-                    client.JoinedGuild += JoinedGuildHandler;
-                    client.LeftGuild += LeftGuildHandler;
-                }).ConfigureAwait(false);
+                _discordClient.MessageReceived += MessageReceivedHandler;
+                _discordClient.JoinedGuild += JoinedGuildHandler;
+                _discordClient.LeftGuild += LeftGuildHandler;
 
                 Log.Info("Started after {0:0}ms", (DateTime.Now - time).TotalMilliseconds);
             }
@@ -159,7 +153,7 @@ namespace Ditto.Bot.Services.Commands
             {
                 Modules.Clear();
                 await ReloadAsync(0, false).ConfigureAwait(false); // default, for private messages.
-                foreach (var g in await _discordClient.DoAsync((client) => client.Guilds))
+                foreach (var g in _discordClient.Guilds)
 				{
 					await ReloadAsync(g, fillDatabase).ConfigureAwait(false);
 				}
@@ -238,19 +232,17 @@ namespace Ditto.Bot.Services.Commands
         private Task MessageReceivedHandler(SocketMessage socketMessage)
         {
             var _ = Task.Run(async () =>
-            {	
+            {
                 var userMessage = socketMessage as SocketUserMessage;
                 var content = userMessage?.Content?.TrimStart();
                 if (socketMessage == null || userMessage == null || socketMessage.Author == null || socketMessage.Author.IsBot || !Ditto.Running)
                     return;
-                
+
                 // Create our context
-                var context = await _discordClient.DoAsync((client) => new CommandContextEx(client, userMessage)).ConfigureAwait(false);
-                var userTag = await _discordClient.DoAsync((client) =>
-                    content.ParseDiscordTags().FirstOrDefault(x => x.IsSuccess
+                var context = new CommandContextEx(_discordClient, userMessage);
+                var userTag = content.ParseDiscordTags().FirstOrDefault(x => x.IsSuccess
                         && x.Type == DiscordTagType.USER
-                        && x.Id == client.CurrentUser?.Id)
-                );
+                        && x.Id == _discordClient.CurrentUser?.Id);
 
                 var startsWithPrefix = content.StartsWith(Ditto.Cache.Db.Prefix(context.Guild));
                 if (userTag != null && !startsWithPrefix)
