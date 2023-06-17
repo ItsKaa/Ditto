@@ -21,14 +21,14 @@ namespace Ditto.Bot.Services.Commands
 {
     public partial class CommandHandler : IDisposable
     {
-        private readonly DiscordClientEx _discordClient;
+        private readonly DiscordSocketClient _discordClient;
 
         public bool Running { get; private set; }
         public ConcurrentDictionary<ulong, List<ModuleInfo>> Modules { get; private set; }
         public CommandConverter CommandConverter { get; private set; }
         public CommandMethodParser CommandMethodParser { get;set; }
 
-        public CommandHandler(DiscordClientEx client)
+        public CommandHandler(DiscordSocketClient client)
         {
             _discordClient = client;
             Modules = new ConcurrentDictionary<ulong, List<ModuleInfo>>();
