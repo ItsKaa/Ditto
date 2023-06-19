@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Admin
 {
     [Alias("module")]
-    public class Modules : DiscordModule<Admin>
+    public class Modules : DiscordModule<AdminText>
     {
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents)]
         public override Task _()
