@@ -1,7 +1,4 @@
 ﻿using Discord;
-using Discord.Commands;
-using Ditto.Attributes;
-using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using System.Threading.Tasks;
 
@@ -23,62 +20,20 @@ namespace Ditto.Bot.Modules.Admin
             };
         }
 
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents)]
-        public override Task _()
+        public static void DebugLogging(bool enable = true)
         {
-            return Task.CompletedTask;
+            Log.Setup(Log.LogToConsole, Log.LogToFile, enable);
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Global)]
-        public async Task Debug(bool enable = true)
+        public static Task Disconnect()
         {
-            if (!Permissions.IsBotOwner(Context))
-            {
-                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
-            }
-            else
-            {
-                Log.Setup(Log.LogToConsole, Log.LogToFile, enable);
-            }
+            return Ditto.Client.StopAsync();
         }
 
-
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Global)]
-        [Alias("dc")]
-        public async Task Disconnect(bool enable = true)
+        public static async Task SetGlobalCacheChannel(ITextChannel textChannel)
         {
-            if (!Permissions.IsBotOwner(Context))
-            {
-                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
-            }
-            else
-            {
-                await Ditto.Client.StopAsync();
-            }
-        }
-
-        [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local)]
-        public async Task SetCache(ITextChannel textChannel)
-        {
-            if (!Permissions.IsBotOwner(Context))
-            {
-                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
-            }
-            if (!await Permissions.CanBotSendMessages(textChannel).ConfigureAwait(false))
-            {
-                await Context.ApplyResultReaction(CommandResult.FailedBotPermission).ConfigureAwait(false);
-            }
-            else
-            {
-                await Ditto.Database.DoAsync(uow =>
-                {
-                    uow.Configs.SetGlobalCacheChannel(textChannel);
-                }).ConfigureAwait(false);
-
-                CacheChannel = textChannel;
-
-                await Context.ApplyResultReaction(CommandResult.Success).ConfigureAwait(false);
-            }
+            await Ditto.Database.DoAsync(uow => uow.Configs.SetGlobalCacheChannel(textChannel));
+            CacheChannel = textChannel;
         }
     }
 }
