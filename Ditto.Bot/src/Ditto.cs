@@ -369,6 +369,33 @@ namespace Ditto.Bot
                 }
             };
 
+            InteractionService.InteractionExecuted += async (_, interactionContext, result) =>
+            {
+                if (!result.IsSuccess)
+                {
+                    try
+                    {
+                        if (interactionContext.Interaction.Type == InteractionType.ApplicationCommand
+                            && !interactionContext.Interaction.HasResponded
+                            && !string.IsNullOrEmpty(result.ErrorReason))
+                        {
+                            if (result is ExecuteResult executeResult && executeResult.Exception != null)
+                            {
+                                await interactionContext.Interaction.RespondAsync($"`💢 An exception occurred while attempting to execute the command. Please try again.`", ephemeral: true);
+                            }
+                            else
+                            {
+                                await interactionContext.Interaction.RespondAsync($"`💢 Error: {result.ErrorReason}`", ephemeral: true);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warn("Failed to send the error code to the user for a failed interaction", ex);
+                    }
+                }
+            };
+
             Client.Ready += async () =>
             {
                 if (!Running)
@@ -434,7 +461,6 @@ namespace Ditto.Bot
             await Client.StartAsync();
             return true;
         }
-        
 
         public async Task RunAndBlockAsync(CancellationToken token)
         {
