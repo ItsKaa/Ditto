@@ -1,30 +1,32 @@
 ﻿using Discord;
-using Discord.Commands;
-using Ditto.Attributes;
-using Ditto.Bot.Data.Discord;
 using Ditto.Bot.Database.Models;
-using Ditto.Bot.Modules.Admin.Data;
-using Ditto.Data;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
-using Ditto.Extensions;
 using Ditto.Extensions.Discord;
-using Ditto.Helpers;
+using Ditto.Extensions;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
+using System.Diagnostics;
 using System.Text;
+using Ditto.Bot.Modules.Admin.Data;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using Ditto.Helpers;
+using Ditto.Data;
 
 namespace Ditto.Bot.Modules.Admin
 {
     public class Build : DiscordModule
     {
+        private const string RepositoryAlias = "origin";
+        //private const string BranchName = "master";
+        private const string BranchName = "slash-commands";
+        private const string Branch = RepositoryAlias + "/" + BranchName;
+
         static Build()
         {
             // Check for a link update message
-            Ditto.Connected += async() =>
+            Ditto.Connected += async () =>
             {
                 Link link = null;
                 await Ditto.Database.DoAsync(uow =>
@@ -55,16 +57,15 @@ namespace Ditto.Bot.Modules.Admin
                             // Post build info in a secondary task
                             try
                             {
-                                var _ = new Build()
+                                var buildInfo = CheckForUpdates();
+                                if (buildInfo.Item1)
                                 {
-                                    Context = new CommandContextEx(Ditto.Client, message as IUserMessage)
-                                    {
-                                        Channel = channel,
-                                        Guild = guild
-                                    }
-                                }.Info(); //commitHash
+                                    var _ = Info(buildInfo.Item2 ?? new BuildInfo(null, null), guild).ContinueWith(async embed
+                                        => await channel.SendMessageAsync(embed: await embed)
+                                    );
+                                }
                             }
-                            catch(Exception ex)
+                            catch (Exception ex)
                             {
                                 Log.Error(ex);
                             }
@@ -81,14 +82,7 @@ namespace Ditto.Bot.Modules.Admin
             };
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
-        [Priority(0)]
-        public Task _(string fromHash = null)
-        {
-            return Info(fromHash);
-        }
-
-        private static string RunGit(string args)
+        public static string RunGit(string args)
         {
             using var process = new Process
             {
@@ -114,201 +108,153 @@ namespace Ditto.Bot.Modules.Admin
                 }
             };
 
-            process.Start();
-            process.BeginOutputReadLine();
-            process.WaitForExit();
+            try
+            {
+                process.Start();
+                process.BeginOutputReadLine();
+                process.WaitForExit();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex);
+                throw;
+            }
 
             return outputBuilder.ToString();
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
-        [Priority(1)]
-        public async Task<BuildInfo> CheckForUpdates(bool reactions = true)
+        public static (bool, BuildInfo?) CheckForUpdates()
         {
-            if (Permissions.IsAdministratorOrBotOwner(Context))
-            {
-                // Git fetch to retrieve all updates
-                var fetch = RunGit("fetch");
+            // Git fetch to retrieve all updates
+            RunGit("fetch");
 
-                // Compare the local and remote hash.
-                var localHash = RunGit("rev-parse HEAD");
-                var remoteHash = RunGit("rev-parse origin/master");
-                if (!string.IsNullOrEmpty(localHash) && !string.IsNullOrEmpty(remoteHash))
+            // Compare the local and remote hash.
+            var localHash = RunGit("rev-parse HEAD");
+            var remoteHash = RunGit($"rev-parse {Branch}");
+            if (!string.IsNullOrEmpty(localHash) && !string.IsNullOrEmpty(remoteHash))
+            {
+                var buildInfo = new BuildInfo(localHash.Trim(), remoteHash.Trim());
+                if (buildInfo.LocalHash == null || buildInfo.RemoteHash == null)
                 {
-                    var buildInfo = new BuildInfo(localHash.Trim(), remoteHash.Trim());
-                    if(reactions && buildInfo.LocalHash == null || buildInfo.RemoteHash == null)
-                    {
-                        await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
-                    }
-                    else if (reactions && buildInfo.IsEqual)
-                    {
-                        // Branch is already up to date
-                        await Context.ApplyResultReaction(CommandResult.SuccessAlt1).ConfigureAwait(false);
-                    }
-                    return buildInfo;
+                    return (false, null);
+                }
+                else if (buildInfo.IsEqual)
+                {
+                    // Branch is already up to date
+                    return (false, buildInfo);
                 }
                 else
                 {
-                    // Git fetch or rev-parse failed.
-                    Log.Error($"Git failed to find branch info | Fetch: '{fetch}'; Local Hash: '{localHash}'; Remote Hash '{remoteHash}'.");
-                    if (reactions)
-                        await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
+                    return (true, buildInfo);
                 }
             }
-            else if (reactions)
-            {
-                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
-            }
 
-            return new BuildInfo(null, null);
+            return (false, null);
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
-        [Priority(1)]
-        [Alias("upgrade")]
-        public async Task Update()
+        public static async Task<(Embed, IEnumerable<EmbedField>)> UpdateList(BuildInfo buildInfo, string fromHash = null, ITextChannel textChannel = null)
         {
-            if (Permissions.IsAdministratorOrBotOwner(Context))
+            var commitData = RunGit($"log {fromHash ?? buildInfo.LocalHash}..{buildInfo.RemoteHash} --pretty=tformat:\"%h|%an|%cI|%s\"");
+            if (!string.IsNullOrEmpty(commitData))
             {
-                var buildInfo = await CheckForUpdates().ConfigureAwait(false);
-                if (!buildInfo.IsEqual && (await UpdateList(null, false).ConfigureAwait(false)).Count() > 0)
+                var values = new List<EmbedField>();
+                var embedBuilder = new EmbedBuilder()
+                    .WithTitle("Updates")
+                    .WithOkColour(textChannel.Guild);
+
+                var entries = commitData.Split("\n", StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
+                foreach (var data in entries.Select(x => x.Split("|")))
                 {
-                    // Add a database link containing the current local branch.
-                    await Ditto.Database.DoAsync((uow) =>
+                    var date = DateTime.Parse(data[2]);
+                    var fieldBuilder = new EmbedFieldBuilder()
                     {
-                        var link = uow.Links.GetOrAdd((link) => link.Type == Database.Data.LinkType.Update, new Database.Models.Link()
-                        {
-                            Type = Database.Data.LinkType.Update,
-                            ChannelId = Context.Channel.Id,
-                            GuildId = Context.Guild.Id,
-                            Date = DateTime.Now,
-                            Value = $"{Context.Message.Id}|{buildInfo.LocalHash}",
-                        });
-
-                        link.ChannelId = Context.Channel.Id;
-                        link.GuildId = Context.Guild.Id;
-                        link.Date = DateTime.Now;
-                        link.Value = $"{Context.Message.Id}|{buildInfo.LocalHash}";
-                    }, true).ConfigureAwait(false);
-
-
-                    var pull = RunGit("pull origin master");
-
-                    var startInfo = new ProcessStartInfo()
-                    {
-                        FileName = "bash",
-                        Arguments = $"{Ditto.Settings.Paths.BaseDir}/{Ditto.Settings.Paths.ScriptDir}/Run.{(BaseClass.IsLinux() ? "sh" : "bat")}",
-                        WorkingDirectory = $"{Ditto.Settings.Paths.BaseDir}/{Ditto.Settings.Paths.ScriptDir}",
-                        UseShellExecute = false,
-                        CreateNoWindow = false,
+                        Name = $"{date:dd-MM-yyyy hh:mm:ss} ({data[0]})",
+                        Value = data[3].TrimTo(200),
                     };
-                    if (BaseClass.IsWindows())
-                    {
-                        startInfo.FileName = "cmd";
-                        startInfo.Arguments = "/c " + startInfo.Arguments;
-                    }
 
-                    // Start a new instance and close the current process.
-                    Log.Info($"Updating bot...");
-                    await Ditto.StopAsync().ConfigureAwait(false);
-                    using var process = new Process() { StartInfo = startInfo };
-                    process.Start();
-                    Program.Close();
+                    values.Add(fieldBuilder.Build());
+                    embedBuilder.AddField(fieldBuilder);
+                }
+
+                if (textChannel != null)
+                    await textChannel.EmbedAsync(embedBuilder, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit }).ConfigureAwait(false);
+
+                return (embedBuilder.Build(), values);
+            }
+
+            return (null, null);
+        }
+
+        public static async Task<Embed> Info(BuildInfo buildInfo, IGuild guild, string fromHash = null)
+        {
+            if (buildInfo.LocalHash != null && buildInfo.RemoteHash != null)
+            {
+                var embedBuilder = new EmbedBuilder()
+                    .WithTitle($"\\{EmotesHelper.GetString(Emotes.HammerPick)} Build Info")
+                    .WithOkColour(guild)
+                ;
+
+                var updateList = (await UpdateList(buildInfo, fromHash)).Item2;
+                if (updateList.Any())
+                {
+                    embedBuilder.WithDescription($"You are {updateList.Count()} commits behind.").WithFields(
+                            updateList.Select(x => new EmbedFieldBuilder().WithName(x.Name).WithValue(x.Value))
+                    );
                 }
                 else
                 {
-                    await Context.ApplyResultReaction(CommandResult.SuccessAlt1).ConfigureAwait(false);
+                    embedBuilder.WithDescription($"Ditto is running on the last available version \\{EmotesHelper.GetString(Emotes.HeavyCheckMark)}");
                 }
+
+                return embedBuilder.Build();
             }
-            else
-            {
-                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
-            }
+
+            return null;
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
-        [Alias("list")]
-        [Priority(1)]
-        public async Task<IEnumerable<EmbedField>> UpdateList(string fromHash = null, bool post = true)
+        public static async Task Update(BuildInfo buildInfo, ITextChannel channel, IUserMessage userMessage, IGuild guild)
         {
-            var values = new List<EmbedField>();
-            if (Permissions.IsAdministratorOrBotOwner(Context))
+            // Add a database link containing the current local branch.
+            await Ditto.Database.DoAsync((uow) =>
             {
-                var buildInfo = await CheckForUpdates(false).ConfigureAwait(false);
-
-                var commitData = RunGit($"log {fromHash ?? buildInfo.LocalHash}..{buildInfo.RemoteHash} --pretty=tformat:\"%h|%an|%cI|%s\"");
-                if (!string.IsNullOrEmpty(commitData))
+                var link = uow.Links.GetOrAdd((link) => link.Type == Database.Data.LinkType.Update, new Database.Models.Link()
                 {
-                    var embedBuilder = new EmbedBuilder()
-                        .WithTitle("Updates")
-                        .WithOkColour(Context.Guild);
+                    Type = Database.Data.LinkType.Update,
+                    ChannelId = channel.Id,
+                    GuildId = guild.Id,
+                    Date = DateTime.Now,
+                    Value = $"{userMessage.Id}|{buildInfo.LocalHash}",
+                });
 
-                    var entries = commitData.Split("\n", StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
-                    foreach (var data in entries.Select(x => x.Split("|")))
-                    {
-                        var date = DateTime.Parse(data[2]);
-                        var fieldBuilder = new EmbedFieldBuilder()
-                        {
-                            Name = $"{date:dd-MM-yyyy hh:mm:ss} ({data[0]})",
-                            Value = data[3].TrimTo(200),
-                        };
+                link.ChannelId = channel.Id;
+                link.GuildId = guild.Id;
+                link.Date = DateTime.Now;
+                link.Value = $"{userMessage.Id}|{buildInfo.LocalHash}";
+            }, true).ConfigureAwait(false);
 
-                        values.Add(fieldBuilder.Build());
-                        embedBuilder.AddField(fieldBuilder);
-                    }
 
-                    if (post)
-                        await Context.Channel.EmbedAsync(embedBuilder, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit }).ConfigureAwait(false);
-                }
-                else if(post)
-                {
-                    await Context.ApplyResultReaction(CommandResult.SuccessAlt1).ConfigureAwait(false);
-                }
-            }
-            else if(post)
+            RunGit($"pull {RepositoryAlias} {BranchName}");
+            var startInfo = new ProcessStartInfo()
             {
-                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
+                FileName = "bash",
+                Arguments = $"{Ditto.Settings.Paths.BaseDir}/{Ditto.Settings.Paths.ScriptDir}/Run.{(BaseClass.IsLinux() ? "sh" : "bat")}",
+                WorkingDirectory = $"{Ditto.Settings.Paths.BaseDir}/{Ditto.Settings.Paths.ScriptDir}",
+                UseShellExecute = false,
+                CreateNoWindow = false,
+            };
+            if (BaseClass.IsWindows())
+            {
+                startInfo.FileName = "cmd";
+                startInfo.Arguments = "/c " + startInfo.Arguments;
             }
-            return values;
+
+            // Start a new instance and close the current process.
+            Log.Info($"Updating bot...");
+            await Ditto.StopAsync().ConfigureAwait(false);
+            using var process = new Process() { StartInfo = startInfo };
+            process.Start();
+            Program.Close();
         }
 
-        [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
-        [Priority(1)]
-        public async Task Info(string fromHash = null)
-        {
-            if (Permissions.IsAdministratorOrBotOwner(Context))
-            {
-                var buildInfo = await CheckForUpdates(false).ConfigureAwait(false);
-                if (buildInfo.LocalHash != null && buildInfo.RemoteHash != null)
-                {
-                    var embedBuilder = new EmbedBuilder()
-                        .WithTitle($"\\{EmotesHelper.GetString(Emotes.HammerPick)} Build Info")
-                        .WithOkColour(Context.Guild)
-                    ;
-
-                    var updateList = await UpdateList(fromHash, false).ConfigureAwait(false);
-                    if (updateList.Count() > 0)
-                    {
-                        embedBuilder.WithDescription($"You are {updateList.Count()} commits behind.").WithFields(
-                                updateList.Select(x => new EmbedFieldBuilder().WithName(x.Name).WithValue(x.Value))
-                        );
-                    }
-                    else
-                    {
-                        embedBuilder.WithDescription($"Ditto is running on the last available version \\{EmotesHelper.GetString(Emotes.HeavyCheckMark)}");
-                    }
-
-                    await Context.Channel.EmbedAsync(embedBuilder, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit }).ConfigureAwait(false);
-                }
-                else
-                {
-                    await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
-                }
-            }
-            else
-            {
-                await Context.ApplyResultReaction(CommandResult.FailedUserPermission).ConfigureAwait(false);
-            }
-        }
     }
 }
