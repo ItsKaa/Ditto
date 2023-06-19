@@ -180,7 +180,12 @@ namespace Ditto.Bot
                     throw new InvalidOperationException("Unable to connect");
                 }
 
-                await Task.Delay(10000).ConfigureAwait(false);
+                var timeStart = DateTime.UtcNow;
+                while (Client.CurrentUser == null && (DateTime.UtcNow - timeStart).TotalSeconds <= 10)
+                {
+                    await Task.Delay(100).ConfigureAwait(false);
+                }
+
                 if (Client.CurrentUser == null)
                 {
                     throw new InvalidOperationException("Failed to validate discord connection.");
@@ -195,7 +200,10 @@ namespace Ditto.Bot
                 //await ReconnectAsync().ConfigureAwait(false);
                 var _ = Task.Run(() => ReconnectAsync());
             }
-            Reconnecting = false;
+            finally
+            {
+                Reconnecting = false;
+            }
         }
 
         private static IServiceProvider CreateServiceProvider()
@@ -348,68 +356,67 @@ namespace Ditto.Bot
                     Connected -= Initialised;
                 };
 
-                Client.InteractionCreated += async (interaction) =>
+                // Call this once after a successful connection.
+                Connected += Initialised;
+            }
+
+            Client.InteractionCreated += async (interaction) =>
+            {
+                if (Running && !Reconnecting)
                 {
                     var context = new SocketInteractionContext(Client, interaction);
                     await InteractionService.ExecuteCommandAsync(context, ServiceProvider);
-                };
+                }
+            };
 
-                // Call this once after a successful connection.
-                Connected += Initialised;
-
-                Client.Ready += async () =>
+            Client.Ready += async () =>
+            {
+                if (!Running)
                 {
-                    if (!Running)
-                    {
-                        Running = true;
-                        await Connected().ConfigureAwait(false);
-                    }
-                    Log.Info("Connected");
+                    Running = true;
+                    await Connected().ConfigureAwait(false);
+                }
+                Log.Info("Connected");
 
-                    if (Type == BotType.Bot)
-                    {
-                        await Client.SetGameAsync(null);
-                        await Client.SetStatusExAsync(UserStatusEx.Online);
-                    }
-
-                    try
-                    {
-                        await InteractionService.RegisterCommandsGloballyAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Fatal(ex);
-                        throw;
-                    }
-                };
-
-                Client.Disconnected += (e) =>
+                if (Type == BotType.Bot)
                 {
-                    if (Reconnecting)
-                    {
-                        //_reconnecting = false;
-                    }
-                    else
-                    {
-                        Log.Warn("Bot has been disconnected. {0}", (object)(Exiting ? null : $"| {e}"));
-                        if (!Exiting && Settings.AutoReconnect && !Reconnecting)
-                        {
-                            var _ = Task.Run(() => ReconnectAsync());
-                        }
-                    }
-                    return Task.CompletedTask;
-                };
+                    await Client.SetGameAsync(null);
+                    await Client.SetStatusExAsync(UserStatusEx.Online);
+                }
 
-                Client.LoggedOut += () =>
+                try
                 {
-                    Log.Warn("Bot has logged out.");
+                    await InteractionService.RegisterCommandsGloballyAsync();
+                }
+                catch (Exception ex)
+                {
+                    Log.Fatal(ex);
+                    throw;
+                }
+            };
+
+            Client.Disconnected += (e) =>
+            {
+                if (!Reconnecting)
+                {
+                    Log.Warn("Bot has been disconnected. {0}", (object)(Exiting ? null : $"| {e}"));
                     if (!Exiting && Settings.AutoReconnect && !Reconnecting)
                     {
                         var _ = Task.Run(() => ReconnectAsync());
                     }
-                    return Task.CompletedTask;
-                };
-            }
+                }
+                return Task.CompletedTask;
+            };
+
+            Client.LoggedOut += () =>
+            {
+                Log.Warn("Bot has logged out.");
+                if (!Exiting && Settings.AutoReconnect && !Reconnecting)
+                {
+                    var _ = Task.Run(() => ReconnectAsync());
+                }
+                return Task.CompletedTask;
+            };
 
             var autoReconnect = Settings.AutoReconnect;
             Settings.AutoReconnect = false;
