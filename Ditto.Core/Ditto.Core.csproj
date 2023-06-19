@@ -40,7 +40,7 @@
     <Optimize>True</Optimize>
     <OutputPath>..\.bin\Release\</OutputPath>
   </PropertyGroup>
-
+  
   <!--
   <ItemGroup>
     <Compile Remove="libs\**" />
@@ -90,7 +90,6 @@
 
   <ItemGroup>
     <Folder Include="src\Data\Feed\" />
-    <Folder Include="src\Data\Translation\" />
   </ItemGroup>
 
 </Project>
