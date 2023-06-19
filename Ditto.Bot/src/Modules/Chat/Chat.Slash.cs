@@ -14,7 +14,6 @@ namespace Ditto.Bot.Modules.Chat
         public const string ButtonIdPurgeConfirmNo  = "chat_purge_confirm_no";
 
         [SlashCommand("talk", "Chat with the bot (Cleverbot, not ChatGPT)")]
-        [DefaultMemberPermissions(GuildPermission.SendMessages)]
         public async Task Talk(
             [Summary(description: "The message you wish to send to the bot")]
             string message)
@@ -24,7 +23,6 @@ namespace Ditto.Bot.Modules.Chat
         }
 
         [SlashCommand("insult", "Insult a user")]
-        [DefaultMemberPermissions(GuildPermission.SendMessages)]
         public Task Insult(
             [Summary(description: "The user you wish to insult")]
             IUser user)
@@ -45,6 +43,8 @@ namespace Ditto.Bot.Modules.Chat
 
         [SlashCommand("purge", "Purge the messages from the channel")]
         [DefaultMemberPermissions(GuildPermission.ManageMessages)]
+        [RequireUserPermission(GuildPermission.ManageMessages)]
+        [RequireContext(ContextType.Guild)]
         public async Task Purge(
             [Summary(description: "Only remoe messages from the specified user")]
             IUser user = null,
@@ -91,18 +91,5 @@ namespace Ditto.Bot.Modules.Chat
                 await ExecutePurge(Context.Interaction, count, user, pattern);
             }
         }
-
-        //private Task Client_ButtonExecuted(SocketMessageComponent arg)
-        //{
-        //    if (arg.Data?.CustomId == ButtonIdPurgeConfirmNo)
-        //    {
-        //    }
-        //    else if(arg.Data?.CustomId == ButtonIdPurgeConfirmYes)
-        //    {
-        //        return ExecutePurge();
-        //    }
-
-        //    return Task.CompletedTask;
-        //}
     }
 }
