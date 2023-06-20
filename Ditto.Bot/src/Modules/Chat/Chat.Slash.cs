@@ -3,17 +3,18 @@ using Ditto.Data.Discord;
 using System.Threading.Tasks;
 using Discord;
 using Ditto.Bot.Services;
+using Ditto.Bot.Helpers;
 
 namespace Ditto.Bot.Modules.Chat
 {
     [Group("chat", "Group for chat-based commands")]
     public class ChatSlash : DiscordBaseSlashModule
     {
-        public ChatService ChatService { get; }
+        public CleverbotService ChatService { get; }
         public const string ButtonIdPurgeConfirmYes = "chat_purge_confirm_yes";
         public const string ButtonIdPurgeConfirmNo = "chat_purge_confirm_no";
 
-        public ChatSlash(InteractionService interactionService, ChatService chatService) : base(interactionService)
+        public ChatSlash(InteractionService interactionService, CleverbotService chatService) : base(interactionService)
         {
             ChatService = chatService;
         }
@@ -33,7 +34,7 @@ namespace Ditto.Bot.Modules.Chat
             IUser user)
         {
             var name = user.Mention ?? (user as IGuildUser)?.DisplayName ?? (user as IGuildUser)?.Nickname ?? user.Username;
-            var message = ChatService.Insult(name);
+            var message = ChatHelper.Insult(name);
             return !string.IsNullOrEmpty(message)
                 ? RespondAsync(message, allowedMentions: AllowedMentions.None)
                 : Task.CompletedTask;
@@ -42,7 +43,7 @@ namespace Ditto.Bot.Modules.Chat
         private async Task ExecutePurge(IDiscordInteraction interaction, int count, IUser user, string pattern)
         {
             await interaction.DeferAsync(ephemeral: true);
-            var deletedMessageCount = await ChatService.PruneMessagesAsync(Context.Channel as ITextChannel, count, user, pattern);
+            var deletedMessageCount = await ChatHelper.PruneMessagesAsync(Context.Channel as ITextChannel, count, user, pattern);
             await interaction.FollowupAsync($"Done! Deleted {deletedMessageCount} messages.", ephemeral: true);
         }
 
@@ -61,7 +62,7 @@ namespace Ditto.Bot.Modules.Chat
             int count = 100
             )
         {
-            if (count > ChatService.PruneConfirmationMessageCount)
+            if (count > CleverbotService.PruneConfirmationMessageCount)
             {
                 var components = new ComponentBuilder()
                     .WithButton("Yes", ButtonIdPurgeConfirmYes, ButtonStyle.Success)

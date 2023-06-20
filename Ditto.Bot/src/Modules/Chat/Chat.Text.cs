@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Ditto.Attributes;
+using Ditto.Bot.Helpers;
 using Ditto.Bot.Modules.Admin;
 using Ditto.Bot.Services;
 using Ditto.Data.Commands;
@@ -15,8 +16,8 @@ namespace Ditto.Bot.Modules.Chat
     [Alias("chat")]
     public class ChatText : DiscordTextModule
     {
-        public ChatService ChatService { get; }
-        public ChatText(DatabaseCacheService cache, DatabaseService database, ChatService chatService) : base(cache, database)
+        public CleverbotService ChatService { get; }
+        public ChatText(DatabaseCacheService cache, DatabaseService database, CleverbotService chatService) : base(cache, database)
         {
             ChatService = chatService;
         }
@@ -42,7 +43,7 @@ namespace Ditto.Bot.Modules.Chat
         [Priority(0)]
         public async Task Insult([Multiword] string name)
         {
-            var message = ChatService.Insult(name);
+            var message = ChatHelper.Insult(name);
             if (!string.IsNullOrEmpty(message))
             {
                 await Context.Channel.SendMessageAsync(message).ConfigureAwait(false);
@@ -66,7 +67,7 @@ namespace Ditto.Bot.Modules.Chat
             await Context.Message.DeleteAsync().ConfigureAwait(false);
             await Task.Delay(100).ConfigureAwait(false);
 
-            if (count > ChatService.PruneConfirmationMessageCount)
+            if (count > CleverbotService.PruneConfirmationMessageCount)
             {
                 var usedReaction = await Context.SendOptionDialogueAsync(
                     ChatService.GetPruneConfirmationMessage(Context.User, count),
@@ -79,7 +80,7 @@ namespace Ditto.Bot.Modules.Chat
                 }
             }
 
-            await ChatService.PruneMessagesAsync(Context.TextChannel, count, user, pattern);
+            await ChatHelper.PruneMessagesAsync(Context.TextChannel, count, user, pattern);
         }
 
         [Priority(4), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]

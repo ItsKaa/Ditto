@@ -1,6 +1,5 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Ditto.Bot.Services;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Services
