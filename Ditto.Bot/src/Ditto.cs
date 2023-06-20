@@ -12,6 +12,8 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Reflection;
+using System.Linq;
 
 namespace Ditto.Bot
 {
@@ -206,6 +208,20 @@ namespace Ditto.Bot
             }
         }
 
+        private static void DisconnectEventsServiceProvider(IServiceProvider serviceProvider)
+        {
+            var types = Assembly.GetEntryAssembly().GetTypes().ToList();
+            foreach (var type in types.Where(x => x.GetInterfaces().Contains(typeof(IModuleService))).ToList())
+            {
+                if (serviceProvider.GetRequiredService(type) is IModuleService moduleService)
+                {
+                    Initialised -= moduleService.Initialised;
+                    Connected -= moduleService.Connected;
+                    Exit -= moduleService.Exit;
+                }
+            }
+        }
+
         private static IServiceProvider CreateServiceProvider()
         {
             var config = new DiscordSocketConfig()
@@ -226,13 +242,37 @@ namespace Ditto.Bot
                 AutoServiceScopes = true,
             };
 
+            // Base services
             var collection = new ServiceCollection()
                 .AddSingleton(config)
                 .AddSingleton<DiscordSocketClient>()
                 .AddSingleton(serviceConfig)
                 .AddSingleton<InteractionService>()
                 ;
-            return collection.BuildServiceProvider();
+            
+            // Add the services from the assembly to the provider.
+            var types = Assembly.GetEntryAssembly().GetTypes().ToList();
+            var serviceTypes = types.Where(x => x.GetInterfaces().Contains(typeof(IModuleService))).ToList();
+            foreach(var type in serviceTypes)
+            {
+                collection.AddSingleton(type);
+            }
+
+            // Build the service provider.
+            var serviceProvider = collection.BuildServiceProvider();
+
+            // Initialise the services and add the events.
+            foreach(var type in serviceTypes)
+            {
+                if (serviceProvider.GetRequiredService(type) is IModuleService moduleService)
+                {
+                    Initialised += moduleService.Initialised;
+                    Connected += moduleService.Connected;
+                    Exit += moduleService.Exit;
+                }
+            }
+
+            return serviceProvider;
         }
 
         public async Task<bool> RunAsync()
@@ -266,6 +306,11 @@ namespace Ditto.Bot
             {
                 Log.Fatal("Unable to create a connection with the database, please check the file \"/data/settings.xml\"", ex);
                 return false;
+            }
+
+            if (ServiceProvider != null)
+            {
+                DisconnectEventsServiceProvider(ServiceProvider);
             }
 
             // Initialize the providers
@@ -329,7 +374,7 @@ namespace Ditto.Bot
             }
 
             CommandHandler?.Dispose();
-            await (CommandHandler = new CommandHandler(Client)).SetupAsync().ConfigureAwait(false);
+            await (CommandHandler = new CommandHandler(Client, ServiceProvider)).SetupAsync().ConfigureAwait(false);
 
             if (_firstStart)
             {

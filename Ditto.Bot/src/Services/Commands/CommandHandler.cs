@@ -9,9 +9,7 @@ using System.Collections.Concurrent;
 using Discord;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
-using Ditto.Data.Commands;
 using Ditto.Attributes;
-using Ditto.Data;
 using Ditto.Extensions.Discord;
 using Ditto.Bot.Data.Discord;
 using Ditto.Bot.Helpers;
@@ -27,10 +25,12 @@ namespace Ditto.Bot.Services.Commands
         public ConcurrentDictionary<ulong, List<ModuleInfo>> Modules { get; private set; }
         public CommandConverter CommandConverter { get; private set; }
         public CommandMethodParser CommandMethodParser { get;set; }
+        public IServiceProvider ServiceProvider { get; }
 
-        public CommandHandler(DiscordSocketClient client)
+        public CommandHandler(DiscordSocketClient client, IServiceProvider serviceProvider)
         {
             _discordClient = client;
+            ServiceProvider = serviceProvider;
             Modules = new ConcurrentDictionary<ulong, List<ModuleInfo>>();
             CommandConverter = new CommandConverter();
             CommandMethodParser = new CommandMethodParser(this);
@@ -77,6 +77,18 @@ namespace Ditto.Bot.Services.Commands
             }
         }
 
+        private ModuleBaseClass CreateModuleInstance(Type type)
+        {
+            var ctorParams = type.GetConstructors().FirstOrDefault().GetParameters();
+            return type.GetConstructors()
+                .Any(x => x.GetParameters()
+                    .SelectMany(x => x.ParameterType.GetInterfaces())
+                    .Contains(typeof(IModuleService))
+                )
+                ? type.CreateInstanceWithServices(ServiceProvider) as ModuleBaseClass
+                : type.CreateInstance() as ModuleBaseClass;
+        }
+
         private async Task LoadModulesAsync(ModuleInfo moduleInfo = null)
         {
             if (moduleInfo == null)
@@ -97,13 +109,13 @@ namespace Ditto.Bot.Services.Commands
                     // Ignore if the module has declared the attribute [DontAutoLoad]
                     if (null == moduleInfo.Type.GetCustomAttribute<DontAutoLoadAttribute>())
                     {
-                        var instance = moduleInfo.Type.CreateInstance() as ModuleBaseClass;
+                        var instance = CreateModuleInstance(moduleInfo.Type);
                         instance.Dispose();
                     }
                 }
                 catch (Exception ex)
                 {
-                    Log.Warn(ex);
+                    Log.Error($"Failed to create module instance of type: {moduleInfo.Type.Name}", ex);
                 }
 
                 // Load child modules
@@ -325,7 +337,8 @@ namespace Ditto.Bot.Services.Commands
 
             try
             {
-                if (methodInfo.DeclaringType.CreateInstance() is ModuleBaseClass instance)
+                
+                if (CreateModuleInstance(methodInfo.DeclaringType) is ModuleBaseClass instance)
                 {
                     instance.Context = context;
                     var @return = methodInfo.Invoke(instance, parameters);
