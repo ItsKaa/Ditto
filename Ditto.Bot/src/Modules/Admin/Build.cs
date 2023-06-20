@@ -42,14 +42,14 @@ namespace Ditto.Bot.Modules.Admin
                         var commitHash = values.LastOrDefault();
                         if (!string.IsNullOrEmpty(commitHash) && ulong.TryParse(values.FirstOrDefault(), out ulong messageId))
                         {
-                            IMessage message = null;
+                            IUserMessage message = null;
                             IGuild guild = null;
                             ITextChannel channel = null;
 
                             guild = Ditto.Client.GetGuild(link.GuildId);
                             channel = await guild.GetTextChannelAsync(link.ChannelId).ConfigureAwait(false);
-                            message = await channel.GetMessageAsync(messageId, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit }).ConfigureAwait(false);
-                            if (message != null)
+                            message = await channel.GetMessageAsync(messageId) as IUserMessage;
+                            if (message != null && message.Author.Id != Ditto.Client.CurrentUser.Id)
                             {
                                 await message.SetResultAsync(CommandResult.Success).ConfigureAwait(false);
                             }
@@ -58,12 +58,25 @@ namespace Ditto.Bot.Modules.Admin
                             try
                             {
                                 var buildInfo = CheckForUpdates();
-                                if (buildInfo.Item1)
-                                {
-                                    var _ = Info(buildInfo.Item2 ?? new BuildInfo(null, null), guild).ContinueWith(async embed
-                                        => await channel.SendMessageAsync(embed: await embed)
-                                    );
-                                }
+                                var _ = Info(buildInfo.Item2 ?? new BuildInfo(null, null), guild).ContinueWith(async embedTask
+                                    =>
+                                    {
+                                        var embed = await embedTask;
+                                        if (message.Author.IsBot && message.Author.Id == Ditto.Client.CurrentUser.Id)
+                                        {
+                                            await message.ModifyAsync(x =>
+                                            {
+                                                x.Content = "";
+                                                x.Embed = embed;
+                                                x.Flags = MessageFlags.None;
+                                            });
+                                        }
+                                        else
+                                        {
+                                            await channel.SendMessageAsync(embed: embed);
+                                        }
+                                    }
+                                );
                             }
                             catch (Exception ex)
                             {
@@ -141,7 +154,7 @@ namespace Ditto.Bot.Modules.Admin
                 else if (buildInfo.IsEqual)
                 {
                     // Branch is already up to date
-                    return (false, buildInfo);
+                    return (true, buildInfo);
                 }
                 else
                 {
@@ -159,8 +172,11 @@ namespace Ditto.Bot.Modules.Admin
             {
                 var values = new List<EmbedField>();
                 var embedBuilder = new EmbedBuilder()
-                    .WithTitle("Updates")
-                    .WithOkColour(textChannel.Guild);
+                    .WithTitle("Updates");
+                if (textChannel?.Guild != null)
+                {
+                    embedBuilder = embedBuilder.WithOkColour(textChannel.Guild);
+                }
 
                 var entries = commitData.Split("\n", StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
                 foreach (var data in entries.Select(x => x.Split("|")))
@@ -182,7 +198,7 @@ namespace Ditto.Bot.Modules.Admin
                 return (embedBuilder.Build(), values);
             }
 
-            return (null, null);
+            return (null, Enumerable.Empty<EmbedField>());
         }
 
         public static async Task<Embed> Info(BuildInfo buildInfo, IGuild guild, string fromHash = null)
