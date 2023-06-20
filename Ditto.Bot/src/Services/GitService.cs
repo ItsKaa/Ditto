@@ -16,8 +16,7 @@ namespace Ditto.Bot.Services
     public class GitService : IModuleService
     {
         private const string RepositoryAlias = "origin";
-        //private const string BranchName = "master";
-        private const string BranchName = "slash-commands";
+        private const string BranchName = "master";
         private const string Branch = RepositoryAlias + "/" + BranchName;
 
         Task IModuleService.Initialised() => Task.CompletedTask;
