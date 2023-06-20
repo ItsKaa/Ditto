@@ -76,10 +76,12 @@ namespace Ditto.Bot.Modules.Admin
         }
 
         [SlashCommand("info", "Retrieve the latest build information. (bot owner only)")]
-        public async Task Info(string fromHash = null)
+        public async Task Info(
+            [Summary(description: "The position of HEAD~[number]. used to compare the differences.")]
+            int headPosition = 0)
         {
             var buildInfo = await CheckForUpdates(false);
-            if (await Build.Info(buildInfo.Item2, Context.Guild, fromHash) is Embed embed)
+            if (await Build.Info(buildInfo.Item2, Context.Guild, $"HEAD~{Math.Max(0, headPosition)}") is Embed embed)
             {
                 await RespondAsync(embed: embed, ephemeral: true, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit });
             }
