@@ -2,15 +2,15 @@
 using Ditto.Extensions;
 using System.Collections.Concurrent;
 using System;
-using Ditto.Data.Discord;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Ditto.Bot.Data.API.Rest;
+using Ditto.Bot.Services;
 
 namespace Ditto.Bot.Modules.Chat
 {
-    public class Chat : DiscordModule
+    public class Chat : DiscordTextModule
     {
         public const int PruneConfirmationMessageCount = 10;
         public static ConcurrentDictionary<ulong, Lazy<CleverbotSession>> CleverbotSessions { get; private set; }
@@ -51,6 +51,10 @@ namespace Ditto.Bot.Modules.Chat
                 CleverbotSessions?.Clear();
                 return Task.CompletedTask;
             };
+        }
+
+        public Chat(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
         }
 
         public static string GetPruneConfirmationMessage(IUser user, int count)

@@ -49,9 +49,9 @@ namespace Ditto.Bot.Helpers
             if (baseType == null)
             {
                 // get top-level modules
-                var searchType = typeof(DiscordModule);
+                var searchType = typeof(DiscordBaseTextModule);
                 foreach (var moduleInfo in from t in Assembly.GetExecutingAssembly().GetTypes()
-                        where t.BaseType == searchType
+                        where t.IsSubclassOf(searchType)
                             //&& t.GetConstructor(Type.EmptyTypes) != null
                         select new ModuleInfo()
                         {

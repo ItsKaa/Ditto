@@ -2,8 +2,8 @@
 using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Database.Data;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
-using Ditto.Data.Discord;
 using Ditto.Extensions;
 using Ditto.Helpers;
 using System;
@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Utility.Linking
 {
     [Alias("rss")]
-    public class RssUtility : DiscordModule<LinkUtility>
+    public class RssUtility : DiscordTextModule<LinkUtility>
     {
         static RssUtility()
         {
@@ -65,7 +65,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 return listUrls;
             });
         }
-        
+
+        public RssUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
+
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents)]
         public Task Rss(ITextChannel textChannel, [Multiword] string url, DateTime? fromDate = null)
             => Add(textChannel, url, fromDate);

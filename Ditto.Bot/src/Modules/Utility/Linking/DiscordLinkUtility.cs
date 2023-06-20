@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Ditto.Attributes;
 using Ditto.Bot.Database.Data;
 using Ditto.Bot.Modules.Admin;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
@@ -18,7 +19,7 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Utility.Linking
 {
     [Alias("discord")]
-    public class DiscordLinkUtility : DiscordModule<LinkUtility>
+    public class DiscordLinkUtility : DiscordTextModule<LinkUtility>
     {
         private static ConcurrentDictionary<int, DateTime> LastUpdate { get; set; }
 
@@ -254,6 +255,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 LastUpdate.TryUpdate(link.Id, DateTime.UtcNow, lastUpdateTime);
                 return messageIds;
             });
+        }
+
+        public DiscordLinkUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
         }
 
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local)]

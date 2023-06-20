@@ -4,28 +4,24 @@ using Ditto.Attributes;
 using Ditto.Bot.Database.Data;
 using Ditto.Bot.Database.Models;
 using Ditto.Bot.Modules.Admin;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
-using Ditto.Data.Discord;
 using Ditto.Extensions;
 using Ditto.Helpers;
-using SixLabors.ImageSharp.Formats;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using TwitchLib.Api.Helix;
 using TwitchLib.Api.Services;
 using TwitchLib.Api.Services.Events.LiveStreamMonitor;
 
 namespace Ditto.Bot.Modules.Utility.Linking
 {
     [Alias("twitch")]
-    public class TwitchUtility : DiscordModule<LinkUtility>
+    public class TwitchUtility : DiscordTextModule<LinkUtility>
     {
         private static CancellationTokenSource _cancellationTokenSource;
         private static ConcurrentDictionary<int, Link> Links;
@@ -91,6 +87,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 Links?.Clear();
                 return Task.CompletedTask;
             };
+        }
+
+        public TwitchUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
         }
 
         private static void Monitor_OnStreamUpdate(object sender, OnStreamUpdateArgs e)

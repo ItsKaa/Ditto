@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Database.Data;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
@@ -15,7 +16,7 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Utility.Linking
 {
     [Alias("bdo")]
-    class BdoLinkUtility : DiscordModule<LinkUtility>
+    class BdoLinkUtility : DiscordTextModule<LinkUtility>
     {
         static BdoLinkUtility()
         {
@@ -89,6 +90,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 }
                 return listUrls;
             });
+        }
+
+        public BdoLinkUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
         }
 
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local)]

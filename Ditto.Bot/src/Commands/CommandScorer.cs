@@ -7,7 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace Ditto.Bot.Services.Commands
+namespace Ditto.Bot.Commands
 {
     public class CommandScorer
     {
@@ -44,7 +44,7 @@ namespace Ditto.Bot.Services.Commands
 
             // Check if we have enough parameters
             var optionalCount = parameterInfo.Sum(x => x.IsOptional);
-            if ((parameterInfo.Count() - optionalCount) <= commandInputs.Count())
+            if (parameterInfo.Count() - optionalCount <= commandInputs.Count())
             {
                 // Possible functions:
                 // [string,int,int,string] one two 1 2 three four => ["one two", 1, 2, "three four"]

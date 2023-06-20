@@ -6,31 +6,31 @@ namespace Ditto.Extensions
     {
         public static EmbedBuilder WithOkColour(this EmbedBuilder @this, IGuild guild)
         {
-            @this.Color = Bot.Ditto.Cache.Db.EmbedColour(guild);
+            @this.Color = Bot.Ditto.Cache.EmbedColour(guild);
             return @this;
         }
 
         public static EmbedBuilder WithErrorColour(this EmbedBuilder @this, IGuild guild)
         {
-            @this.Color = Bot.Ditto.Cache.Db.EmbedErrorColour(guild);
+            @this.Color = Bot.Ditto.Cache.EmbedErrorColour(guild);
             return @this;
         }
         
         public static EmbedBuilder WithRssColour(this EmbedBuilder @this, IGuild guild)
         {
-            @this.Color = Bot.Ditto.Cache.Db.EmbedRssColour(guild);
+            @this.Color = Bot.Ditto.Cache.EmbedRssColour(guild);
             return @this;
         }
 
         public static EmbedBuilder WithDiscordLinkColour(this EmbedBuilder @this, IGuild guild)
         {
-            @this.Color = Bot.Ditto.Cache.Db.EmbedDiscordLinkColour(guild);
+            @this.Color = Bot.Ditto.Cache.EmbedDiscordLinkColour(guild);
             return @this;
         }
 
         public static EmbedBuilder WithTwitchColour(this EmbedBuilder @this, IGuild guild)
         {
-            @this.Color = Bot.Ditto.Cache.Db.EmbedTwitchLinkColour(guild);
+            @this.Color = Bot.Ditto.Cache.EmbedTwitchLinkColour(guild);
             return @this;
         }
 

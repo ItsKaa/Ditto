@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Ditto.Bot.Database.Data;
 using Ditto.Bot.Database.Models;
+using Ditto.Bot.Services;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
 using System;
@@ -15,7 +16,7 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Utility.Linking
 {
     [Alias("link")]
-    public class LinkUtility : DiscordModule<Utility>
+    public class LinkUtility : DiscordTextModule<Utility>
     {
         private static ConcurrentDictionary<int, Link> _links;
         private static CancellationTokenSource _cancellationTokenSource;
@@ -127,6 +128,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 _cancellationTokenSource?.Cancel();
                 return Task.CompletedTask;
             };
+        }
+
+        public LinkUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
         }
 
         private static async Task<IEnumerable<LinkItem>> ReadAndPostLinkAsync(Link link)

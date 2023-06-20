@@ -1,5 +1,6 @@
 ﻿using Discord.Commands;
 using Ditto.Attributes;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
@@ -11,8 +12,12 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Translation
 {
     [Alias("translation")]
-    public class TranslationModule : DiscordModule
+    public class TranslationModule : DiscordTextModule
     {
+        public TranslationModule(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
+
         public static Task<TranslationResult> Translate(Language sourceLanguage, Language targetLanguage, string input)
         {
             var translator = new GoogleTranslator();

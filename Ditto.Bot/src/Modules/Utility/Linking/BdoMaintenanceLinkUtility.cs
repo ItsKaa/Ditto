@@ -2,6 +2,7 @@
 using Discord;
 using Ditto.Bot.Database.Data;
 using Ditto.Bot.Database.Models;
+using Ditto.Bot.Services;
 using Ditto.Data.Discord;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Utility.Linking
 {
-    public class BdoMaintenanceLinkUtility : DiscordModule<LinkUtility>
+    public class BdoMaintenanceLinkUtility : DiscordTextModule<LinkUtility>
     {
         private static ConcurrentList<Link> _links { get; set; }
         static BdoMaintenanceLinkUtility()
@@ -27,6 +28,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 }
                 return Task.FromResult(Enumerable.Empty<string>());
             });
+        }
+
+        public BdoMaintenanceLinkUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
         }
 
         public static IEnumerable<ITextChannel> GetLinkedChannels()

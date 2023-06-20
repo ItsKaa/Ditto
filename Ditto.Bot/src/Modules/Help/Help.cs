@@ -1,9 +1,8 @@
-﻿using Autofac.Core;
-using Discord;
+﻿using Discord;
 using Discord.Commands;
 using Ditto.Attributes;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
-using Ditto.Data.Discord;
 using Ditto.Extensions;
 using System;
 using System.Linq;
@@ -13,8 +12,12 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Help
 {
     [Alias("description", "desc", "describe", "explain", "detail", "details", "info", "h", "?")]
-    public sealed class Help : DiscordModule
+    public sealed class Help : DiscordTextModule
     {
+        public Help(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
+
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.Local)]
         public async Task _([Multiword] string text = "")
         {

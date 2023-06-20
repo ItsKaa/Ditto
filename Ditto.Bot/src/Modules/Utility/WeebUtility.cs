@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Data.API.Rest;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using System.Threading.Tasks;
@@ -10,8 +11,12 @@ using MessageType = Ditto.Bot.Data.API.Rest.RamMoeApi.Type;
 namespace Ditto.Bot.Modules.Utility
 {
     [Alias("weeb")]
-    public class WeebUtility : DiscordModule<Utility>
+    public class WeebUtility : DiscordTextModule<Utility>
     {
+        public WeebUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
+
         private async Task<string> GetImagePathAsync(MessageType type)
         {
             var result = new RamMoeApi().RandomImage(type, type == MessageType.Nsfw);

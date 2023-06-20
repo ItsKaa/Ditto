@@ -7,18 +7,18 @@ using Ditto.Bot.Database.Models;
 using Ditto.Bot.Modules.Admin;
 using Ditto.Bot.Modules.Utility.Linking;
 using Ditto.Data.Commands;
-using Ditto.Data.Discord;
 using Ditto.Helpers;
 using Ditto.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ditto.Bot.Services;
 
 namespace Ditto.Bot.Modules.Utility
 {
     [Alias("rolemenu")]
-    public class RoleMenuUtility : DiscordModule<LinkUtility>
+    public class RoleMenuUtility : DiscordTextModule<LinkUtility>
     {
         private static ConcurrentList<Link> _links = new ConcurrentList<Link>();
 
@@ -45,6 +45,10 @@ namespace Ditto.Bot.Modules.Utility
 
             // Empty link handler since we base updates on reactions from the IGuild message.
             LinkUtility.TryAddHandler(LinkType.RoleMenu, (link, channel, cancellationToken) => Task.FromResult(Enumerable.Empty<string>()));
+        }
+
+        public RoleMenuUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
         }
 
         private static async Task<IUserMessage> GetMessageAsync(IGuild guild, ulong messageId, ITextChannel textChannel = null)
@@ -90,7 +94,7 @@ namespace Ditto.Bot.Modules.Utility
                 return false;
 
             // Handle message
-            Ditto.ReactionHandler.Remove(message);
+            Ditto.ReactionService.Remove(message);
 
             var funcReaction = new Func<Discord.WebSocket.SocketReaction, bool, Task>(async (Discord.WebSocket.SocketReaction r, bool added) =>
             {
@@ -178,7 +182,7 @@ namespace Ditto.Bot.Modules.Utility
                 }
             });
 
-            return Ditto.ReactionHandler.Add(message, r => funcReaction(r, true), r => funcReaction(r, false));
+            return Ditto.ReactionService.Add(message, r => funcReaction(r, true), r => funcReaction(r, false));
         }
 
 

@@ -7,13 +7,17 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Services
 {
-    public class ButtonHandler : IDisposable
+    public class ButtonService : IModuleService, IDisposable
     {
         private ConcurrentDictionary<ulong, List<(string, Func<SocketMessageComponent, Task>)>> ButtonCallbackDictionary { get; } = new ConcurrentDictionary<ulong, List<(string, Func<SocketMessageComponent, Task>)>>();
-        public ButtonHandler()
+
+        public Task Initialised() => Task.CompletedTask;
+        public Task Connected()
         {
             Ditto.Client.ButtonExecuted += Client_ButtonExecuted;
+            return Task.CompletedTask;
         }
+        public Task Exit() => Task.CompletedTask;
 
         public void Dispose()
         {
@@ -44,7 +48,7 @@ namespace Ditto.Bot.Services
         public void AddSingle(string buttonId, ulong interactionId, Func<SocketMessageComponent, Task> callbackFunc)
             => Add(buttonId, interactionId, callbackFunc, true);
 
-        private async Task Client_ButtonExecuted(Discord.WebSocket.SocketMessageComponent messageComponent)
+        private async Task Client_ButtonExecuted(SocketMessageComponent messageComponent)
         {
             var interactionId = messageComponent?.Message?.Interaction?.Id;
             var buttonId = messageComponent.Data?.CustomId;

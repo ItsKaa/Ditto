@@ -36,8 +36,8 @@ namespace Ditto.Extensions
                         replyToUser ? $"{replyUser?.Mention} " : "",
                         message
                     ),
-                    Color = (error ? Bot.Ditto.Cache.Db.EmbedErrorColour(guild)
-                        : Bot.Ditto.Cache.Db.EmbedColour(guild)
+                    Color = (error ? Bot.Ditto.Cache.EmbedErrorColour(guild)
+                        : Bot.Ditto.Cache.EmbedColour(guild)
                     )
                 },
                 embedBuilder == null ? string.Empty : message,
@@ -126,7 +126,7 @@ namespace Ditto.Extensions
             {
                 Description = headerMessage,
                 Footer = new EmbedFooterBuilder() { Text = string.Format("{0} {1} seconds left", Globals.Character.Clock, seconds) },
-                Color = Bot.Ditto.Cache.Db.EmbedColour((channel as ITextChannel)?.Guild)
+                Color = Bot.Ditto.Cache.EmbedColour((channel as ITextChannel)?.Guild)
             };
 
             if(embedFields.Count > 0)
@@ -146,7 +146,7 @@ namespace Ditto.Extensions
             }
 
             var tokenSource = new CancellationTokenSource();
-            Bot.Ditto.ReactionHandler.Add(message, (r) =>
+            Bot.Ditto.ReactionService.Add(message, (r) =>
             {
                 if (r.UserId != discordClient.CurrentUser.Id)
                 {
@@ -191,7 +191,7 @@ namespace Ditto.Extensions
                 await message.DeleteAsync().ConfigureAwait(false);
             });
 
-            Bot.Ditto.ReactionHandler.Remove(message);
+            Bot.Ditto.ReactionService.Remove(message);
             return selection;
         }
 
@@ -225,7 +225,7 @@ namespace Ditto.Extensions
                 //Fields = embedFields,
                 Description = description,
                 Footer = new EmbedFooterBuilder() { Text = string.Format("{0} {1} seconds left", Globals.Character.Clock, seconds) },
-                Color = Bot.Ditto.Cache.Db.EmbedColour((channel as ITextChannel)?.Guild)
+                Color = Bot.Ditto.Cache.EmbedColour((channel as ITextChannel)?.Guild)
             };
             var message = await channel.EmbedAsync(embedBuilder);
 
@@ -280,7 +280,7 @@ namespace Ditto.Extensions
             var tokenSource = new CancellationTokenSource();
 
             embedBuilder.WithFooter(new EmbedFooterBuilder().WithText($"{Globals.Character.Clock} expires at {expireDate:t} | {page}/{pageCount}"));
-            embedBuilder.Color = Bot.Ditto.Cache.Db.EmbedColour((channel as ITextChannel)?.Guild);
+            embedBuilder.Color = Bot.Ditto.Cache.EmbedColour((channel as ITextChannel)?.Guild);
             var message = await channel.EmbedAsync(embedBuilder).ConfigureAwait(false);
 
             foreach(var reaction in reactionEmotes)
@@ -318,7 +318,7 @@ namespace Ditto.Extensions
                         {
                             embedBuilder = onPageChange?.Invoke(message, page);
                             embedBuilder.WithFooter(new EmbedFooterBuilder().WithText($"{Globals.Character.Clock} expires at {expireDate:t}{(displayPage ? $" | {page}/{pageCount}" : "")}"));
-                            embedBuilder.Color = Bot.Ditto.Cache.Db.EmbedColour((channel as ITextChannel)?.Guild);
+                            embedBuilder.Color = Bot.Ditto.Cache.EmbedColour((channel as ITextChannel)?.Guild);
                             try
                             {
                                 await message.ModifyAsync((m) => m.Embed = new Optional<Embed>(embedBuilder.Build()),
@@ -330,7 +330,7 @@ namespace Ditto.Extensions
                     }
                 }
             });
-            Bot.Ditto.ReactionHandler.Add(message, onChanged, onChanged, null);
+            Bot.Ditto.ReactionService.Add(message, onChanged, onChanged, null);
 
             // Wait until date >= expireDate
             try
@@ -346,7 +346,7 @@ namespace Ditto.Extensions
             catch (OperationCanceledException) { }
             
             // Clear reactions and remove the footer
-            Bot.Ditto.ReactionHandler.Remove(message);
+            Bot.Ditto.ReactionService.Remove(message);
             await message.RemoveAllReactionsAsync().ConfigureAwait(false);
             try
             {

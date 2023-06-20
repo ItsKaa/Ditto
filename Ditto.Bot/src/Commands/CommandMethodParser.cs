@@ -1,7 +1,6 @@
 ﻿using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Database.Models;
-using Ditto.Bot.Services.Commands.Data;
 using Ditto.Data.Commands;
 using Ditto.Extensions;
 using System;
@@ -9,10 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using ParseResult = Ditto.Bot.Services.Commands.Data.ParseResult;
+using ParseResult = Ditto.Bot.Commands.Data.ParseResult;
 using ModuleInfo = Ditto.Bot.Data.Reflection.ModuleInfo;
+using Ditto.Bot.Commands.Data;
 
-namespace Ditto.Bot.Services.Commands
+namespace Ditto.Bot.Commands
 {
     public class CommandMethodParser
     {
@@ -31,7 +31,7 @@ namespace Ditto.Bot.Services.Commands
         public async Task<IEnumerable<ParseResult>> ParseMethodsAsync(ICommandContextEx context, string input, bool validateInput = true)
         {
             var list = new List<ParseResult>();
-            foreach (var module in (context.Guild == null ? CommandHandler.Modules[0] : CommandHandler.Modules[context.Guild.Id]))
+            foreach (var module in context.Guild == null ? CommandHandler.Modules[0] : CommandHandler.Modules[context.Guild.Id])
             {
                 var parseResults = ParseMethodsInternal(module, input, ParsingState.BASE);
                 foreach (var parseResult in parseResults)
@@ -113,7 +113,7 @@ namespace Ditto.Bot.Services.Commands
             {
                 bool found = false;
                 var methodNameMatch = method.Aliases.FirstOrDefault(n => inputItem1.Equals(n, StringComparison.OrdinalIgnoreCase));
-                if ((method.MethodInfo.Name == "_" || (method.Aliases.Contains("") && methodNameMatch != null)) || !string.IsNullOrWhiteSpace(methodNameMatch))
+                if (method.MethodInfo.Name == "_" || method.Aliases.Contains("") && methodNameMatch != null || !string.IsNullOrWhiteSpace(methodNameMatch))
                 {
                     if (method.Accessibility.Has(state == ParsingState.BASE ? CommandAccessLevel.Global : CommandAccessLevel.Parents))
                     {
@@ -260,7 +260,7 @@ namespace Ditto.Bot.Services.Commands
                 else if (left.Score == right.Score)
                 {
                     // Sort by most parameters parsed.
-                    return (left.Parameters?.Count() ?? -1).CompareTo((right.Parameters?.Count() ?? -1));
+                    return (left.Parameters?.Count() ?? -1).CompareTo(right.Parameters?.Count() ?? -1);
                 }
                 return left.Score.CompareTo(right.Score);
             });

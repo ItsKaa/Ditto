@@ -3,7 +3,6 @@ using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Database.Data;
 using Ditto.Data.Commands;
-using Ditto.Data.Discord;
 using Ditto.Extensions;
 using Ditto.Helpers;
 using Newtonsoft.Json.Linq;
@@ -18,11 +17,12 @@ using Ditto.Bot.Modules.Admin;
 using Ditto.Bot.Database.Models;
 using Tweetinvi.Core.Extensions;
 using System.Threading;
+using Ditto.Bot.Services;
 
 namespace Ditto.Bot.Modules.Utility.Linking
 {
     [Alias("pixiv")]
-    public class PixivLinkUtility : DiscordModule<LinkUtility>
+    public class PixivLinkUtility : DiscordTextModule<LinkUtility>
     {
         private static bool Initialized { get; set; } = false;
         private static TimeSpan FetchTimeout { get; set; } = TimeSpan.FromMinutes(30);
@@ -161,6 +161,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
                 return Enumerable.Empty<string>();
             });
+        }
+
+        public PixivLinkUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
         }
 
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local)]

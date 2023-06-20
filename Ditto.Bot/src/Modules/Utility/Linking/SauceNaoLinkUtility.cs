@@ -5,6 +5,7 @@ using Ditto.Attributes;
 using Ditto.Bot.Database.Data;
 using Ditto.Bot.Database.Models;
 using Ditto.Bot.Modules.Admin;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
@@ -23,7 +24,7 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Utility.Linking
 {
     [Alias("sauce")]
-    public class SauceNaoLinkUtility : DiscordModule<LinkUtility>
+    public class SauceNaoLinkUtility : DiscordTextModule<LinkUtility>
     {
         private class SauceResult
         {
@@ -119,6 +120,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
             // Empty link handler since it's a one time only configuration
             LinkUtility.TryAddHandler(LinkType.SauceNAO, (link, channel, cancellationToken) => Task.FromResult(Enumerable.Empty<string>()));
+        }
+
+        public SauceNaoLinkUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
         }
 
         private static Task Ditto_MessageReceived(Discord.WebSocket.SocketMessage socketMessage)

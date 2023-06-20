@@ -18,10 +18,11 @@ using Image = SixLabors.ImageSharp.Image;
 using SixLabors.ImageSharp.Processing.Processors.Transforms;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.Fonts;
+using Ditto.Bot.Services;
 
 namespace Ditto.Bot.Modules.Utility
 {
-    public class RandomSeedUtility : DiscordModule<Utility>
+    public class RandomSeedUtility : DiscordTextModule<Utility>
     {
         private static readonly Dictionary<int, Tuple<string, string>> _shipLevels = new Dictionary<int, Tuple<string, string>>
         {
@@ -48,6 +49,10 @@ namespace Ditto.Bot.Modules.Utility
             { 50,  "Heart.png" },           // ❤
             { 0,   "HeartBroken.png" },     // 💔
         };
+
+        public RandomSeedUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
 
         private static Randomizer GetTodayRandomizer(params ulong[] seed)
         {
