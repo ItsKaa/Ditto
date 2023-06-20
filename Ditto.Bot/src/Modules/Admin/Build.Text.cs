@@ -4,6 +4,7 @@ using Ditto.Attributes;
 using Ditto.Bot.Modules.Admin.Data;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,9 +17,9 @@ namespace Ditto.Bot.Modules.Admin
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
         [Priority(0)]
-        public Task _(string fromHash = null)
+        public Task _(int headPosition = 0)
         {
-            return Info(fromHash);
+            return Info(headPosition);
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
@@ -96,12 +97,12 @@ namespace Ditto.Bot.Modules.Admin
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
         [Priority(1)]
-        public async Task Info(string fromHash = null)
+        public async Task Info(int headPosition = 0)
         {
             if (Permissions.IsAdministratorOrBotOwner(Context))
             {
                 var buildInfo = await CheckForUpdates(false).ConfigureAwait(false);
-                if (await Build.Info(buildInfo, Context.Guild, fromHash) is Embed embed)
+                if (await Build.Info(buildInfo, Context.Guild, $"HEAD~{Math.Max(0, headPosition)}") is Embed embed)
                 {
                     await Context.Channel.SendMessageAsync(embed: embed, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit });
                 }
