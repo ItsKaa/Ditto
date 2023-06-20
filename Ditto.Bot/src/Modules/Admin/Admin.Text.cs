@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Ditto.Attributes;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using System.Threading.Tasks;
@@ -8,8 +9,12 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Admin
 {
     [Alias("admin")]
-    public class AdminText : DiscordModule
+    public class AdminText : DiscordTextModule
     {
+        public AdminText(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
+
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents)]
         public override Task _()
         {

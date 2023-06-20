@@ -9,7 +9,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using TB.ComponentModel;
 
-namespace Ditto.Bot.Services.Commands
+namespace Ditto.Bot.Commands
 {
     public class CommandConverter
     {

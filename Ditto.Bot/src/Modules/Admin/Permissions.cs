@@ -1,13 +1,13 @@
 ﻿using Discord;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
-using Ditto.Data.Discord;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Admin
 {
-    public class Permissions : DiscordModule
+    public class Permissions : DiscordTextModule
     {
-        static Permissions()
+        public Permissions(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
         {
         }
 

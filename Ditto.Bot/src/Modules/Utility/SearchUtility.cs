@@ -2,18 +2,21 @@
 using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Data;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
-using Ditto.Data.Discord;
 using Ditto.Extensions;
-using Ditto.Helpers;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Utility
 {
     [Alias("search")]
-    public class SearchUtility : DiscordModule<Utility>
+    public class SearchUtility : DiscordTextModule<Utility>
     {
+        public SearchUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
+
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
         public async Task Gif([Multiword] string query = null)
         {

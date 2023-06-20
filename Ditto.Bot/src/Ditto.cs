@@ -4,7 +4,6 @@ using Discord.WebSocket;
 using Ditto.Bot.Data.API;
 using Ditto.Bot.Data.Configuration;
 using Ditto.Bot.Services;
-using Ditto.Bot.Services.Commands;
 using Ditto.Extensions;
 using Ditto.Data.Discord;
 using Ditto.Data.Exceptions;
@@ -14,6 +13,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Reflection;
 using System.Linq;
+using Ditto.Bot.Handlers;
+using Ditto.Bot.Commands;
 
 namespace Ditto.Bot
 {
@@ -31,17 +32,16 @@ namespace Ditto.Bot
         public static bool Reconnecting { get; private set; } = false;
         public static bool Exiting { get; private set; } = false;
         public static DiscordSocketClient Client { get; private set; }
-        public static DatabaseHandler Database { get; private set; }
+        public static DatabaseService Database { get; private set; }
         public static CommandHandler CommandHandler { get; private set; }
         public static InteractionService InteractionService { get; private set;  }
         public static IServiceProvider ServiceProvider { get; private set; }
-
-        public static CacheHandler Cache { get; private set; }
+        public static DatabaseCacheService Cache { get; private set; }
         public static GoogleService Google { get; private set; }
         public static TwitchLib.Api.TwitchAPI Twitch { get; private set; }
         public static Giphy Giphy { get; private set; }
         public static SettingsConfiguration Settings { get; private set; }
-        public static ReactionHandler ReactionHandler { get; private set; }
+        public static ReactionService ReactionService { get; private set; }
         
         private static bool _firstStart = true;
 
@@ -95,9 +95,8 @@ namespace Ditto.Bot
             }
 
             Client?.Dispose();
-            ReactionHandler?.Dispose();
+            ReactionService?.Dispose();
             Database = null;
-            Cache = null;
         }
 
         private static async Task LogOutAsync()
@@ -173,7 +172,7 @@ namespace Ditto.Bot
                 try { PlayingStatusHandler.Stop(); } catch (Exception ex) { Log.Warn("Error at PlayingStatusHandler.Stop | {0}", ex); }
                 try { PlayingStatusHandler.Clear(); } catch (Exception ex) { Log.Warn("Error at PlayingStatusHandler.Clear | {0}", ex); }
                 try { CommandHandler?.Dispose(); } catch (Exception ex) { Log.Warn("Error at CommandHandler.Dispose | {0}", ex); }
-                try { ReactionHandler?.Dispose(); } catch (Exception ex) { Log.Warn("Error at ReactionHandler.Dispose | {0}", ex); }
+                try { ReactionService?.Dispose(); } catch (Exception ex) { Log.Warn("Error at ReactionHandler.Dispose | {0}", ex); }
                 try { Client?.Dispose(); } catch (Exception ex) { Log.Warn("Error at Client.Dispose | {0}", ex); }
                 Running = false;
 
@@ -297,17 +296,6 @@ namespace Ditto.Bot
                 return false;
             }
 
-            // Try to initialize the database
-            try
-            {
-                (Database = new DatabaseHandler()).Setup(Settings.Credentials.Sql.Type, Settings.Credentials.Sql.ConnectionString);
-            }
-            catch(Exception ex)
-            {
-                Log.Fatal("Unable to create a connection with the database, please check the file \"/data/settings.xml\"", ex);
-                return false;
-            }
-
             if (ServiceProvider != null)
             {
                 DisconnectEventsServiceProvider(ServiceProvider);
@@ -315,6 +303,18 @@ namespace Ditto.Bot
 
             // Initialize the providers
             ServiceProvider = CreateServiceProvider();
+
+            // Try to initialize the database
+            try
+            {
+                Database = ServiceProvider.GetRequiredService<DatabaseService>();
+                Database.Setup(Settings.Credentials.Sql.Type, Settings.Credentials.Sql.ConnectionString);
+            }
+            catch(Exception ex)
+            {
+                Log.Fatal("Unable to create a connection with the database, please check the file \"/data/settings.xml\"", ex);
+                return false;
+            }
 
             // Try to initialise the service 'Google'
             try
@@ -368,10 +368,8 @@ namespace Ditto.Bot
             await InteractionService.AddModulesAsync(typeof(Ditto).Assembly, ServiceProvider);
             
             // Various services
-            if (Cache == null)
-            {
-                (Cache = new CacheHandler()).Setup(TimeSpan.FromSeconds(Settings.Cache.CacheTime));
-            }
+            Cache ??= ServiceProvider.GetRequiredService<DatabaseCacheService>();
+            ReactionService ??= ServiceProvider.GetRequiredService<ReactionService>();
 
             CommandHandler?.Dispose();
             await (CommandHandler = new CommandHandler(Client, ServiceProvider)).SetupAsync().ConfigureAwait(false);
@@ -384,8 +382,6 @@ namespace Ditto.Bot
                     {
                         // Setup services
                         await CommandHandler.SetupAsync().ConfigureAwait(false);
-                        ReactionHandler?.Dispose();
-                        await (ReactionHandler = new ReactionHandler()).SetupAsync(Client).ConfigureAwait(false);
                         PlayingStatusHandler.Setup(TimeSpan.FromMinutes(1));
                     }
 

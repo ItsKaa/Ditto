@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Modules.Admin;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
@@ -12,8 +13,12 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Chat
 {
     [Alias("chat")]
-    public class ChatText : DiscordModule
+    public class ChatText : DiscordTextModule
     {
+        public ChatText(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
+
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All, RequireBotTag = false)]
         public async Task Talk([Multiword] string message)
         {

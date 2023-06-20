@@ -1,4 +1,4 @@
-﻿namespace Ditto.Bot.Services.Commands.Data
+﻿namespace Ditto.Bot.Commands.Data
 {
     public enum ParsingState
     {

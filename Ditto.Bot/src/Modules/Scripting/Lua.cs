@@ -5,20 +5,18 @@ using Discord.WebSocket;
 using Ditto.Attributes;
 using Ditto.Bot.Modules.Admin;
 using Ditto.Bot.Modules.Scripting.Data;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
-using Ditto.Data.Discord;
-using Ditto.Extensions.Discord;
 using MoonSharp.Interpreter;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Scripting
 {
-    public class Lua : DiscordModule
+    public class Lua : DiscordTextModule
     {
         private static ConcurrentDictionary<IGuild, ConcurrentList<LuaScript>> _scripts = new ConcurrentDictionary<IGuild, ConcurrentList<LuaScript>>();
         private static bool Initialized { get; set; } = false;
@@ -108,6 +106,10 @@ namespace Ditto.Bot.Modules.Scripting
             };
         }
 
+        public Lua(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
+
         private static Task GuildMemberUpdated(Cacheable<SocketGuildUser, ulong> cachedSocketGuildUserOld, SocketGuildUser socketGuildUser)
         {
             var _ = Task.Run(async () =>
@@ -167,10 +169,6 @@ namespace Ditto.Bot.Modules.Scripting
                 }
             });
             return Task.CompletedTask;
-        }
-
-        public Lua()
-        {
         }
 
         public static Closure GetMethodFromScript(LuaScript luaScript, LuaScriptMethods scriptMethod)

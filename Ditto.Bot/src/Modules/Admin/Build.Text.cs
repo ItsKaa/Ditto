@@ -4,7 +4,6 @@ using Ditto.Attributes;
 using Ditto.Bot.Modules.Admin.Data;
 using Ditto.Bot.Services;
 using Ditto.Data.Commands;
-using Ditto.Data.Discord;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,14 +12,15 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Admin
 {
     [Alias("build")]
-    public class BuildText : DiscordModule
+    public class BuildText : DiscordTextModule
     {
         public GitService GitService { get; }
 
-        public BuildText(GitService gitService)
+        public BuildText(DatabaseCacheService cache, DatabaseService database, GitService gitService) : base(cache, database)
         {
             GitService = gitService;
         }
+
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
         [Priority(0)]

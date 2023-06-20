@@ -190,8 +190,8 @@ namespace Ditto.Bot.Modules.Music.Data
                                 )
                             )
                             .WithColor(MusicPlayer.Paused
-                                ? Ditto.Cache.Db.EmbedMusicPausedColour(Guild)
-                                : Ditto.Cache.Db.EmbedMusicPlayingColour(Guild)
+                                ? Ditto.Cache.EmbedMusicPausedColour(Guild)
+                                : Ditto.Cache.EmbedMusicPlayingColour(Guild)
                             );
 
                         // Description
@@ -243,7 +243,7 @@ namespace Ditto.Bot.Modules.Music.Data
                         {
                             _userMessage = await Channel.EmbedAsync(embedBuilder, Guild).ConfigureAwait(false);
                             var botUserId = Ditto.Client.CurrentUser.Id;
-                            Ditto.ReactionHandler.Add(_userMessage,
+                            Ditto.ReactionService.Add(_userMessage,
                                 async r =>
                                 {
                                     if (r?.Emote != null && r.UserId != botUserId)

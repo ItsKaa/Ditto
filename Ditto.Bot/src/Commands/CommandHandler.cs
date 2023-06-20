@@ -14,8 +14,9 @@ using Ditto.Extensions.Discord;
 using Ditto.Bot.Data.Discord;
 using Ditto.Bot.Helpers;
 using ModuleInfo = Ditto.Bot.Data.Reflection.ModuleInfo;
+using Ditto.Bot.Services;
 
-namespace Ditto.Bot.Services.Commands
+namespace Ditto.Bot.Commands
 {
     public partial class CommandHandler : IDisposable
     {
@@ -24,7 +25,7 @@ namespace Ditto.Bot.Services.Commands
         public bool Running { get; private set; }
         public ConcurrentDictionary<ulong, List<ModuleInfo>> Modules { get; private set; }
         public CommandConverter CommandConverter { get; private set; }
-        public CommandMethodParser CommandMethodParser { get;set; }
+        public CommandMethodParser CommandMethodParser { get; set; }
         public IServiceProvider ServiceProvider { get; }
 
         public CommandHandler(DiscordSocketClient client, IServiceProvider serviceProvider)
@@ -43,7 +44,7 @@ namespace Ditto.Bot.Services.Commands
             await ReloadAsync(0).ConfigureAwait(false);
             await LoadModulesAsync().ConfigureAwait(false);
         }
-        
+
         public void Dispose()
         {
             try
@@ -125,7 +126,7 @@ namespace Ditto.Bot.Services.Commands
                 }
             }
         }
-        
+
 
         private async Task JoinedGuildHandler(SocketGuild guild)
         {
@@ -166,9 +167,9 @@ namespace Ditto.Bot.Services.Commands
                 Modules.Clear();
                 await ReloadAsync(0, false).ConfigureAwait(false); // default, for private messages.
                 foreach (var g in _discordClient.Guilds)
-				{
-					await ReloadAsync(g, fillDatabase).ConfigureAwait(false);
-				}
+                {
+                    await ReloadAsync(g, fillDatabase).ConfigureAwait(false);
+                }
             }
             else
             {
@@ -182,7 +183,7 @@ namespace Ditto.Bot.Services.Commands
         /// <param name="guildId">see IGuild.Id</param>
         /// <param name="fillDatabase">if true, any command that is not in our database will be automatically added, by default this is off and should only be used when manually editing the database.</param>
         public async Task ReloadAsync(ulong guildId, bool fillDatabase = false)
-        {	
+        {
             // Load our modules
             var internalModules = ReflectionHelper.GetModules().ToList();
 
@@ -256,11 +257,11 @@ namespace Ditto.Bot.Services.Commands
                         && x.Type == DiscordTagType.USER
                         && x.Id == _discordClient.CurrentUser?.Id);
 
-                var startsWithPrefix = content.StartsWith(Ditto.Cache.Db.Prefix(context.Guild));
+                var startsWithPrefix = content.StartsWith(Ditto.Cache.Prefix(context.Guild));
                 if (userTag != null && !startsWithPrefix)
                 {
                     content = content.Remove(userTag.Index, userTag.Length).TrimStart();
-                    if (content.StartsWith(Ditto.Cache.Db.Prefix(context.Guild)))
+                    if (content.StartsWith(Ditto.Cache.Prefix(context.Guild)))
                     {
                         content = content.Remove(0, 1);
                     }
@@ -337,7 +338,7 @@ namespace Ditto.Bot.Services.Commands
 
             try
             {
-                
+
                 if (CreateModuleInstance(methodInfo.DeclaringType) is ModuleBaseClass instance)
                 {
                     instance.Context = context;

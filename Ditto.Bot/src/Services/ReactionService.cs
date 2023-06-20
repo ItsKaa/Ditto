@@ -1,31 +1,31 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Ditto.Data;
-using Ditto.Data.Discord;
+using Ditto.Bot.Services.Data;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Services
 {
-    public class ReactionData
+    public class ReactionService : IModuleService, IDisposable
     {
-        public Func<SocketReaction, Task> OnReactionAdded = delegate { return Task.CompletedTask; };
-        public Func<SocketReaction, Task> OnReactionRemoved = delegate { return Task.CompletedTask; };
-        public Func<Task> OnReactionsCleared = delegate { return Task.CompletedTask; };
-    }
-    public class ReactionHandler : IDisposable
-    {
-        private DiscordSocketClient _discordClient = null;
-        private Dictionary<ulong, ReactionData> _messageData = new Dictionary<ulong, ReactionData>();
+        private readonly DiscordSocketClient _discordClient;
+        private readonly Dictionary<ulong, ReactionData> _messageData = new Dictionary<ulong, ReactionData>();
 
-        public async Task SetupAsync(DiscordSocketClient discordClient)
+        public ReactionService(DiscordSocketClient discordClient) => _discordClient = discordClient;
+
+        public Task Initialised() => Task.CompletedTask;
+        
+        public Task Connected()
         {
-            _discordClient = discordClient;
             _discordClient.ReactionAdded += DiscordClient_ReactionAdded;
             _discordClient.ReactionRemoved += DiscordClient_ReactionRemoved;
             _discordClient.ReactionsCleared += DiscordClient_ReactionsCleared;
+            return Task.CompletedTask;
         }
+
+        public Task Exit() => Task.CompletedTask;
+
         public void Uninstall()
         {
             if (_discordClient != null)
@@ -45,7 +45,7 @@ namespace Ditto.Bot.Services
         {
             if (userMessage == null)
                 return false;
-            
+
             return _messageData.TryAdd(userMessage.Id, new ReactionData()
             {
                 OnReactionAdded = onReactionAdded ?? delegate { return Task.CompletedTask; },
@@ -55,7 +55,7 @@ namespace Ditto.Bot.Services
         }
         public void Remove(IUserMessage userMessage)
         {
-            if(userMessage != null)
+            if (userMessage != null)
                 _messageData.Remove(userMessage.Id);
         }
 
@@ -94,7 +94,7 @@ namespace Ditto.Bot.Services
 
         private Task DiscordClient_ReactionsCleared(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
         {
-            var _ = Task.Run(async() =>
+            var _ = Task.Run(async () =>
             {
                 try
                 {

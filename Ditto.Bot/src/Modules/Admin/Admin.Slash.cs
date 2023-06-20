@@ -9,7 +9,7 @@ namespace Ditto.Bot.Modules.Admin
     [Group("admin", "Administrative commands")]
     [DefaultMemberPermissions(GuildPermission.Administrator)]
     [RequireUserPermission(GuildPermission.Administrator)]
-    public class AdminSlash : DiscordSlashModule
+    public class AdminSlash : DiscordBaseSlashModule
     {
         public AdminSlash(InteractionService interactionService) : base(interactionService)
         {

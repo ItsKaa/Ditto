@@ -4,6 +4,7 @@ using Ditto.Attributes;
 using Ditto.Bot.Database.Models;
 using Ditto.Bot.Modules.Admin;
 using Ditto.Bot.Modules.Utility.Data;
+using Ditto.Bot.Services;
 using Ditto.Data;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
@@ -21,9 +22,8 @@ namespace Ditto.Bot.Modules.Utility
 {
     [Alias("event", "events")]
     [Help("Event", "")]
-    public class EventUtility : DiscordModule
+    public class EventUtility : DiscordTextModule
     {
-
         private static ConcurrentDictionary<int, Event> _events = new ConcurrentDictionary<int, Event>();
         private static CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
@@ -145,6 +145,10 @@ namespace Ditto.Bot.Modules.Utility
 
                 return Task.CompletedTask;
             };
+        }
+
+        public EventUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
         }
 
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents)]

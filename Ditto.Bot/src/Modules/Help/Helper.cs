@@ -1,5 +1,6 @@
 ﻿using Discord.Commands;
 using Ditto.Attributes;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions.Discord;
@@ -11,8 +12,12 @@ namespace Ditto.Bot.Modules.Help
     /// Helper class, parses any kind of value we might want to use.
     /// </summary>
     [DiscordPriority(-1)]
-    public class Helper : DiscordModule
+    public class Helper : DiscordTextModule
     {
+        public Helper(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
+
         [DiscordCommand(
             CommandSourceLevel.All,
             CommandAccessLevel.Global | CommandAccessLevel.Local | CommandAccessLevel.Parents,
@@ -27,7 +32,7 @@ namespace Ditto.Bot.Modules.Help
             // Youtube parsing
             if (Ditto.Google.Youtube.IsValidPlaylist(value) || Ditto.Google.Youtube.IsValidVideo(value))
             {
-                await Module<Music.Music>().Play(value).ConfigureAwait(false);
+                await Module<Music.Music>(Ditto.ServiceProvider).Play(value).ConfigureAwait(false);
                 await Context.Message.DeleteAfterAsync();
             }
             else
@@ -35,7 +40,7 @@ namespace Ditto.Bot.Modules.Help
                 // Chat bot
                 if(Context.IsBotUserTagged)
                 {
-                    await Module<Chat.ChatText>().Talk(value).ConfigureAwait(false);
+                    await Module<Chat.ChatText>(Ditto.ServiceProvider).Talk(value).ConfigureAwait(false);
                 }
             }
         }

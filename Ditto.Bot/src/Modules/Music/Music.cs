@@ -2,8 +2,8 @@
 using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Modules.Music.Data;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
-using Ditto.Data.Discord;
 using Ditto.Extensions;
 using Ditto.Extensions.Discord;
 using System;
@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Music
 {
     [Alias("audio", "sound", "sing", "vocal", "youtube", "m")]
-    public class Music : DiscordModule
+    public class Music : DiscordTextModule
     {
         private static ConcurrentDictionary<ulong, MusicPlayer> _musicPlayers { get; set; } = new ConcurrentDictionary<ulong, MusicPlayer>();
 
@@ -76,6 +76,10 @@ namespace Ditto.Bot.Modules.Music
                     }
                 }
             };
+        }
+
+        public Music(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
         }
 
         private bool GetMusicPlayer(out MusicPlayer musicPlayer)

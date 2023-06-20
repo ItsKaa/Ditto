@@ -5,6 +5,7 @@ using Discord.WebSocket;
 using Ditto.Attributes;
 using Ditto.Bot.Database.Data;
 using Ditto.Bot.Database.Models;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using Ditto.Extensions;
@@ -23,7 +24,7 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Utility.Linking
 {
     [Alias("translation")]
-    public class TranslationLinkUtility : DiscordModule<LinkUtility>
+    public class TranslationLinkUtility : DiscordTextModule<LinkUtility>
     {
         private class TranslationLink
         {
@@ -155,6 +156,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
             LinkUtility.TryAddHandler(LinkType.Translation, (link, channel, cancellationToken) => Task.FromResult(Enumerable.Empty<string>()));
         }
 
+        public TranslationLinkUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
+
         private static Task Ditto_MessageReceived(Discord.WebSocket.SocketMessage socketMessage)
         {
             Task.Run(async () =>
@@ -174,7 +179,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
             foreach (var link in _links.ToList().Where(x => x.SourceChannel?.Id == message.Channel.Id))
             {
-                if (message.Content.StartsWith(Ditto.Cache.Db.Prefix(link.Link.Guild)))
+                if (message.Content.StartsWith(Ditto.Cache.Prefix(link.Link.Guild)))
                 {
                     continue;
                 }
@@ -329,7 +334,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         .WithName(authorGuildUser?.DisplayName ?? authorGuildUser?.Nickname ?? message.Author?.Username ?? "Unknown User")
                     )
                     .WithDescription(messageDescription)
-                    .WithColor(Ditto.Cache.Db.EmbedMusicPlayingColour(link.Link.Guild));
+                    .WithColor(Ditto.Cache.EmbedMusicPlayingColour(link.Link.Guild));
 
                 if (!string.IsNullOrEmpty(imageUrl))
                 {

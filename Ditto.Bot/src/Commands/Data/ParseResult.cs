@@ -1,7 +1,7 @@
 ﻿using Ditto.Bot.Data.Reflection;
 using System.Collections.Generic;
 
-namespace Ditto.Bot.Services.Commands.Data
+namespace Ditto.Bot.Commands.Data
 {
     public class ParseResult
     {

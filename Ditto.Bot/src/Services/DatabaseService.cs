@@ -1,4 +1,5 @@
 ﻿using Ditto.Bot.Database;
+using Ditto.Bot.Services;
 using Ditto.Data;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -11,10 +12,14 @@ namespace Ditto.Bot.Services
         Sqlite = 0,
         Mysql
     }
-    public class DatabaseHandler : BaseClass
+    public class DatabaseService : BaseClass, IModuleService
     {
         private DbContextOptions _options;
         public UnitOfWork UnitOfWork => new(GetContext());
+
+        public Task Initialised() => Task.CompletedTask;
+        public Task Connected() => Task.CompletedTask;
+        public Task Exit() => Task.CompletedTask;
 
         public void Setup(DatabaseType databaseType, string connectionString = null)
         {
@@ -177,6 +182,7 @@ namespace Ditto.Bot.Services
 
         public Task<TResult> WriteAsync<TResult>(Func<UnitOfWork, Task<TResult>> func, bool throwOnError = false, bool silent = false)
             => DoAsync(func, true, throwOnError, silent);
+
     }
 
 

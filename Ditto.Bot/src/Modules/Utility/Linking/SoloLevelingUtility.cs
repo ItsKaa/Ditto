@@ -5,13 +5,12 @@ using Ditto.Attributes;
 using Ditto.Bot.Database.Data;
 using Ditto.Bot.Database.Models;
 using Ditto.Bot.Modules.Admin;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
-using Ditto.Data.Discord;
 using Ditto.Extensions;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -20,7 +19,7 @@ using System.Threading.Tasks;
 namespace Ditto.Bot.Modules.Utility.Linking
 {
     [Alias("sololeveling", "sl")]
-    public class SoloLevelingUtility : DiscordModule<LinkUtility>
+    public class SoloLevelingUtility : DiscordTextModule<LinkUtility>
     {
         private static ConcurrentList<Link> _links = new ConcurrentList<Link>();
         private static SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
@@ -96,6 +95,10 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 Ditto.Client.MessageReceived -= OnMessageReceived;
                 return Task.CompletedTask;
             };
+        }
+
+        public SoloLevelingUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
         }
 
         private static T GetValueFromLink<T>(Link link, int index, T defaultValue = default)

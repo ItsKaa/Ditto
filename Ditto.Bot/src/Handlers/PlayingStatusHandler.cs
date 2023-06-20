@@ -1,13 +1,12 @@
 ﻿using Discord.WebSocket;
 using Ditto.Bot.Services.Data;
-using Ditto.Data.Discord;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Ditto.Bot.Services
+namespace Ditto.Bot.Handlers
 {
     public static class PlayingStatusHandler
     {
@@ -19,7 +18,7 @@ namespace Ditto.Bot.Services
         public static bool Running { get; private set; } = false;
         public static TimeSpan Delay { get; private set; } = TimeSpan.FromMinutes(1);
         public static bool Initialized { get; private set; } = false;
-        
+
         public static void Setup(TimeSpan delay)
         {
             Delay = delay;
@@ -46,7 +45,7 @@ namespace Ditto.Bot.Services
                             {
                                 try
                                 {
-                                    if ((DateTime.Now - _lastTime) > Delay)
+                                    if (DateTime.Now - _lastTime > Delay)
                                     {
                                         // Sort items based on priority and date added
                                         //if (Ditto.Running && Ditto.Client != null
@@ -69,7 +68,7 @@ namespace Ditto.Bot.Services
                                         //        }
                                         //    }
                                         //}
-                                        
+
                                         if (Ditto.IsClientConnected())
                                         {
                                             var items = _playingStatusItems.OrderByDescending(e => e.Priority).ThenByDescending(e => e.DateAdded);

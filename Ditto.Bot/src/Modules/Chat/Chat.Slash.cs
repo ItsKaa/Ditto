@@ -7,7 +7,7 @@ using Ditto.Bot.Services;
 namespace Ditto.Bot.Modules.Chat
 {
     [Group("chat", "Group for chat-based commands")]
-    public class ChatSlash : DiscordSlashModule
+    public class ChatSlash : DiscordBaseSlashModule
     {
         public ChatSlash(InteractionService interactionService) : base(interactionService) { }
         public const string ButtonIdPurgeConfirmYes = "chat_purge_confirm_yes";
@@ -64,7 +64,7 @@ namespace Ditto.Bot.Modules.Chat
                     .Build()
                     ;
 
-                var buttonHandler = new ButtonHandler();
+                var buttonHandler = new ButtonService();
                 buttonHandler.AddSingle(ButtonIdPurgeConfirmNo, Context.Interaction.Id, async (msg) =>
                 {
                     await msg.DeferAsync(true);

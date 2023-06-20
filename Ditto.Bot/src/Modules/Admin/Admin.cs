@@ -1,10 +1,11 @@
 ﻿using Discord;
+using Ditto.Bot.Services;
 using Ditto.Data.Discord;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Admin
 {
-    public class Admin : DiscordModule
+    public class Admin : DiscordTextModule
     {
         public static ITextChannel CacheChannel { get; private set; }
 
@@ -18,6 +19,10 @@ namespace Ditto.Bot.Modules.Admin
                     CacheChannel = await Ditto.Client.GetChannelAsync(channelId, new RequestOptions() { RetryMode = RetryMode.AlwaysRetry }) as ITextChannel;
                 }
             };
+        }
+
+        public Admin(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
         }
 
         public static void DebugLogging(bool enable = true)

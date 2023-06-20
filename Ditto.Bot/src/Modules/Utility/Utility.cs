@@ -1,14 +1,11 @@
-﻿using Discord;
-using Ditto.Attributes;
-using Ditto.Bot.Modules.Admin;
-using Ditto.Data.Commands;
-using Ditto.Data.Discord;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Ditto.Bot.Services;
 
 namespace Ditto.Bot.Modules.Utility
 {
-    public class Utility : DiscordModule
+    public class Utility : DiscordTextModule
     {
+        public Utility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
     }
 }

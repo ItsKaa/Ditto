@@ -3,6 +3,7 @@ using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Data.API.Rest;
 using Ditto.Bot.Helpers;
+using Ditto.Bot.Services;
 using Ditto.Common;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
@@ -19,8 +20,12 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Utility
 {
-    public class RandomUtility : DiscordModule<Utility>
+    public class RandomUtility : DiscordTextModule<Utility>
     {
+        public RandomUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
+
         public enum QuoteType
         {
             Default,

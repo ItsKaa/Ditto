@@ -3,6 +3,7 @@ using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Database.Models;
 using Ditto.Bot.Modules.Utility.Data;
+using Ditto.Bot.Services;
 using Ditto.Data;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
@@ -17,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Utility
 {
-    public class RemindUtility : DiscordModule<Utility>
+    public class RemindUtility : DiscordTextModule<Utility>
     {
         private static ConcurrentDictionary<int, Reminder> _reminders = new ConcurrentDictionary<int, Reminder>();
         private static CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
@@ -200,7 +201,11 @@ namespace Ditto.Bot.Modules.Utility
                 return Task.CompletedTask;
             };
         }
-        
+
+        public RemindUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        {
+        }
+
         public static ReminderParseResult ParseReminder(string message)
         {
             TimeSpan? time = null;
