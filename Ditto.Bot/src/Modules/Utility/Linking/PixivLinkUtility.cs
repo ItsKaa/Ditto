@@ -24,6 +24,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
     [Alias("pixiv")]
     public class PixivLinkUtility : DiscordTextModule<LinkUtility>
     {
+        private AdminService AdminService { get; }
         private static bool Initialized { get; set; } = false;
         private static TimeSpan FetchTimeout { get; set; } = TimeSpan.FromMinutes(30);
         private static CookieContainer CookieContainer { get; set; } = new CookieContainer();
@@ -78,13 +79,13 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     await UpdateOrAddLinkIllustrationIds(link).ConfigureAwait(false);
                     return Enumerable.Empty<string>();
                 }
-                else if (Admin.Admin.CacheChannel == null)
+                else if (AdminService.CacheChannel == null)
                 {
                     linkIllustrationIds.Item1 = DateTime.UtcNow;
                     Log.Warn("Cache channel is not set, ignoring Pixiv module.");
                     return Enumerable.Empty<string>();
                 }
-                else if (!await Permissions.CanBotSendMessages(Admin.Admin.CacheChannel).ConfigureAwait(false))
+                else if (!await Permissions.CanBotSendMessages(AdminService.CacheChannel).ConfigureAwait(false))
                 {
                     linkIllustrationIds.Item1 = DateTime.UtcNow;
                     Log.Warn("No SendMessages permission in cache channel, ignoring Pixiv module.");
@@ -163,8 +164,9 @@ namespace Ditto.Bot.Modules.Utility.Linking
             });
         }
 
-        public PixivLinkUtility(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        public PixivLinkUtility(DatabaseCacheService cache, DatabaseService database, AdminService adminService) : base(cache, database)
         {
+            AdminService = adminService;
         }
 
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Local)]
@@ -232,7 +234,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
 
         protected static async Task<bool> PostPixivIllustration(Database.Models.Link link, string illustrationId, string title, string authorName, DateTime dateTime, byte[] imageBytes)
         {
-            if(Admin.Admin.CacheChannel == null || !await Permissions.CanBotSendMessages(Admin.Admin.CacheChannel).ConfigureAwait(false))
+            if(AdminService.CacheChannel == null || !await Permissions.CanBotSendMessages(AdminService.CacheChannel).ConfigureAwait(false))
             {
                 Log.Error("Cache channel is not set or permissions have changed!");
                 return false;
@@ -242,7 +244,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
             try
             {
                 using var memoryStream = new MemoryStream(imageBytes);
-                var fileMessage = await Admin.Admin.CacheChannel.SendFileAsync(
+                var fileMessage = await AdminService.CacheChannel.SendFileAsync(
                     memoryStream,
                     $"{illustrationId}.png",
                     options: new RequestOptions()

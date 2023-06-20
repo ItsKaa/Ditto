@@ -14,8 +14,11 @@ namespace Ditto.Bot.Modules.Help
     [DiscordPriority(-1)]
     public class Helper : DiscordTextModule
     {
-        public Helper(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        private YoutubeService YoutubeService { get; }
+
+        public Helper(DatabaseCacheService cache, DatabaseService database, YoutubeService youtubeService) : base(cache, database)
         {
+            YoutubeService = youtubeService;
         }
 
         [DiscordCommand(
@@ -30,7 +33,7 @@ namespace Ditto.Bot.Modules.Help
         public async Task _([Multiword] string value = "")
         {
             // Youtube parsing
-            if (Ditto.Google.Youtube.IsValidPlaylist(value) || Ditto.Google.Youtube.IsValidVideo(value))
+            if (YoutubeService.IsValidPlaylist(value) || YoutubeService.IsValidVideo(value))
             {
                 await Module<Music.Music>(Ditto.ServiceProvider).Play(value).ConfigureAwait(false);
                 await Context.Message.DeleteAfterAsync();

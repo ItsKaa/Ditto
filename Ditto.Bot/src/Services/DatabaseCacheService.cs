@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Services
 {
-    public class DatabaseCacheService : IModuleService
+    public class DatabaseCacheService : IDittoService
     {
         protected ConcurrentDictionary<string, CacheItem<IUnitOfWork, object>> _cachedDatabaseItems = new ConcurrentDictionary<string, CacheItem<IUnitOfWork, object>>();
 

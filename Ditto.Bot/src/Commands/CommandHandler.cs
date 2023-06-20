@@ -13,12 +13,12 @@ using Ditto.Attributes;
 using Ditto.Extensions.Discord;
 using Ditto.Bot.Data.Discord;
 using Ditto.Bot.Helpers;
-using ModuleInfo = Ditto.Bot.Data.Reflection.ModuleInfo;
 using Ditto.Bot.Services;
+using ModuleInfo = Ditto.Bot.Data.Reflection.ModuleInfo;
 
 namespace Ditto.Bot.Commands
 {
-    public partial class CommandHandler : IDisposable
+    public class CommandService : IDisposable
     {
         private readonly DiscordSocketClient _discordClient;
 
@@ -28,7 +28,7 @@ namespace Ditto.Bot.Commands
         public CommandMethodParser CommandMethodParser { get; set; }
         public IServiceProvider ServiceProvider { get; }
 
-        public CommandHandler(DiscordSocketClient client, IServiceProvider serviceProvider)
+        public CommandService(DiscordSocketClient client, IServiceProvider serviceProvider)
         {
             _discordClient = client;
             ServiceProvider = serviceProvider;
@@ -36,6 +36,8 @@ namespace Ditto.Bot.Commands
             CommandConverter = new CommandConverter();
             CommandMethodParser = new CommandMethodParser(this);
             Running = false;
+
+            SetupAsync().Wait();
         }
 
         public async Task SetupAsync()
@@ -84,7 +86,7 @@ namespace Ditto.Bot.Commands
             return type.GetConstructors()
                 .Any(x => x.GetParameters()
                     .SelectMany(x => x.ParameterType.GetInterfaces())
-                    .Contains(typeof(IModuleService))
+                    .Contains(typeof(IDittoService))
                 )
                 ? type.CreateInstanceWithServices(ServiceProvider) as ModuleBaseClass
                 : type.CreateInstance() as ModuleBaseClass;
@@ -368,5 +370,6 @@ namespace Ditto.Bot.Commands
 
         internal static MethodInfo FindMethodInfo(ModuleInfo moduleInfo, string commandString)
             => moduleInfo.Methods.FirstOrDefault(a => a.Aliases.Any(n => commandString.StartsWith(n, StringComparison.InvariantCultureIgnoreCase)))?.MethodInfo;
+
     }
 }

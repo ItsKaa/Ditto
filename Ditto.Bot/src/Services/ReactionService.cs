@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Services
 {
-    public class ReactionService : IModuleService, IDisposable
+    public class ReactionService : IDittoService, IDisposable
     {
         private readonly DiscordSocketClient _discordClient;
         private readonly Dictionary<ulong, ReactionData> _messageData = new Dictionary<ulong, ReactionData>();

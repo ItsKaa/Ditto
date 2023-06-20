@@ -13,15 +13,15 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Services
 {
-    public class GitService : IModuleService
+    public class GitService : IDittoService
     {
         private const string RepositoryAlias = "origin";
         private const string BranchName = "master";
         private const string Branch = RepositoryAlias + "/" + BranchName;
 
-        Task IModuleService.Initialised() => Task.CompletedTask;
-        Task IModuleService.Connected() => Task.CompletedTask;
-        Task IModuleService.Exit() => Task.CompletedTask;
+        Task IDittoService.Initialised() => Task.CompletedTask;
+        Task IDittoService.Connected() => Task.CompletedTask;
+        Task IDittoService.Exit() => Task.CompletedTask;
 
         public string RunGit(string args)
         {

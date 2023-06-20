@@ -17,6 +17,7 @@ namespace Ditto.Bot.Modules.Music
     [Alias("audio", "sound", "sing", "vocal", "youtube", "m")]
     public class Music : DiscordTextModule
     {
+        private YoutubeService YoutubeService { get; }
         private static ConcurrentDictionary<ulong, MusicPlayer> _musicPlayers { get; set; } = new ConcurrentDictionary<ulong, MusicPlayer>();
 
         static Music()
@@ -78,8 +79,9 @@ namespace Ditto.Bot.Modules.Music
             };
         }
 
-        public Music(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        public Music(DatabaseCacheService cache, DatabaseService database, YoutubeService youtubeService) : base(cache, database)
         {
+            YoutubeService = youtubeService;
         }
 
         private bool GetMusicPlayer(out MusicPlayer musicPlayer)
@@ -112,11 +114,11 @@ namespace Ditto.Bot.Modules.Music
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.Global | CommandAccessLevel.Local, deleteUserMessage: true)]
         public async Task Play([Multiword] string query = "", IVoiceChannel voiceChannel = null)
         {
-            var musicPlayer = _musicPlayers.GetOrAdd(Context.Guild.Id, new MusicPlayer(Context));
+            var musicPlayer = _musicPlayers.GetOrAdd(Context.Guild.Id, new MusicPlayer(Context, YoutubeService));
             if (musicPlayer == null)
             {
                 _musicPlayers.TryRemove(Context.Guild.Id, out MusicPlayer mp);
-                if (!_musicPlayers.TryAdd(Context.Guild.Id, (musicPlayer = new MusicPlayer(Context))))
+                if (!_musicPlayers.TryAdd(Context.Guild.Id, (musicPlayer = new MusicPlayer(Context, YoutubeService))))
                 {
                     await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
                 }

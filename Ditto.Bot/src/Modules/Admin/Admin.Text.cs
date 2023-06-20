@@ -3,7 +3,6 @@ using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Services;
 using Ditto.Data.Commands;
-using Ditto.Data.Discord;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Admin
@@ -11,8 +10,10 @@ namespace Ditto.Bot.Modules.Admin
     [Alias("admin")]
     public class AdminText : DiscordTextModule
     {
-        public AdminText(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        public AdminService AdminService { get; }
+        public AdminText(DatabaseCacheService cache, DatabaseService database, AdminService adminService) : base(cache, database)
         {
+            AdminService = adminService;
         }
 
         [DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.LocalAndParents)]
@@ -30,7 +31,7 @@ namespace Ditto.Bot.Modules.Admin
             }
             else
             {
-                Admin.DebugLogging(enable);
+                AdminService.DebugLogging(enable);
             }
         }
 
@@ -44,7 +45,7 @@ namespace Ditto.Bot.Modules.Admin
             }
             else
             {
-                await Admin.Disconnect();
+                await AdminService.Disconnect();
             }
         }
 
@@ -61,7 +62,7 @@ namespace Ditto.Bot.Modules.Admin
             }
             else
             {
-                await Admin.SetGlobalCacheChannel(textChannel);
+                await AdminService.SetGlobalCacheChannel(textChannel);
                 await Context.ApplyResultReaction(CommandResult.Success).ConfigureAwait(false);
             }
         }

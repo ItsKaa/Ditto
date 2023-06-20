@@ -1,5 +1,4 @@
 ﻿using Ditto.Bot.Database;
-using Ditto.Bot.Services;
 using Ditto.Data;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -12,7 +11,7 @@ namespace Ditto.Bot.Services
         Sqlite = 0,
         Mysql
     }
-    public class DatabaseService : BaseClass, IModuleService
+    public class DatabaseService : BaseClass, IDittoService
     {
         private DbContextOptions _options;
         public UnitOfWork UnitOfWork => new(GetContext());

@@ -109,7 +109,7 @@ namespace Ditto.Bot.Services.Data
             _cancellationTokenSource.Cancel();
         }
 
-        public async Task<YoutubeResult> LoadSongsAsync(bool loadDetails = true)
+        public async Task<YoutubeResult> LoadSongsAsync(YoutubeService youtubeService, bool loadDetails = true)
         {
             if (Type == YoutubeResultType.Playlist)
             {
@@ -118,7 +118,7 @@ namespace Ditto.Bot.Services.Data
                     var token = "";
                     do
                     {
-                        token = await Ditto.Google.Youtube.ReadPlaylistSongsBasicAsync(this, token).ConfigureAwait(false);
+                        token = await youtubeService.ReadPlaylistSongsBasicAsync(this, token).ConfigureAwait(false);
                     }
                     while (!string.IsNullOrEmpty(token));
                     SongsLoaded = true;
@@ -127,7 +127,7 @@ namespace Ditto.Bot.Services.Data
                 {
                     _detailsLoadingTask = Task.Run(async () =>
                     {
-                        await Ditto.Google.Youtube.ReadPlaylistSongDetailsAsync(this).ConfigureAwait(false);
+                        await youtubeService.ReadPlaylistSongDetailsAsync(this).ConfigureAwait(false);
                         SongDetailsLoaded = true;
                     }, CancellationToken);
                 }
@@ -136,7 +136,7 @@ namespace Ditto.Bot.Services.Data
             {
                 if(!SongsLoaded || !SongDetailsLoaded)
                 {
-                    var song = await Ditto.Google.Youtube.GetVideoByIdAsync(Id);
+                    var song = await youtubeService.GetVideoByIdAsync(Id);
                     if (Songs.Count > 0)
                     {
                         Songs[0] = song;

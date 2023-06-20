@@ -9,16 +9,21 @@ namespace Ditto.Bot.Modules.Chat
     [Group("chat", "Group for chat-based commands")]
     public class ChatSlash : DiscordBaseSlashModule
     {
-        public ChatSlash(InteractionService interactionService) : base(interactionService) { }
+        public ChatService ChatService { get; }
         public const string ButtonIdPurgeConfirmYes = "chat_purge_confirm_yes";
-        public const string ButtonIdPurgeConfirmNo  = "chat_purge_confirm_no";
+        public const string ButtonIdPurgeConfirmNo = "chat_purge_confirm_no";
+
+        public ChatSlash(InteractionService interactionService, ChatService chatService) : base(interactionService)
+        {
+            ChatService = chatService;
+        }
 
         [SlashCommand("talk", "Chat with the bot (Cleverbot, not ChatGPT)")]
         public async Task Talk(
             [Summary(description: "The message you wish to send to the bot")]
             string message)
         {
-            var response = await Chat.Talk(Context.Guild, Context.Channel, message);
+            var response = await ChatService.Talk(Context.Guild, Context.Channel, message);
             await RespondAsync(response);
         }
 
@@ -28,7 +33,7 @@ namespace Ditto.Bot.Modules.Chat
             IUser user)
         {
             var name = user.Mention ?? (user as IGuildUser)?.DisplayName ?? (user as IGuildUser)?.Nickname ?? user.Username;
-            var message = Chat.Insult(name);
+            var message = ChatService.Insult(name);
             return !string.IsNullOrEmpty(message)
                 ? RespondAsync(message, allowedMentions: AllowedMentions.None)
                 : Task.CompletedTask;
@@ -37,7 +42,7 @@ namespace Ditto.Bot.Modules.Chat
         private async Task ExecutePurge(IDiscordInteraction interaction, int count, IUser user, string pattern)
         {
             await interaction.DeferAsync(ephemeral: true);
-            var deletedMessageCount = await Chat.PruneMessagesAsync(Context.Channel as ITextChannel, count, user, pattern);
+            var deletedMessageCount = await ChatService.PruneMessagesAsync(Context.Channel as ITextChannel, count, user, pattern);
             await interaction.FollowupAsync($"Done! Deleted {deletedMessageCount} messages.", ephemeral: true);
         }
 
@@ -56,7 +61,7 @@ namespace Ditto.Bot.Modules.Chat
             int count = 100
             )
         {
-            if (count > Chat.PruneConfirmationMessageCount)
+            if (count > ChatService.PruneConfirmationMessageCount)
             {
                 var components = new ComponentBuilder()
                     .WithButton("Yes", ButtonIdPurgeConfirmYes, ButtonStyle.Success)
@@ -78,13 +83,13 @@ namespace Ditto.Bot.Modules.Chat
                 {
                     await ModifyOriginalResponseAsync((msg) =>
                     {
-                        msg.Content = Chat.GetPruneConfirmationMessage(Context.User, count);
+                        msg.Content = ChatService.GetPruneConfirmationMessage(Context.User, count);
                         msg.Components = null;
                     });
                     await ExecutePurge(msg, count, user, pattern);
                 });
 
-                await RespondAsync(text: Chat.GetPruneConfirmationMessage(Context.User, count), components: components, ephemeral: true);
+                await RespondAsync(text: ChatService.GetPruneConfirmationMessage(Context.User, count), components: components, ephemeral: true);
             }
             else
             {
