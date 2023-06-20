@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Admin
 {
+    [Alias("build")]
     public class BuildText : DiscordModule
     {
 

@@ -19,18 +19,18 @@ namespace Ditto.Bot.Modules.Admin
         {
         }
 
-        private async Task<(bool, BuildInfo)> CheckForUpdates(bool respond = false)
+        private async Task<(bool, BuildInfo)> CheckForUpdates(bool respondAlreadyUpToDate = false, bool respondError = true)
         {
             var result = false;
             var buildInfoUpdates = Build.CheckForUpdates();
             if (buildInfoUpdates.Item2 == null)
             {
-                if (respond)
+                if (respondError)
                     await RespondAsync("Failed to execute the git command.", ephemeral: true);
             }
-            else if (!buildInfoUpdates.Item1)
+            else if (!buildInfoUpdates.Item1 || buildInfoUpdates.Item2?.LocalHash == buildInfoUpdates.Item2?.RemoteHash)
             {
-                if (respond)
+                if (respondAlreadyUpToDate)
                     await RespondAsync("Branch already up to date.", ephemeral: true);
             }
             else
@@ -41,23 +41,7 @@ namespace Ditto.Bot.Modules.Admin
             return (result, buildInfoUpdates.Item2 ?? new BuildInfo(null, null));
         }
 
-        [SlashCommand("update", "Update the bot to the latest version. (bot owner only)")]
-        public async Task Update()
-        {
-            var buildInfo = await CheckForUpdates(true);
-            if (!buildInfo.Item1)
-                return;
-
-            if (!buildInfo.Item2.IsEqual && (await List(null, false)).Any())
-            {
-                await DeferAsync();
-                var message = await GetOriginalResponseAsync();
-                await Build.Update(buildInfo.Item2, Context.Channel as ITextChannel, message, Context.Guild);
-            }
-        }
-
-        [SlashCommand("list", "List the changes, if any. (bot owner only)")]
-        public async Task<IEnumerable<EmbedField>> List(string fromHash = null, bool post = true)
+        private async Task<IEnumerable<EmbedField>> List(string fromHash = null, bool post = true)
         {
             var buildInfo = await CheckForUpdates(false);
             var data = (await Build.UpdateList(buildInfo.Item2, fromHash));
@@ -69,20 +53,32 @@ namespace Ditto.Bot.Modules.Admin
                 }
                 else
                 {
-                    await RespondAsync(embeds: new [] { data.Item1 });
+                    await RespondAsync(embeds: new[] { data.Item1 });
                 }
             }
 
             return data.Item2 ?? Enumerable.Empty<EmbedField>();
         }
 
-        [SlashCommand("info", "Retrieve the latest build information. (bot owner only)")]
-        public async Task Info(string fromHash = null)
+        [SlashCommand("update", "Update the bot to the latest version. (bot owner only)")]
+        public async Task Update()
         {
             var buildInfo = await CheckForUpdates(true);
             if (!buildInfo.Item1)
                 return;
 
+            if (!buildInfo.Item2.IsEqual && (await List(null, false)).Any())
+            {
+                await RespondAsync("Please wait, updating bot...");
+                var message = await GetOriginalResponseAsync();
+                await Build.Update(buildInfo.Item2, Context.Channel as ITextChannel, message, Context.Guild);
+            }
+        }
+
+        [SlashCommand("info", "Retrieve the latest build information. (bot owner only)")]
+        public async Task Info(string fromHash = null)
+        {
+            var buildInfo = await CheckForUpdates(false);
             if (await Build.Info(buildInfo.Item2, Context.Guild, fromHash) is Embed embed)
             {
                 await RespondAsync(embed: embed, ephemeral: true, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit });
