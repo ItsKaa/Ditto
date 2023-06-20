@@ -6,6 +6,7 @@ using System;
 using Discord;
 using System.Collections.Generic;
 using System.Linq;
+using Ditto.Bot.Services;
 
 namespace Ditto.Bot.Modules.Admin
 {
@@ -15,14 +16,17 @@ namespace Ditto.Bot.Modules.Admin
     [RequireOwner]
     public class BuildSlash : DiscordSlashModule
     {
-        public BuildSlash(InteractionService interactionService) : base(interactionService)
+        private GitService GitService { get; }
+
+        public BuildSlash(InteractionService interactionService, GitService gitService) : base(interactionService)
         {
+            GitService = gitService;
         }
 
         private async Task<(bool, BuildInfo)> CheckForUpdates(bool respondAlreadyUpToDate = false, bool respondError = true)
         {
             var result = false;
-            var buildInfoUpdates = Build.CheckForUpdates();
+            var buildInfoUpdates = GitService.CheckForUpdates();
             if (buildInfoUpdates.Item2 == null)
             {
                 if (respondError)
@@ -44,7 +48,7 @@ namespace Ditto.Bot.Modules.Admin
         private async Task<IEnumerable<EmbedField>> List(string fromHash = null, bool post = true)
         {
             var buildInfo = await CheckForUpdates(false);
-            var data = (await Build.UpdateList(buildInfo.Item2, fromHash));
+            var data = (await GitService.UpdateList(buildInfo.Item2, fromHash));
             if (post)
             {
                 if (data.Item1 == null)
@@ -71,7 +75,7 @@ namespace Ditto.Bot.Modules.Admin
             {
                 await RespondAsync("Please wait, updating bot...");
                 var message = await GetOriginalResponseAsync();
-                await Build.Update(buildInfo.Item2, Context.Channel as ITextChannel, message, Context.Guild);
+                await GitService.Update(buildInfo.Item2, Context.Channel as ITextChannel, message, Context.Guild);
             }
         }
 
@@ -81,7 +85,7 @@ namespace Ditto.Bot.Modules.Admin
             int headPosition = 0)
         {
             var buildInfo = await CheckForUpdates(false);
-            if (await Build.Info(buildInfo.Item2, Context.Guild, $"HEAD~{Math.Max(0, headPosition)}") is Embed embed)
+            if (await GitService.Info(buildInfo.Item2, Context.Guild, $"HEAD~{Math.Max(0, headPosition)}") is Embed embed)
             {
                 await RespondAsync(embed: embed, ephemeral: true, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit });
             }

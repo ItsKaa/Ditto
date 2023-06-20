@@ -1,101 +1,30 @@
 ﻿using Discord;
-using Ditto.Bot.Database.Models;
-using Ditto.Data.Commands;
-using Ditto.Data.Discord;
-using Ditto.Extensions.Discord;
-using Ditto.Extensions;
-using System;
-using System.Linq;
-using System.Diagnostics;
-using System.Text;
 using Ditto.Bot.Modules.Admin.Data;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using Ditto.Helpers;
+using Ditto.Data.Discord;
 using Ditto.Data;
+using Ditto.Extensions;
+using Ditto.Helpers;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Ditto.Bot.Modules.Admin
+namespace Ditto.Bot.Services
 {
-    public class Build : DiscordModule
+    public class GitService : IModuleService
     {
         private const string RepositoryAlias = "origin";
         //private const string BranchName = "master";
         private const string BranchName = "slash-commands";
         private const string Branch = RepositoryAlias + "/" + BranchName;
 
-        static Build()
-        {
-            // Check for a link update message
-            Ditto.Connected += async () =>
-            {
-                Link link = null;
-                await Ditto.Database.DoAsync(uow =>
-                {
-                    link = uow.Links.Get(l => l.Type == Database.Data.LinkType.Update);
-                }, false).ConfigureAwait(false);
+        Task IModuleService.Initialised() => Task.CompletedTask;
+        Task IModuleService.Connected() => Task.CompletedTask;
+        Task IModuleService.Exit() => Task.CompletedTask;
 
-                if (link != null)
-                {
-                    if (!string.IsNullOrEmpty(link.Value))
-                    {
-                        var values = link.Value.Split("|", StringSplitOptions.RemoveEmptyEntries);
-                        var commitHash = values.LastOrDefault();
-                        if (!string.IsNullOrEmpty(commitHash) && ulong.TryParse(values.FirstOrDefault(), out ulong messageId))
-                        {
-                            IUserMessage message = null;
-                            IGuild guild = null;
-                            ITextChannel channel = null;
-
-                            guild = Ditto.Client.GetGuild(link.GuildId);
-                            channel = await guild.GetTextChannelAsync(link.ChannelId).ConfigureAwait(false);
-                            message = await channel.GetMessageAsync(messageId) as IUserMessage;
-                            if (message != null && message.Author.Id != Ditto.Client.CurrentUser.Id)
-                            {
-                                await message.SetResultAsync(CommandResult.Success).ConfigureAwait(false);
-                            }
-
-                            // Post build info in a secondary task
-                            try
-                            {
-                                var buildInfo = CheckForUpdates();
-                                var _ = Info(buildInfo.Item2 ?? new BuildInfo(null, null), guild).ContinueWith(async embedTask
-                                    =>
-                                    {
-                                        var embed = await embedTask;
-                                        if (message.Author.IsBot && message.Author.Id == Ditto.Client.CurrentUser.Id)
-                                        {
-                                            await message.ModifyAsync(x =>
-                                            {
-                                                x.Content = "";
-                                                x.Embed = embed;
-                                                x.Flags = MessageFlags.None;
-                                            });
-                                        }
-                                        else
-                                        {
-                                            await channel.SendMessageAsync(embed: embed);
-                                        }
-                                    }
-                                );
-                            }
-                            catch (Exception ex)
-                            {
-                                Log.Error(ex);
-                            }
-
-                            // Remove link
-                            await Ditto.Database.DoAsync(uow =>
-                            {
-                                uow.Links.Remove(link);
-                            }, true).ConfigureAwait(false);
-
-                        }
-                    }
-                }
-            };
-        }
-
-        public static string RunGit(string args)
+        public string RunGit(string args)
         {
             using var process = new Process
             {
@@ -136,7 +65,7 @@ namespace Ditto.Bot.Modules.Admin
             return outputBuilder.ToString();
         }
 
-        public static (bool, BuildInfo?) CheckForUpdates()
+        public (bool, BuildInfo?) CheckForUpdates()
         {
             // Git fetch to retrieve all updates
             RunGit("fetch");
@@ -165,7 +94,7 @@ namespace Ditto.Bot.Modules.Admin
             return (false, null);
         }
 
-        public static async Task<(Embed, IEnumerable<EmbedField>)> UpdateList(BuildInfo buildInfo, string fromHash = null, ITextChannel textChannel = null)
+        public async Task<(Embed, IEnumerable<EmbedField>)> UpdateList(BuildInfo buildInfo, string fromHash = null, ITextChannel textChannel = null)
         {
             var commitData = RunGit($"log {fromHash ?? buildInfo.LocalHash}..{buildInfo.RemoteHash} --pretty=tformat:\"%h|%an|%cI|%s\"");
             if (!string.IsNullOrEmpty(commitData))
@@ -201,7 +130,7 @@ namespace Ditto.Bot.Modules.Admin
             return (null, Enumerable.Empty<EmbedField>());
         }
 
-        public static async Task<Embed> Info(BuildInfo buildInfo, IGuild guild, string fromHash = null)
+        public async Task<Embed> Info(BuildInfo buildInfo, IGuild guild, string fromHash = null)
         {
             if (buildInfo.LocalHash != null && buildInfo.RemoteHash != null)
             {
@@ -228,7 +157,7 @@ namespace Ditto.Bot.Modules.Admin
             return null;
         }
 
-        public static async Task Update(BuildInfo buildInfo, ITextChannel channel, IUserMessage userMessage, IGuild guild)
+        public async Task Update(BuildInfo buildInfo, ITextChannel channel, IUserMessage userMessage, IGuild guild)
         {
             // Add a database link containing the current local branch.
             await Ditto.Database.DoAsync((uow) =>
@@ -271,6 +200,5 @@ namespace Ditto.Bot.Modules.Admin
             process.Start();
             Program.Close();
         }
-
     }
 }
