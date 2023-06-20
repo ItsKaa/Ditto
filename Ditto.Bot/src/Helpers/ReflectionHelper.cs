@@ -50,10 +50,9 @@ namespace Ditto.Bot.Helpers
             {
                 // get top-level modules
                 var searchType = typeof(DiscordModule);
-
-                foreach(var moduleInfo in from t in Assembly.GetExecutingAssembly().GetTypes()
+                foreach (var moduleInfo in from t in Assembly.GetExecutingAssembly().GetTypes()
                         where t.BaseType == searchType
-                            && t.GetConstructor(Type.EmptyTypes) != null
+                            //&& t.GetConstructor(Type.EmptyTypes) != null
                         select new ModuleInfo()
                         {
                             Type = t,
@@ -78,7 +77,7 @@ namespace Ditto.Bot.Helpers
                 foreach (var moduleInfo in from t in Assembly.GetExecutingAssembly().GetTypes()
                         where t.UnderlyingSystemType != baseType
                         && t.BaseType != null
-                        && t.GetConstructor(Type.EmptyTypes) != null // we need a public constructor
+                        //&& t.GetConstructor(Type.EmptyTypes) != null // we need a public constructor
                         && t.BaseType.IsGenericType
                         && t.BaseType.GetGenericArguments()?.Where(x => x.Equals(baseType)).Count() >= 1
                         select new ModuleInfo()

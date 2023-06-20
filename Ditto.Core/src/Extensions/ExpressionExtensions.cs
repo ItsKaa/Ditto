@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -15,6 +16,18 @@ namespace Ditto.Extensions
                 )
             );
             return e.Compile()();
+        }
+
+        public static object CreateInstanceWithServices(this Type type, IServiceProvider serviceProvider)
+        {
+            var parameters = new List<object>();
+            foreach (var param in type.GetConstructors().FirstOrDefault()?.GetParameters())
+            {
+                var obj = serviceProvider.GetService(param.ParameterType) ?? throw new InvalidOperationException($"Unable to retrieve service of type: {param.ParameterType}");
+                parameters.Add(obj);
+            }
+
+            return Activator.CreateInstance(type, parameters.ToArray());
         }
 
         // from https://stackoverflow.com/q/12307519
