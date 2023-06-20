@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Ditto.Attributes;
 using Ditto.Bot.Modules.Admin.Data;
+using Ditto.Bot.Services;
 using Ditto.Data.Commands;
 using Ditto.Data.Discord;
 using System;
@@ -14,6 +15,12 @@ namespace Ditto.Bot.Modules.Admin
     [Alias("build")]
     public class BuildText : DiscordModule
     {
+        public GitService GitService { get; }
+
+        public BuildText(GitService gitService)
+        {
+            GitService = gitService;
+        }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.LocalAndParents)]
         [Priority(0)]
@@ -32,7 +39,7 @@ namespace Ditto.Bot.Modules.Admin
                 return new BuildInfo(null, null);
             }
 
-            var buildInfoUpdates = Build.CheckForUpdates();
+            var buildInfoUpdates = GitService.CheckForUpdates();
             if (buildInfoUpdates.Item2 == null)
             {
                 // Something went wrong with the git command
@@ -59,7 +66,7 @@ namespace Ditto.Bot.Modules.Admin
                 var buildInfo = await CheckForUpdates();
                 if (!buildInfo.IsEqual && (await List(null, false)).Any())
                 {
-                    await Build.Update(buildInfo, Context.TextChannel, Context.Message, Context.Guild);
+                    await GitService.Update(buildInfo, Context.TextChannel, Context.Message, Context.Guild);
                 }
                 else
                 {
@@ -81,7 +88,7 @@ namespace Ditto.Bot.Modules.Admin
             if (Permissions.IsAdministratorOrBotOwner(Context))
             {
                 var buildInfo = await CheckForUpdates(false);
-                values = (await Build.UpdateList(buildInfo, fromHash, post ? Context.TextChannel : null)).Item2?.ToList();
+                values = (await GitService.UpdateList(buildInfo, fromHash, post ? Context.TextChannel : null)).Item2?.ToList();
                 if (values == null)
                 {
                     await Context.ApplyResultReaction(CommandResult.SuccessAlt1);
@@ -102,7 +109,7 @@ namespace Ditto.Bot.Modules.Admin
             if (Permissions.IsAdministratorOrBotOwner(Context))
             {
                 var buildInfo = await CheckForUpdates(false).ConfigureAwait(false);
-                if (await Build.Info(buildInfo, Context.Guild, $"HEAD~{Math.Max(0, headPosition)}") is Embed embed)
+                if (await GitService.Info(buildInfo, Context.Guild, $"HEAD~{Math.Max(0, headPosition)}") is Embed embed)
                 {
                     await Context.Channel.SendMessageAsync(embed: embed, options: new RequestOptions() { RetryMode = RetryMode.RetryRatelimit });
                 }
