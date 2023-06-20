@@ -17,8 +17,8 @@ namespace Ditto.Bot.Commands
     public class CommandMethodParser
     {
         public CommandScorer CommandScorer { get; private set; }
-        public CommandHandler CommandHandler { get; private set; }
-        public CommandMethodParser(CommandHandler commandHandler)
+        public CommandService CommandHandler { get; private set; }
+        public CommandMethodParser(CommandService commandHandler)
         {
             CommandHandler = commandHandler;
             CommandScorer = new CommandScorer(CommandHandler.CommandConverter);

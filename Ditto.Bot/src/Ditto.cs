@@ -33,7 +33,7 @@ namespace Ditto.Bot
         public static bool Exiting { get; private set; } = false;
         public static DiscordSocketClient Client { get; private set; }
         public static DatabaseService Database { get; private set; }
-        public static CommandHandler CommandHandler { get; private set; }
+        public static CommandService CommandHandler { get; private set; }
         public static InteractionService InteractionService { get; private set;  }
         public static IServiceProvider ServiceProvider { get; private set; }
         public static DatabaseCacheService Cache { get; private set; }
@@ -210,9 +210,9 @@ namespace Ditto.Bot
         private static void DisconnectEventsServiceProvider(IServiceProvider serviceProvider)
         {
             var types = Assembly.GetEntryAssembly().GetTypes().ToList();
-            foreach (var type in types.Where(x => x.GetInterfaces().Contains(typeof(IModuleService))).ToList())
+            foreach (var type in types.Where(x => x.GetInterfaces().Contains(typeof(IDittoService))).ToList())
             {
-                if (serviceProvider.GetRequiredService(type) is IModuleService moduleService)
+                if (serviceProvider.GetRequiredService(type) is IDittoService moduleService)
                 {
                     Initialised -= moduleService.Initialised;
                     Connected -= moduleService.Connected;
@@ -247,11 +247,12 @@ namespace Ditto.Bot
                 .AddSingleton<DiscordSocketClient>()
                 .AddSingleton(serviceConfig)
                 .AddSingleton<InteractionService>()
+                .AddSingleton<CommandService>()
                 ;
             
             // Add the services from the assembly to the provider.
             var types = Assembly.GetEntryAssembly().GetTypes().ToList();
-            var serviceTypes = types.Where(x => x.GetInterfaces().Contains(typeof(IModuleService))).ToList();
+            var serviceTypes = types.Where(x => x.GetInterfaces().Contains(typeof(IDittoService))).ToList();
             foreach(var type in serviceTypes)
             {
                 collection.AddSingleton(type);
@@ -263,7 +264,7 @@ namespace Ditto.Bot
             // Initialise the services and add the events.
             foreach(var type in serviceTypes)
             {
-                if (serviceProvider.GetRequiredService(type) is IModuleService moduleService)
+                if (serviceProvider.GetRequiredService(type) is IDittoService moduleService)
                 {
                     Initialised += moduleService.Initialised;
                     Connected += moduleService.Connected;
@@ -317,14 +318,7 @@ namespace Ditto.Bot
             }
 
             // Try to initialise the service 'Google'
-            try
-            {
-                await (Google = new GoogleService()).SetupAsync(Settings.Credentials.GoogleApiKey).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Could not initialize Google {0}\n", ex.ToString());
-            }
+            Google = ServiceProvider.GetRequiredService<GoogleService>();
 
             // Try to initialise 'Giphy'
             try
@@ -361,18 +355,15 @@ namespace Ditto.Bot
                 Log.Warn("Could not initialize Twitch {0}\n", ex.ToString());
             }
 
-            // Create our discord client
+            // Initialize the discord client and other services.
             Client = ServiceProvider.GetRequiredService<DiscordSocketClient>();
             InteractionService = ServiceProvider.GetRequiredService<InteractionService>();
-
-            await InteractionService.AddModulesAsync(typeof(Ditto).Assembly, ServiceProvider);
-            
-            // Various services
+            CommandHandler = ServiceProvider.GetRequiredService<CommandService>();
             Cache ??= ServiceProvider.GetRequiredService<DatabaseCacheService>();
             ReactionService ??= ServiceProvider.GetRequiredService<ReactionService>();
 
-            CommandHandler?.Dispose();
-            await (CommandHandler = new CommandHandler(Client, ServiceProvider)).SetupAsync().ConfigureAwait(false);
+            // Initialize the interaction service with the modules from the assembly.
+            await InteractionService.AddModulesAsync(typeof(Ditto).Assembly, ServiceProvider);
 
             if (_firstStart)
             {

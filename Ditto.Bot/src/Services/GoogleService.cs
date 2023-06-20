@@ -7,43 +7,35 @@ using Google.Apis.Urlshortener.v1;
 
 namespace Ditto.Bot.Services
 {
-    public partial class GoogleService
+    public class GoogleService : IDittoService
     {
-        private BaseClientService.Initializer _baseClientService;
-        private UrlshortenerService _urlShortenerService { get; set; }
-        private CustomsearchService _customSearchService { get; set; }
-        public YoutubeService Youtube { get; private set; }
-        
-        public GoogleService()
-        {
-            Youtube = new YoutubeService();
-        }
-        
-        // TODO: Move apiKey to database
-        public virtual async Task SetupAsync(string apiKey)
+        public BaseClientService.Initializer BaseClientService { get; private set; }
+        public UrlshortenerService UrlShortenerService { get; private set; }
+        public CustomsearchService CustomSearchService { get; private set; }
+
+        public Task Connected()
         {
             try
             {
-                _baseClientService = new BaseClientService.Initializer()
+                BaseClientService = new BaseClientService.Initializer()
                 {
                     ApplicationName = "Ditto",
-                    ApiKey = apiKey
+                    ApiKey = Ditto.Settings.Credentials.GoogleApiKey
                 };
 
-                _urlShortenerService = new UrlshortenerService(_baseClientService);
-                _customSearchService = new CustomsearchService(_baseClientService);
-                await Youtube.SetupAsync(_baseClientService);
-            
-                // Test method
-                var test = await Youtube.GetPlaylistNameAsync("0");
+                UrlShortenerService = new UrlshortenerService(BaseClientService);
+                CustomSearchService = new CustomsearchService(BaseClientService);
             }
             catch (Exception ex)
             {
-                if(ex is GoogleApiException)
-                {
-                    throw;
-                }
+                Log.Error(ex);
             }
+
+            return Task.CompletedTask;
         }
+
+        public Task Exit() => Task.CompletedTask;
+
+        public Task Initialised() => Task.CompletedTask;
     }
 }

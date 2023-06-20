@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Services
 {
-    public interface IModuleService
+    public interface IDittoService
     {
         public Task Initialised();
 

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Ditto.Bot.Services
 {
-    public class ButtonService : IModuleService, IDisposable
+    public class ButtonService : IDittoService, IDisposable
     {
         private ConcurrentDictionary<ulong, List<(string, Func<SocketMessageComponent, Task>)>> ButtonCallbackDictionary { get; } = new ConcurrentDictionary<ulong, List<(string, Func<SocketMessageComponent, Task>)>>();
 

@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Ditto.Bot.Services;
 using Ditto.Data.Discord;
 using System;
 using System.Threading.Tasks;
@@ -11,8 +12,10 @@ namespace Ditto.Bot.Modules.Admin
     [RequireUserPermission(GuildPermission.Administrator)]
     public class AdminSlash : DiscordBaseSlashModule
     {
-        public AdminSlash(InteractionService interactionService) : base(interactionService)
+        public AdminService AdminService { get; }
+        public AdminSlash(InteractionService interactionService, AdminService adminService) : base(interactionService)
         {
+            AdminService = adminService;
         }
 
         [SlashCommand("disconnect", "Trigger a disconnect of the bot (bot owner only)")]
@@ -43,7 +46,7 @@ namespace Ditto.Bot.Modules.Admin
                 Ditto.Connected -= disconnectAction;
             });
             Ditto.Connected += disconnectAction;
-            await Admin.Disconnect();
+            await AdminService.Disconnect();
         }
 
         [SlashCommand("cache-channel", "Set the global cache channel for the bot for temporary files (bot owner only)")]
@@ -52,7 +55,7 @@ namespace Ditto.Bot.Modules.Admin
         [RequireOwner]
         public async Task CacheChannel(ITextChannel textChannel)
         {
-            await Admin.SetGlobalCacheChannel(textChannel);
+            await AdminService.SetGlobalCacheChannel(textChannel);
             await RespondAsync($"Changed the global chat channel to {textChannel?.Mention}", ephemeral: true);
         }
 
@@ -62,7 +65,7 @@ namespace Ditto.Bot.Modules.Admin
         [RequireOwner]
         public Task DebugLogging(bool enable)
         {
-            Admin.DebugLogging(enable);
+            AdminService.DebugLogging(enable);
             return RespondAsync($"{(enable ? "Enabled" : "Disabled")} debug logging.", ephemeral: true);
         }
     }

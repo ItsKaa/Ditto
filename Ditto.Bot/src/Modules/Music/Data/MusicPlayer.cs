@@ -1,6 +1,7 @@
 ﻿using Cauldron.Core.Collections;
 using Discord;
 using Discord.Audio;
+using Ditto.Bot.Services;
 using Ditto.Bot.Services.Data;
 using Ditto.Data;
 using Ditto.Data.Commands;
@@ -26,6 +27,7 @@ namespace Ditto.Bot.Modules.Music.Data
         public bool RandomSong { get; set; }
         public int CurrentIndex { get; private set; }
         public PlaylistItem? Current { get; private set; }
+        public YoutubeService YoutubeService { get; }
         public ConcurrentList<PlaylistItem> Playlist { get; private set; }
         public delegate void SongChangedHandler(PlaylistItem? oldItem, PlaylistItem? newItem);
         
@@ -51,9 +53,10 @@ namespace Ditto.Bot.Modules.Music.Data
         private CancellationTokenSource _cancellationTokenSource;
         private bool _disposed = false;
 
-        public MusicPlayer(ICommandContextEx context)
+        public MusicPlayer(ICommandContextEx context, YoutubeService youtubeService)
         {
             Context = context;
+            YoutubeService = youtubeService;
             AudioClient = null;
             VoiceChannel = null;
             Running = false;
@@ -231,7 +234,7 @@ namespace Ditto.Bot.Modules.Music.Data
 
         public Task<YoutubeResult> GetSongAsync(string query)
         {
-            return Ditto.Google.Youtube.SearchAsync(query);
+            return YoutubeService.SearchAsync(query);
         }
 
         public async Task ConnectAndPlayAsync(IVoiceChannel voiceChannel, IGuildUser guildUser, string query)

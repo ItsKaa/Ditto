@@ -6,25 +6,22 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Ditto.Bot.Data.API.Rest;
-using Ditto.Bot.Services;
 
-namespace Ditto.Bot.Modules.Chat
+namespace Ditto.Bot.Services
 {
-    public class Chat : DiscordTextModule
+    public class ChatService : IDittoService
     {
         public const int PruneConfirmationMessageCount = 10;
         public static ConcurrentDictionary<ulong, Lazy<CleverbotSession>> CleverbotSessions { get; private set; }
 
-        static Chat()
+        public Task Initialised() => Task.CompletedTask;
+
+        public Task Connected()
         {
-            Ditto.Connected += () =>
-            {
-                CleverbotSessions = new ConcurrentDictionary<ulong, Lazy<CleverbotSession>>(
-                    Ditto.Client.Guilds.ToDictionary(g => g.Id, _ => new Lazy<CleverbotSession>(
-                        () => new CleverbotSession(Ditto.Settings.Credentials.CleverbotApiKey, false), true)
-                    ));
-                return Task.CompletedTask;
-            };
+            CleverbotSessions = new ConcurrentDictionary<ulong, Lazy<CleverbotSession>>(
+                Ditto.Client.Guilds.ToDictionary(g => g.Id, _ => new Lazy<CleverbotSession>(
+                    () => new CleverbotSession(Ditto.Settings.Credentials.CleverbotApiKey, false), true)
+                ));
 
             Ditto.Client.JoinedGuild += (guild) =>
             {
@@ -46,21 +43,19 @@ namespace Ditto.Bot.Modules.Chat
                 return Task.CompletedTask;
             };
 
-            Ditto.Exit += () =>
-            {
-                CleverbotSessions?.Clear();
-                return Task.CompletedTask;
-            };
+            return Task.CompletedTask;
         }
 
-        public Chat(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        public Task Exit()
         {
+            CleverbotSessions?.Clear();
+            return Task.CompletedTask;
         }
 
-        public static string GetPruneConfirmationMessage(IUser user, int count)
+        public string GetPruneConfirmationMessage(IUser user, int count)
             => $"{user.Mention} Please verify. Do you wish to delete {count} messages from this channel?";
 
-        public static async Task<string> Talk(IGuild guild, IMessageChannel channel, string message)
+        public async Task<string> Talk(IGuild guild, IMessageChannel channel, string message)
         {
             try
             {
@@ -87,7 +82,7 @@ namespace Ditto.Bot.Modules.Chat
             return null;
         }
 
-        public static string Insult(string name)
+        public string Insult(string name)
         {
             var insult = new InsultApi().Insult("");
             return !string.IsNullOrEmpty(insult?.Insult)
@@ -96,7 +91,7 @@ namespace Ditto.Bot.Modules.Chat
         }
 
 
-        public static async Task<int> PruneMessagesAsync(ITextChannel channel, int count, IUser user = null, string pattern = "")
+        public async Task<int> PruneMessagesAsync(ITextChannel channel, int count, IUser user = null, string pattern = "")
         {
             if (count > 100)
                 count = 100;

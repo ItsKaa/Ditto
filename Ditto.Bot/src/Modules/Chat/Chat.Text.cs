@@ -15,14 +15,16 @@ namespace Ditto.Bot.Modules.Chat
     [Alias("chat")]
     public class ChatText : DiscordTextModule
     {
-        public ChatText(DatabaseCacheService cache, DatabaseService database) : base(cache, database)
+        public ChatService ChatService { get; }
+        public ChatText(DatabaseCacheService cache, DatabaseService database, ChatService chatService) : base(cache, database)
         {
+            ChatService = chatService;
         }
 
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All, RequireBotTag = false)]
         public async Task Talk([Multiword] string message)
         {
-            var response = await Chat.Talk(Context.Guild, Context.TextChannel, message);
+            var response = await ChatService.Talk(Context.Guild, Context.TextChannel, message);
             if (!string.IsNullOrEmpty(response))
             {
                 await Context.Channel.SendMessageAsync(response);
@@ -40,7 +42,7 @@ namespace Ditto.Bot.Modules.Chat
         [Priority(0)]
         public async Task Insult([Multiword] string name)
         {
-            var message = Chat.Insult(name);
+            var message = ChatService.Insult(name);
             if (!string.IsNullOrEmpty(message))
             {
                 await Context.Channel.SendMessageAsync(message).ConfigureAwait(false);
@@ -64,10 +66,10 @@ namespace Ditto.Bot.Modules.Chat
             await Context.Message.DeleteAsync().ConfigureAwait(false);
             await Task.Delay(100).ConfigureAwait(false);
 
-            if (count > Chat.PruneConfirmationMessageCount)
+            if (count > ChatService.PruneConfirmationMessageCount)
             {
                 var usedReaction = await Context.SendOptionDialogueAsync(
-                    Chat.GetPruneConfirmationMessage(Context.User, count),
+                    ChatService.GetPruneConfirmationMessage(Context.User, count),
                     new List<string>(), true,
                     new[] { EmotesHelper.GetEmoji(Emotes.WhiteCheckMark), EmotesHelper.GetEmoji(Emotes.NoEntrySign) }, null, 60000, 0
                 ).ConfigureAwait(false);
@@ -77,7 +79,7 @@ namespace Ditto.Bot.Modules.Chat
                 }
             }
 
-            await Chat.PruneMessagesAsync(Context.TextChannel, count, user, pattern);
+            await ChatService.PruneMessagesAsync(Context.TextChannel, count, user, pattern);
         }
 
         [Priority(4), DiscordCommand(CommandSourceLevel.Guild, CommandAccessLevel.All)]
