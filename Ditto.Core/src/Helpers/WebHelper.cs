@@ -138,12 +138,15 @@ namespace Ditto.Helpers
         {
             try
             {
-                var httpWebRequest = WebRequest.Create(url) as HttpWebRequest;
-                httpWebRequest.Method = "HEAD";
-                httpWebRequest.AllowAutoRedirect = true;
+                using var handler = new HttpClientHandler()
+                {
+                    AllowAutoRedirect = true,
+                };
+                using var client = new HttpClient(handler);
+                var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, url)).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
 
-                using var httpWebReponse = await httpWebRequest.GetResponseAsync().ConfigureAwait(false);
-                return httpWebReponse.ContentType.ToLower(CultureInfo.InvariantCulture).StartsWith("image/");
+                return response.Content?.Headers?.ContentType?.MediaType?.ToLower(CultureInfo.InvariantCulture).StartsWith("image/") == true;
             }
             catch { }
             return false;
