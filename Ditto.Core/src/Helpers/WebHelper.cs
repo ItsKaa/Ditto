@@ -51,16 +51,15 @@ namespace Ditto.Helpers
         public static Task<Stream> GetStreamAsync(Uri uri)
             => GetStreamAsync(uri.ToString());
 
-        public static Task<string> GetSourceCodeAsync(string url)
+        public static async Task<string> GetSourceCodeAsync(string url)
         {
-
             try
             {
                 using var client = new HttpClient();
-                return client.GetStringAsync(url);
+                return await client.GetStringAsync(url);
             }
             catch { }
-            return Task.FromResult<string>(null);
+            return null;
         }
 
         public static Task<string> GetSourceCodeAsync(Uri uri)
