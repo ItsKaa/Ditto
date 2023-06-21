@@ -4,7 +4,7 @@ using Ditto.Data.Discord;
 
 namespace Ditto.Bot.Modules
 {
-    internal class DiscordSlashModule : DiscordBaseSlashModule
+    public class DiscordSlashModule : DiscordBaseSlashModule
     {
         public DatabaseCacheService Cache { get; }
         public DatabaseService Database { get; }

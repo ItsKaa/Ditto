@@ -14,11 +14,11 @@ namespace Ditto.Bot.Modules.Admin
     [DefaultMemberPermissions(GuildPermission.Administrator)]
     [RequireUserPermission(GuildPermission.Administrator)]
     [RequireOwner]
-    public class BuildSlash : DiscordBaseSlashModule
+    public class BuildSlash : DiscordSlashModule
     {
         private GitService GitService { get; }
 
-        public BuildSlash(InteractionService interactionService, GitService gitService) : base(interactionService)
+        public BuildSlash(InteractionService interactionService, DatabaseCacheService cache, DatabaseService database, GitService gitService) : base(interactionService, cache, database)
         {
             GitService = gitService;
         }
