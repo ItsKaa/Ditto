@@ -1,6 +1,7 @@
 ﻿using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -132,6 +133,23 @@ namespace Ditto.Helpers
             catch { }
             return null;
         }
+
+        public static async Task<bool> IsImageUrlAsync(this string url)
+        {
+            try
+            {
+                var httpWebRequest = WebRequest.Create(url) as HttpWebRequest;
+                httpWebRequest.Method = "HEAD";
+                httpWebRequest.AllowAutoRedirect = true;
+
+                using var httpWebReponse = await httpWebRequest.GetResponseAsync().ConfigureAwait(false);
+                return httpWebReponse.ContentType.ToLower(CultureInfo.InvariantCulture).StartsWith("image/");
+            }
+            catch { }
+            return false;
+        }
+
+        public static Task<bool> IsImageUrlAsync(this Uri uri) => IsImageUrlAsync(uri.ToString());
 
         /// <summary>
         /// Reads the content from the response message and returns the uncompressed string value.

@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Ditto.Bot.Modules.Utility.Linking
@@ -136,7 +137,9 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 if (link == null || link.Channel == null)
                     continue;
 
-                if (message.Attachments.Any(x => x.ContentType.Contains("image")))
+                if (message.Attachments.Any(x => x.ContentType.Contains("image"))
+                    || (Globals.RegularExpression.Urls.Matches(message.Content) is MatchCollection urlMatches
+                    && urlMatches.Any(x => x.Success && WebHelper.IsValidWebsite(x.Value))))
                 {
                     MessageQueue.Enqueue(message);
                 }
@@ -290,6 +293,31 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     return GetResultText(saucePixiv, pixivUrl, multiline);
                 }
 
+                // 1b. Pixiv (inner source)
+                saucePixiv = sauceWithUrls.FirstOrDefault(x => x.Sauce.InnerSource?.Contains("pixiv.net") == true);
+                if (saucePixiv != null
+                    && saucePixiv.Similarity > (highestSimilarity - SimilarityTolerance)
+                    && saucePixiv.Similarity >= minimumSimilarity)
+                {
+                    var pixivUrl = saucePixiv.Sauce.InnerSource;
+                    return GetResultText(saucePixiv, pixivUrl, multiline);
+                }
+
+                // 1c. Pixiv (inner source through pximg.net)
+                saucePixiv = sauceWithUrls.FirstOrDefault(x => x.Sauce.InnerSource?.Contains("i.pximg.net") == true);
+                if (saucePixiv != null
+                    && saucePixiv.Similarity > (highestSimilarity - SimilarityTolerance)
+                    && saucePixiv.Similarity >= minimumSimilarity)
+                {
+                    var pximgUrl = saucePixiv.Sauce.InnerSource;
+                    var match = Regex.Match(pximgUrl, "https?://i.pximg.net/img-original/img/[\\d]*/[\\d]*/[\\d]*/[\\d]*/[\\d]*/[\\d]*/(?<id>[\\d]*)");
+                    if (match.Success && match.Groups.ContainsKey("id"))
+                    {
+                        var pixivUrl = $"https://www.pixiv.net/en/artworks/{(match.Groups["id"].Value)}";
+                        return GetResultText(saucePixiv, pixivUrl, multiline);
+                    }
+                }
+
                 // 2. Twitter
                 var sauceTwitter = sauceWithUrls.FirstOrDefault(x => x.Sauce.SourceURL.Contains("twitter.com"));
                 if (sauceTwitter != null
@@ -297,6 +325,16 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     && sauceTwitter.Similarity >= minimumSimilarity)
                 {
                     var twitterUrl = sauceTwitter.Sauce.SourceURL;
+                    return GetResultText(sauceTwitter, twitterUrl, multiline);
+                }
+
+                // 2b. Twitter (inner source)
+                sauceTwitter = sauceWithUrls.FirstOrDefault(x => x.Sauce.InnerSource?.Contains("twitter.com") == true);
+                if (sauceTwitter != null
+                    && sauceTwitter.Similarity > (highestSimilarity - SimilarityTolerance)
+                    && sauceTwitter.Similarity >= minimumSimilarity)
+                {
+                    var twitterUrl = sauceTwitter.Sauce.InnerSource;
                     return GetResultText(sauceTwitter, twitterUrl, multiline);
                 }
 
@@ -310,7 +348,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     return GetResultText(sauceFanbox, fanboxUrl, multiline);
                 }
 
-                // 4. Fanbox (inner source)
+                // 3b. Fanbox (inner source)
                 sauceFanbox = sauceWithUrls.FirstOrDefault(x => x.Sauce.InnerSource?.Contains("fanbox.cc") == true);
                 if (sauceFanbox != null
                     && sauceFanbox.Similarity > (highestSimilarity - SimilarityTolerance)
@@ -357,26 +395,47 @@ namespace Ditto.Bot.Modules.Utility.Linking
         private static async Task GetSauceAndPostResponse(IUserMessage message)
         {
             // Check number of links compared to the number of attachments.
-            var matches = Globals.RegularExpression.Urls.Matches(message.Content);
-            if (matches.Any(x => x.Success) && matches.Count >= message.Attachments.Count)
+            var urlMatches = Globals.RegularExpression.Urls.Matches(message.Content);
+            if (urlMatches.Any(x => x.Success)
+                && message.Attachments.Count > 0
+                && urlMatches.Count >= message.Attachments.Count)
             {
                 return;
             }
 
+            // Get the urls from the attachments or if it does not contain any attachments then use the image URLs from the message.
+            var urls = message.Attachments.Select(x => x.Url);
+            if (!urls.Any())
+            {
+                foreach(var match in urlMatches.Where(x => x.Success))
+                {
+                    if (WebHelper.IsValidWebsite(match.Value)
+                        && await match.Value.IsImageUrlAsync().ConfigureAwait(false))
+                    {
+                        urls = urls.Append(match.Value);
+                    }
+                }
+            }
+            urls = urls.Distinct();
+
+            // Exit out if we cannot detect a valid url so that we don't add an unnecessary reaction.
+            if (!urls.Any())
+                return;
+
             var description = "";
             int number = 1;
-            foreach (var attachment in message.Attachments)
+            foreach (var url in urls)
             {
                 int retryAttempt = 0;
                 while(true)
                 {
                     try
                     {
-                        var sauce = await GetSauce(attachment.Url).ConfigureAwait(false);
-                        var sauceText = GetPreferredSauceNameWithUrl(message, sauce.Results, message.Attachments.Count > 1);
+                        var sauce = await GetSauce(url).ConfigureAwait(false);
+                        var sauceText = GetPreferredSauceNameWithUrl(message, sauce.Results, urls.Count() > 1);
                         if (!string.IsNullOrEmpty(sauceText))
                         {
-                            if (message.Attachments.Count > 1)
+                            if (urls.Count() > 1)
                                 description += $"`{number++}.` ";
 
                             description += $"{sauceText}\n";
