@@ -8,13 +8,13 @@ using Ditto.Bot.Helpers;
 namespace Ditto.Bot.Modules.Chat
 {
     [Group("chat", "Group for chat-based commands")]
-    public class ChatSlash : DiscordBaseSlashModule
+    public class ChatSlash : DiscordSlashModule
     {
         public CleverbotService ChatService { get; }
         public const string ButtonIdPurgeConfirmYes = "chat_purge_confirm_yes";
         public const string ButtonIdPurgeConfirmNo = "chat_purge_confirm_no";
 
-        public ChatSlash(InteractionService interactionService, CleverbotService chatService) : base(interactionService)
+        public ChatSlash(InteractionService interactionService, DatabaseCacheService cache, DatabaseService database, CleverbotService chatService) : base(interactionService, cache, database)
         {
             ChatService = chatService;
         }
