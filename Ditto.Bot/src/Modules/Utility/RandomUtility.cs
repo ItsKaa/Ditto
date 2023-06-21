@@ -93,7 +93,6 @@ namespace Ditto.Bot.Modules.Utility
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
         public async Task YearFact(int? number = null)
         {
-            //use http://numbersapi.com
             var year = number ?? Randomizer.Static.New(-1225, 2060);
             await NumbersApi(await Common.NumbersApi.Year(year,
                 year >= 0 ? Common.NumbersApi.NotFoundOption.Floor : Common.NumbersApi.NotFoundOption.Ceil,
@@ -104,10 +103,9 @@ namespace Ditto.Bot.Modules.Utility
         [DiscordCommand(CommandSourceLevel.All, CommandAccessLevel.All)]
         public async Task DateFact(uint? day = null, uint? month = null)
         {
-            //use http://numbersapi.com
             await NumbersApi(await Common.NumbersApi.Date(
-                month ?? Randomizer.Static.New(0U, ushort.MaxValue),
-                day ?? Randomizer.Static.New(0, uint.MaxValue),
+                month ?? Randomizer.Static.New(0U, 12U),
+                day ?? Randomizer.Static.New(0, 31U),
                 Common.NumbersApi.NotFoundOption.Ceil, false
             ));
         }
@@ -219,33 +217,6 @@ namespace Ditto.Bot.Modules.Utility
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
         public Task TrumpQuote([Multiword] string text = "")
            => Quote(QuoteType.Trump, text);
-
-        [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        public async Task Fortune()
-        {
-            var fortune = new FortuneCookieApi().Fortune();
-            if (!string.IsNullOrEmpty(fortune))
-            {
-                await Context.Channel.SendMessageAsync(
-                    $"{Context.User.Mention} {fortune}"
-                ).ConfigureAwait(false);
-            }
-            else
-            {
-                await Context.ApplyResultReaction(CommandResult.Failed).ConfigureAwait(false);
-            }
-        }
-
-        [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
-        public async Task AdorableAvatar()
-        {
-            var avatarUrl = new AdorableApi().RandomAvatar();
-            await Context.Channel.EmbedAsync(
-                new EmbedBuilder()
-                .WithImageUrl(avatarUrl.ToString())
-                .WithAuthor(Context.User)
-            ).ConfigureAwait(false);
-        }
 
         [DiscordCommand(CommandSourceLevel.Group | CommandSourceLevel.Guild, CommandAccessLevel.All)]
         [Alias("thonk")]
