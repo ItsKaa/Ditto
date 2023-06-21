@@ -408,17 +408,24 @@ namespace Ditto.Bot
                     try
                     {
                         if (interactionContext.Interaction.Type == InteractionType.ApplicationCommand
-                            && !interactionContext.Interaction.HasResponded
-                            && !string.IsNullOrEmpty(result.ErrorReason))
+                            && !string.IsNullOrEmpty(result.ErrorReason)
+                            && (!interactionContext.Interaction.HasResponded || (await interactionContext.Interaction.GetOriginalResponseAsync()).Flags.Has(MessageFlags.Loading)))
                         {
-                            if (result is ExecuteResult executeResult && executeResult.Exception != null)
+                            string message = "`💢 An exception occurred while attempting to execute the command. Please try again.`";
+                            if (!(result is ExecuteResult executeResult && executeResult.Exception != null))
                             {
-                                await interactionContext.Interaction.RespondAsync($"`💢 An exception occurred while attempting to execute the command. Please try again.`", ephemeral: true);
+                                message = $"`💢 Error: {result.ErrorReason}`";
+                            }
+
+                            if (interactionContext.Interaction.HasResponded)
+                            {
+                                await interactionContext.Interaction.FollowupAsync(message, ephemeral: (await interactionContext.Interaction.GetOriginalResponseAsync()).Flags.Has(MessageFlags.Ephemeral));
                             }
                             else
                             {
-                                await interactionContext.Interaction.RespondAsync($"`💢 Error: {result.ErrorReason}`", ephemeral: true);
+                                await interactionContext.Interaction.RespondAsync(message, ephemeral: true);
                             }
+
                         }
                     }
                     catch (Exception ex)
