@@ -22,8 +22,8 @@ namespace Ditto.Common
         {
             public Type Type { get; set; }
             public string Text { get; set; }
-            public ulong? Year { get; set; }
-            public ulong Number { get; set; }
+            public long? Year { get; set; }
+            public long Number { get; set; }
             public bool ExactMatch { get; set; }
         }
 
@@ -38,14 +38,14 @@ namespace Ditto.Common
         
         private static async Task<Result> ParseAsync(Type type, string value, NotFoundOption notFoundOption = NotFoundOption.Default, bool fragment = false)
         {
-            var htmlCode = await WebHelper.GetSourceCodeAsync(
-                $"{_baseUrl}/{value}/{type.ToString().ToLower()}"
-                + $"?json"
-                + $"&notfound={notFoundOption.ToString().ToLower()}"
-                + $"&{(fragment ? "fragment" : "")}"
-            ).ConfigureAwait(false);
             try
             {
+                var htmlCode = await WebHelper.GetSourceCodeAsync(
+                    $"{_baseUrl}/{value}/{type.ToString().ToLower()}"
+                    + $"?json"
+                    + $"&notfound={notFoundOption.ToString().ToLower()}"
+                    + $"&{(fragment ? "fragment" : "")}"
+                ).ConfigureAwait(false);
                 return JsonConvert.DeserializeObject<Result>(htmlCode);
             }
             catch { }

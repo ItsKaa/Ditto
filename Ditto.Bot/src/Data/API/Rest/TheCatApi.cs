@@ -1,9 +1,11 @@
 ﻿using Ditto.Data;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Ditto.Bot.Data.API.Rest
 {
-    public class TheCatApi : RestBase<TheCatApi.Result>
+    public class TheCatApi : RestBase<List<TheCatApi.Result>>
     {
         public class Result
         {
@@ -11,16 +13,16 @@ namespace Ditto.Bot.Data.API.Rest
         }
         public TheCatApi()
         {
-            BaseUrl = new Uri("http://thecatapi.com");
+            BaseUrl = new Uri("http://api.thecatapi.com");
         }
 
         public Uri Random()
         {
-            var value = Call("/api/images/get", new[] {
+            var value = Call("/v1/images/search", new[] {
                 new Parameter("format", "xml"),
                 new Parameter("size", "full")
             });
-            return value.Url;
+            return value.FirstOrDefault()?.Url ?? new Uri(string.Empty);
         }
     }
 }
