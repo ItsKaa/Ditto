@@ -353,7 +353,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 client.DefaultRequestHeaders.Host = "www.pixiv.net";
                 client.DefaultRequestHeaders.Referrer = new Uri($"https://www.pixiv.net/en/users/{userId}/illustrations");
                 client.DefaultRequestHeaders.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-                client.DefaultRequestHeaders.AcceptEncoding.ParseAdd("gzip, deflate, br");
+                //client.DefaultRequestHeaders.AcceptEncoding.ParseAdd("gzip, deflate, br");
                 client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
                 client.DefaultRequestHeaders.Connection.ParseAdd("keep-alive");
                 client.DefaultRequestHeaders.Add("max-age", "0");
