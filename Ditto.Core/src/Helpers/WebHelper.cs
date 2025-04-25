@@ -181,13 +181,22 @@ namespace Ditto.Helpers
         public static async Task<string> ReadContentAsString(this HttpResponseMessage response)
         {
             // Check whether response is compressed
-            if (response.Content.Headers.ContentEncoding.Any(x => x == "gzip"))
+            var encoding = response.Content.Headers.ContentEncoding;
+            var acceptedEncodings = new List<(string name, Type type)>{("gzip", typeof(GZipStream)), ("deflate", typeof(DeflateStream)), ("br", typeof(BrotliStream))};
+            if (encoding.Select(x => x.ToLower()).Intersect(acceptedEncodings.Select(x => x.name.ToLower())).Any())
             {
-                // Decompress manually
-                using var s = await response.Content.ReadAsStreamAsync();
-                using var decompressed = new GZipStream(s, CompressionMode.Decompress);
-                using var rdr = new StreamReader(decompressed);
-                return await rdr.ReadToEndAsync();
+                await using var streamContent = await response.Content.ReadAsStreamAsync();
+                foreach (var (name, type) in acceptedEncodings)
+                {
+                    if (encoding.Any(x => x.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
+                    {
+                        var decompressStream = (Stream)Activator.CreateInstance(type, streamContent, CompressionMode.Decompress);
+                        using var rdr = new StreamReader(decompressStream);
+                        var result = await rdr.ReadToEndAsync();
+                        await decompressStream.DisposeAsync();
+                        return result;
+                    }
+                }
             }
 
             // Use standard implementation if not compressed

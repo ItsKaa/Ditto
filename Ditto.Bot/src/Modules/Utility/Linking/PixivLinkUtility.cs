@@ -109,35 +109,32 @@ namespace Ditto.Bot.Modules.Utility.Linking
                     return Enumerable.Empty<string>();
 
                 var illustrationId = ids.LastOrDefault();
-                if (!LinkHtmlCodePerIllustrationId.TryGetValue(illustrationId, out string htmlCode))
+                if (!LinkHtmlCodePerIllustrationId.TryGetValue(illustrationId, out string jsonString))
                     return new[] { illustrationId };
 
                 // Attempt to retrieve the details from the HTML code
                 try
                 {
-                    if (string.IsNullOrEmpty(htmlCode))
+                    if (string.IsNullOrEmpty(jsonString))
                         return new[] { illustrationId };
 
-                    var searchBlock = htmlCode.From($"\"illust\":{{\"{illustrationId}\"");
-                    var title = searchBlock.Between(@"""illustTitle"":""", @""",""illustComment");
-                    var authorName = searchBlock.Between(@"userName"":""", @"""}");
-
-                    var createdDateString = searchBlock.Between(@"""uploadDate"":""", @""",""restrict");
-                    var createdDate = DateTime.UtcNow;
-                    if (!DateTime.TryParse(createdDateString, out createdDate))
+                    var (id, title, authorName, createDate, uploadDate, urls) = ParseIllustrationJson(jsonString);
+                    
+                    // Use the first valid URL for the image data.
+                    var imageBytes = Array.Empty<byte>();
+                    foreach (var url in urls)
                     {
-                        Log.Error("Failed to parse the date, assuming that the Pixiv illustration is posted now!");
+                        imageBytes = await GetPixivIllustrationImageBytes(url).ConfigureAwait(false);
+                        if (imageBytes?.Length > 0)
+                            break;
                     }
-
-                    var imagePath = searchBlock.Between(@"""regular"":""https://i.pximg.net", @""",""original");
-                    var imageBytes = await GetPixivIllustrationImageBytes(imagePath).ConfigureAwait(false);
-
+                    
                     Log.Info($"Posting \"{title}\" ({LinkType.Pixiv}) in \"{link.Guild.Name}:{link.Channel.Name}\"");
                     if (await PostPixivIllustration(link,
                         illustrationId,
                         title,
                         authorName,
-                        createdDate,
+                        createDate,
                         imageBytes
                     ).ConfigureAwait(false))
                     {
@@ -148,7 +145,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         }
 
                         // Update the link date to match the time of this post
-                        link.Date = createdDate;
+                        link.Date = createDate;
 
                         // Add the linked item
                         return new[] { illustrationId };
@@ -363,7 +360,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                 client.DefaultRequestHeaders.Add("Sec-Fetch-Mode", "cors");
                 client.DefaultRequestHeaders.Add("Sec-Fetch-Site", "same-origin");
 
-                var message = new HttpRequestMessage(HttpMethod.Get, $"/en/artworks/{illustrationId}");
+                var message = new HttpRequestMessage(HttpMethod.Get, $"/ajax/illust/{illustrationId}?lang=en");
                 var result = await client.SendAsync(message);
                 result.EnsureSuccessStatusCode();
                 return await WebHelper.ReadContentAsString(result);
@@ -456,6 +453,58 @@ namespace Ditto.Bot.Modules.Utility.Linking
             var illustrationIds = await GetPixivUserIllustrationIdList(userId).ConfigureAwait(false);
             LinkIllustrationIds.AddOrUpdate(link, (DateTime.UtcNow, illustrationIds.ToList()));
         }
+        
+        private static (string id, string title, string authorName, DateTime createdDate, DateTime uploadDate, List<string> urls) ParseIllustrationJson(string jsonString)
+        {
+            var jsonObjects = JObject.Parse(jsonString)?.Children().OfType<JProperty>().ToList();
+            if (jsonObjects?.Count > 0)
+            {
+                var body = jsonObjects.SingleOrDefault(e => e.Name == "body")?.Value;
+                var bodyChildren = body?.Children().OfType<JProperty>().ToList();
+                if (bodyChildren?.Count > 0)
+                {
+                    var id = bodyChildren.SingleOrDefault(x => x.Name == "illustId")?.Value.ToString();
+                    var title = bodyChildren.SingleOrDefault(x => x.Name == "title")?.Value.ToString();
+                    var authorName = bodyChildren.SingleOrDefault(x => x.Name == "userName")?.Value.ToString();
+                    var createdDateString = bodyChildren.SingleOrDefault(x => x.Name == "createDate")?.Value.ToString();
+                    if (!DateTime.TryParse(createdDateString, out var createdDate))
+                    {
+                        Log.Warn("Failed to parse the creation date, assuming that the Pixiv illustration is created now.");
+                    }
+
+                    var uploadDateString = bodyChildren.SingleOrDefault(x => x.Name == "uploadDate")?.Value.ToString();
+                    if (!DateTime.TryParse(uploadDateString, out var uploadDate))
+                    {
+                        Log.Warn("Failed to parse the upload date, assuming that the Pixiv illustration is uploaded now.");
+                    }
+
+                    var urls = bodyChildren?.SingleOrDefault(e => e.Name == "urls")?.Value.AsJEnumerable()
+                        .OfType<JProperty>().ToList();
+                    var regularUrl = urls?.SingleOrDefault(x => x.Name == "regular")?.Value.ToString();
+                    var originalUrl = urls?.SingleOrDefault(x => x.Name == "original")?.Value.ToString();
+                    var smallUrl = urls?.SingleOrDefault(x => x.Name == "small")?.Value.ToString();
+                    var thumbUrl = urls?.SingleOrDefault(x => x.Name == "thumb")?.Value.ToString();
+                    var miniUrl = urls?.SingleOrDefault(x => x.Name == "mini")?.Value.ToString();
+
+                    return new ValueTuple<string, string, string, DateTime, DateTime, List<string>>(
+                        id,
+                        title,
+                        authorName,
+                        createdDate,
+                        DateTime.Now,
+                        new List<string>()
+                        {
+                            regularUrl,
+                            originalUrl,
+                            smallUrl,
+                            thumbUrl,
+                            miniUrl,
+                        }
+                    );
+                }
+            }
+            return (null, null, null, DateTime.MinValue, DateTime.MinValue, null);
+        }
 
         private static async Task<IEnumerable<string>> ProcessHtmlCode(Link link, IEnumerable<string> ids, CancellationToken cancellationToken)
         {
@@ -479,18 +528,11 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         return processedIds;
 
                     Log.Info($"Fetching pixiv illustration id {illustrationId}...");
-                    var htmlCode = await GetPixivIllustrationPageHtmlCode(userId, illustrationId).ConfigureAwait(false);
                     await Task.Delay(Randomizer.Static.New(5000, 10000));
-                    if (string.IsNullOrEmpty(htmlCode))
+                    var jsonString = await GetPixivIllustrationPageHtmlCode(userId, illustrationId).ConfigureAwait(false);
+                    var (id, title, authorName, createdDate, uploadDate, urls) = ParseIllustrationJson(jsonString);
+                    if (id == null)
                         continue;
-
-                    var searchBlock = htmlCode.From($"\"illust\":{{\"{illustrationId}\"");
-                    var createdDateString = searchBlock.Between(@"""uploadDate"":""", @""",""restrict");
-                    var createdDate = DateTime.UtcNow;
-                    if (!DateTime.TryParse(createdDateString, out createdDate))
-                    {
-                        Log.Error("Failed to parse the date, assuming that the Pixiv illustration is posted now!");
-                    }
 
                     // If the created date is older than the link date it most likely means that the link is new.
                     if (createdDate <= link.Date)
@@ -499,7 +541,7 @@ namespace Ditto.Bot.Modules.Utility.Linking
                         break;
                     }
 
-                    if (LinkHtmlCodePerIllustrationId.TryAdd(illustrationId, htmlCode))
+                    if (LinkHtmlCodePerIllustrationId.TryAdd(illustrationId, jsonString))
                     {
                         processedIds.Add(illustrationId);
                     }
